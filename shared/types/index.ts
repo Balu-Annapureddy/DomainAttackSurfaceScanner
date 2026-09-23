@@ -4,34 +4,44 @@
 export type DemoStatus = 'active' | 'visited' | 'expired' | 'terminated';
 export type MediaType = 'image' | 'pdf' | 'video';
 export type PermissionStatus = 'not_requested' | 'granted' | 'denied' | 'unavailable';
+export type GeoStatus = 'available' | 'localhost' | 'private' | 'unavailable' | 'failed';
 
 // ─── Geo Information (IP-based) ───────────────────────────────────────────────
 export interface GeoInfo {
+  ip: string;
+  ipVersion: 'IPv4' | 'IPv6' | 'unknown';
+  status: GeoStatus;
   country: string | null;
   countryCode: string | null;
   region: string | null;
   city: string | null;
+  postalCode: string | null;
   latitude: number | null;
   longitude: number | null;
   timezone: string | null;
   isp: string | null;
   org: string | null;
   asn: string | null;
+  provider: string;
+  lookupTimestamp: string;
+  note: string;
 }
 
-// ─── Network / Request Info ───────────────────────────────────────────────────
+// ─── Network / Request Info (Server-observed) ──────────────────────────────────
 export interface NetworkInfo {
   ipAddress: string;
+  ipVersion?: 'IPv4' | 'IPv6' | 'unknown';
+  isLocalhostOrPrivate?: boolean;
   userAgent: string;
   browser: string;
   browserVersion: string;
+  engine?: string | null;
   os: string;
   osVersion: string;
   platform: string;
   deviceCategory: 'desktop' | 'mobile' | 'tablet' | 'unknown';
   referrer: string | null;
   timestamp: string;
-  // HTTP headers
   accept: string | null;
   acceptLanguage: string | null;
   acceptEncoding: string | null;
@@ -40,9 +50,11 @@ export interface NetworkInfo {
   secFetchMode: string | null;
   secFetchDest: string | null;
   uaClientHint: string | null;
+  secChUaPlatform?: string | null;
+  secChUaMobile?: string | null;
 }
 
-// ─── Browser Environment Info (client-collected) ──────────────────────────────
+// ─── Browser Environment Info (Client-collected) ──────────────────────────────
 export interface BrowserInfo {
   screenWidth: number;
   screenHeight: number;
@@ -51,22 +63,71 @@ export interface BrowserInfo {
   viewportWidth: number;
   viewportHeight: number;
   devicePixelRatio: number;
+  colorDepth: number;
+  pixelDepth: number | null;
   language: string;
   languages: string[];
   timezone: string;
-  colorDepth: number;
+  timezoneOffset: number | null;
   cookiesEnabled: boolean;
   doNotTrack: boolean | null;
   touchSupport: boolean;
-  connectionType?: string;
+  maxTouchPoints: number | null;
+  hardwareConcurrency: number | null;
+  deviceMemory: number | null;
+  online: boolean | null;
+  connectionType?: string | null;
+  effectiveConnectionType?: string | null;
+  downlink?: number | null;
+  rtt?: number | null;
+  saveData?: boolean | null;
 }
 
-// ─── GPS Location (browser Geolocation API) ───────────────────────────────────
+// ─── GPS Location (Browser Geolocation API) ───────────────────────────────────
 export interface LocationInfo {
   latitude: number;
   longitude: number;
   accuracy: number;
+  altitude?: number | null;
+  altitudeAccuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  timestamp?: string;
+}
+
+// ─── Timeline Events ──────────────────────────────────────────────────────────
+export interface TimelineEvent {
+  id: string;
+  type:
+    | 'visit_received'
+    | 'content_requested'
+    | 'telemetry_received'
+    | 'gps_received'
+    | 'photo_captured'
+    | 'video_started'
+    | 'video_completed'
+    | 'audio_started'
+    | 'audio_completed'
+    | 'permission_denied'
+    | 'permission_unavailable'
+    | 'session_terminated';
   timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+// ─── Media Metadata ───────────────────────────────────────────────────────────
+export interface MediaItemMetadata {
+  ref: string;
+  timestamp: string;
+  mimeType: string;
+  fileSize: number;
+  durationSeconds?: number;
+}
+
+export interface MediaMetadata {
+  photo: MediaItemMetadata | null;
+  video: MediaItemMetadata | null;
+  audio: MediaItemMetadata | null;
 }
 
 // ─── Main Session Object ──────────────────────────────────────────────────────
@@ -76,36 +137,119 @@ export interface DemoSession {
   expiresAt: string;
   status: DemoStatus;
   mediaType: MediaType;
-  // Content source: URL string (image/video) or null (PDF uses mediaId)
   contentUrl: string | null;
   mediaId: string | null;
   mediaFilename: string | null;
-  // Theme
   theme: string;
   themeLabel: string;
   themeCaption: string;
   themeLinkText: string;
   themeEmoji: string;
-  // Visit tracking
   visitCount: number;
-  visitedAt: string | null;    // first visit timestamp
-  lastVisitAt: string | null;  // most recent visit timestamp
-  // Collected information
+  visitedAt: string | null;
+  lastVisitAt: string | null;
   networkInfo: NetworkInfo | null;
   browserInfo: BrowserInfo | null;
   geoInfo: GeoInfo | null;
   location: LocationInfo | null;
-  // Permission states
   locationPermission: PermissionStatus;
   cameraPermission: PermissionStatus;
   microphonePermission: PermissionStatus;
-  // Captured media references
   capturedPhotoRef: string | null;
   capturedVideoRef: string | null;
   capturedAudioRef: string | null;
-  // Meta
+  mediaMetadata: MediaMetadata;
+  timeline: TimelineEvent[];
   lastActivityAt: string | null;
   durationHours: number;
+}
+
+// ─── Structured Detail View for API ───────────────────────────────────────────
+export interface StructuredSessionDetail {
+  session: {
+    demoId: string;
+    createdAt: string;
+    expiresAt: string;
+    status: DemoStatus;
+    mediaType: MediaType;
+    contentUrl: string | null;
+    mediaFilename: string | null;
+    theme: string;
+    themeLabel: string;
+    themeCaption: string;
+    themeLinkText: string;
+    themeEmoji: string;
+    visitCount: number;
+    visitedAt: string | null;
+    lastVisitAt: string | null;
+    durationHours: number;
+  };
+  location: {
+    ip: GeoInfo | null;
+    gps: LocationInfo | null;
+  };
+  browser: {
+    name: string | null;
+    version: string | null;
+    engine: string | null;
+    userAgent: string | null;
+    language: string | null;
+    languages: string[] | null;
+    cookiesEnabled: boolean | null;
+    doNotTrack: boolean | null;
+  };
+  device: {
+    category: string | null;
+    platform: string | null;
+    os: string | null;
+    osVersion: string | null;
+    cores: number | null;
+    memoryGb: number | null;
+    touchSupport: boolean | null;
+    maxTouchPoints: number | null;
+  };
+  display: {
+    screenWidth: number | null;
+    screenHeight: number | null;
+    availScreenWidth: number | null;
+    availScreenHeight: number | null;
+    viewportWidth: number | null;
+    viewportHeight: number | null;
+    devicePixelRatio: number | null;
+    colorDepth: number | null;
+    pixelDepth: number | null;
+  };
+  network: {
+    ipAddress: string | null;
+    ipVersion: string | null;
+    isLocalhostOrPrivate: boolean | null;
+    connectionType: string | null;
+    effectiveConnectionType: string | null;
+    downlink: number | null;
+    rtt: number | null;
+    saveData: boolean | null;
+    online: boolean | null;
+  };
+  headers: {
+    accept: string | null;
+    acceptLanguage: string | null;
+    acceptEncoding: string | null;
+    origin: string | null;
+    referer: string | null;
+    secFetchSite: string | null;
+    secFetchMode: string | null;
+    secFetchDest: string | null;
+    uaClientHint: string | null;
+    secChUaPlatform: string | null;
+    secChUaMobile: string | null;
+  };
+  permissions: {
+    camera: PermissionStatus;
+    microphone: PermissionStatus;
+    location: PermissionStatus;
+  };
+  media: MediaMetadata;
+  timeline: TimelineEvent[];
 }
 
 // ─── Request / Response Types ─────────────────────────────────────────────────
@@ -150,8 +294,8 @@ export interface VisitorPageInfo {
   expiresAt: string;
   status: DemoStatus;
   mediaType: MediaType;
-  contentUrl: string | null;  // for image/video URL
-  mediaUrl: string | null;    // for PDF file (/api/r/:token/media)
+  contentUrl: string | null;
+  mediaUrl: string | null;
   themeLabel: string;
   themeCaption: string;
   themeLinkText: string;
@@ -162,6 +306,11 @@ export interface LocationRequest {
   latitude: number;
   longitude: number;
   accuracy: number;
+  altitude?: number | null;
+  altitudeAccuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  timestamp?: string;
 }
 
 export interface PermissionUpdateRequest {

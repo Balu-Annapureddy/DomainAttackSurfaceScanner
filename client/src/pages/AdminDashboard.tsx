@@ -889,14 +889,19 @@ function DetailModal({ session, onClose, onTerminate, onExportCsv, onCopyUrl, on
               <div className="info-section-title"><Globe size={13} /> IP-derived approximate location</div>
               {g ? (
                 <>
+                  <InfoRow label="Status" value={<span className={`badge badge-${g.status}`}>{g.status}</span>} />
+                  <InfoRow label="IP" value={<span className="info-value-mono">{g.ip}</span>} />
                   <InfoRow label="Country" value={`${g.country || '—'} ${g.countryCode ? `(${g.countryCode})` : ''}`} />
                   <InfoRow label="Region" value={g.region || '—'} />
                   <InfoRow label="City" value={g.city || '—'} />
-                  <InfoRow label="Coordinates" value={g.latitude && g.longitude ? `${g.latitude.toFixed(4)}, ${g.longitude.toFixed(4)}` : '—'} />
+                  <InfoRow label="Postal Code" value={g.postalCode || '—'} />
+                  <InfoRow label="Coordinates" value={g.latitude !== null && g.longitude !== null ? `${g.latitude.toFixed(4)}, ${g.longitude.toFixed(4)}` : '—'} />
                   <InfoRow label="Timezone" value={g.timezone || '—'} />
                   <InfoRow label="ISP" value={g.isp || '—'} />
                   <InfoRow label="Org" value={g.org || '—'} />
                   <InfoRow label="ASN" value={g.asn || '—'} />
+                  <InfoRow label="Provider" value={g.provider || '—'} />
+                  <InfoRow label="Note" value={g.note || '—'} />
                 </>
               ) : (
                 <div className="text-xs" style={{ color: 'var(--color-text-muted)', padding: '0.5rem 0' }}>
@@ -973,7 +978,11 @@ function DetailModal({ session, onClose, onTerminate, onExportCsv, onCopyUrl, on
                   <InfoRow label="Latitude" value={l.latitude.toFixed(6)} />
                   <InfoRow label="Longitude" value={l.longitude.toFixed(6)} />
                   <InfoRow label="Accuracy" value={`${l.accuracy}m`} />
-                  <InfoRow label="Timestamp" value={formatDate(l.timestamp)} />
+                  {l.altitude !== null && l.altitude !== undefined && <InfoRow label="Altitude" value={`${l.altitude}m`} />}
+                  {l.altitudeAccuracy !== null && l.altitudeAccuracy !== undefined && <InfoRow label="Altitude Accuracy" value={`${l.altitudeAccuracy}m`} />}
+                  {l.heading !== null && l.heading !== undefined && <InfoRow label="Heading" value={`${l.heading}°`} />}
+                  {l.speed !== null && l.speed !== undefined && <InfoRow label="Speed" value={`${l.speed}m/s`} />}
+                  <InfoRow label="Timestamp" value={l.timestamp ? formatDate(l.timestamp) : '—'} />
                 </>
               ) : (
                 <div className="text-xs" style={{ color: 'var(--color-text-muted)', padding: '0.5rem 0' }}>

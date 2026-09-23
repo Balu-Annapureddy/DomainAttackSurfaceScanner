@@ -173,7 +173,10 @@ router.post('/:token/photo', captureUpload.single('photo'), async (req: Request,
   }
 
   const ref = await mediaStorage.save(`photo_${session.demoId}.jpg`, req.file.buffer);
-  setPhotoRef(session.demoId, ref);
+  setPhotoRef(session.demoId, ref, {
+    mimeType: req.file.mimetype || 'image/jpeg',
+    fileSize: req.file.size,
+  });
 
   res.json({ message: 'Photo captured', cameraPermission: 'granted' });
 });
@@ -189,7 +192,11 @@ router.post('/:token/video', captureUpload.single('video'), async (req: Request,
   }
 
   const ref = await mediaStorage.save(`video_${session.demoId}.webm`, req.file.buffer);
-  setVideoRef(session.demoId, ref);
+  setVideoRef(session.demoId, ref, {
+    mimeType: req.file.mimetype || 'video/webm',
+    fileSize: req.file.size,
+    durationSeconds: 0,
+  });
 
   res.json({ message: 'Video captured', cameraPermission: 'granted' });
 });
@@ -205,7 +212,11 @@ router.post('/:token/audio', captureUpload.single('audio'), async (req: Request,
   }
 
   const ref = await mediaStorage.save(`audio_${session.demoId}.webm`, req.file.buffer);
-  setAudioRef(session.demoId, ref);
+  setAudioRef(session.demoId, ref, {
+    mimeType: req.file.mimetype || 'audio/webm',
+    fileSize: req.file.size,
+    durationSeconds: 0,
+  });
 
   res.json({ message: 'Audio captured', microphonePermission: 'granted' });
 });

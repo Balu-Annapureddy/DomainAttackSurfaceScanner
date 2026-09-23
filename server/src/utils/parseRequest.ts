@@ -1,6 +1,7 @@
 import UAParser from 'ua-parser-js';
 import { NetworkInfo } from '../types';
 import { Request } from 'express';
+import { cleanIpAddress, detectIpVersion, isPrivateOrReservedIp } from '../services/geoService';
 
 export function parseRequest(req: Request): NetworkInfo {
   const ua = new UAParser(req.headers['user-agent'] || '');
@@ -8,22 +9,26 @@ export function parseRequest(req: Request): NetworkInfo {
   const os = ua.getOS();
   const device = ua.getDevice();
   const cpu = ua.getCPU();
+  const engine = ua.getEngine();
 
   let deviceCategory: NetworkInfo['deviceCategory'] = 'unknown';
   if (device.type === 'mobile') deviceCategory = 'mobile';
   else if (device.type === 'tablet') deviceCategory = 'tablet';
   else if (!device.type) deviceCategory = 'desktop';
 
-  // Get IP — supports X-Forwarded-For for proxied environments
+  // Extract client IP safely
   const forwarded = req.headers['x-forwarded-for'];
-  let ip = typeof forwarded === 'string'
-    ? forwarded.split(',')[0].trim()
-    : req.socket.remoteAddress || 'unknown';
-
-  // Normalize IPv4-mapped IPv6 address (e.g. ::ffff:127.0.0.1 -> 127.0.0.1)
-  if (ip.startsWith('::ffff:')) {
-    ip = ip.substring(7);
+  let rawIp: string;
+  if (typeof forwarded === 'string' && forwarded.trim().length > 0) {
+    // In proxy setups, take the first valid IP from the chain
+    rawIp = forwarded.split(',')[0].trim();
+  } else {
+    rawIp = req.socket.remoteAddress || req.ip || 'unknown';
   }
+
+  const ipAddress = cleanIpAddress(rawIp);
+  const ipVersion = detectIpVersion(ipAddress);
+  const isLocalhostOrPrivate = isPrivateOrReservedIp(ipAddress);
 
   // Platform from OS + CPU
   const platform = [os.name, os.version, cpu.architecture]
@@ -33,10 +38,13 @@ export function parseRequest(req: Request): NetworkInfo {
   const h = req.headers;
 
   return {
-    ipAddress: ip,
-    userAgent: h['user-agent'] || '',
+    ipAddress,
+    ipVersion,
+    isLocalhostOrPrivate,
+    userAgent: (h['user-agent'] as string) || '',
     browser: browser.name || 'Unknown',
     browserVersion: browser.version || '',
+    engine: engine.name ? `${engine.name} ${engine.version || ''}`.trim() : null,
     os: os.name || 'Unknown',
     osVersion: os.version || '',
     platform,
@@ -52,5 +60,7 @@ export function parseRequest(req: Request): NetworkInfo {
     secFetchMode: (h['sec-fetch-mode'] as string) || null,
     secFetchDest: (h['sec-fetch-dest'] as string) || null,
     uaClientHint: (h['sec-ch-ua'] as string) || null,
+    secChUaPlatform: (h['sec-ch-ua-platform'] as string) || null,
+    secChUaMobile: (h['sec-ch-ua-mobile'] as string) || null,
   };
 }
