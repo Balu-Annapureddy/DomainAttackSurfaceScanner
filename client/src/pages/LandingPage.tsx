@@ -16,8 +16,8 @@ export default function LandingPage() {
     setLoading(true);
     try {
       const scan = await createScan(domain);
-      const previous = JSON.parse(localStorage.getItem('reconlab_scans') || '[]') as Array<{ scanId: string; domain: string; createdAt: string }>;
-      localStorage.setItem('reconlab_scans', JSON.stringify([{ scanId: scan.scanId, domain: scan.domain, createdAt: scan.createdAt }, ...previous.filter(item => item.scanId !== scan.scanId)].slice(0, 30)));
+      const previous = JSON.parse(localStorage.getItem('domain_scanner_scans') || '[]') as Array<{ scanId: string; domain: string; createdAt: string }>;
+      localStorage.setItem('domain_scanner_scans', JSON.stringify([{ scanId: scan.scanId, domain: scan.domain, createdAt: scan.createdAt }, ...previous.filter(item => item.scanId !== scan.scanId)].slice(0, 30)));
       navigate(`/scan/${scan.scanId}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to start scan');

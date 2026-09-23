@@ -79,8 +79,6 @@ export default function ScanPage() {
 
   useEffect(() => {
     if (!scanId) {
-      setError('Missing scan id.');
-      setLoading(false);
       return;
     }
 
@@ -117,6 +115,21 @@ export default function ScanPage() {
     return 'High exposure risk';
   }, [scan?.score]);
 
+  if (!scanId || error || (!scan && !loading)) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
+        <div className="mx-auto max-w-xl rounded-2xl border border-rose-500/20 bg-slate-900 p-8 text-center">
+          <div className="mb-3 flex justify-center text-rose-400"><XCircle size={28} /></div>
+          <h1 className="text-2xl font-semibold">Unable to load scan</h1>
+          <p className="mt-3 text-slate-400">{error ?? 'Missing scan id.'}</p>
+          <Link to="/" className="mt-6 inline-flex items-center gap-2 text-cyan-400 hover:underline">
+            <ArrowLeft size={16} /> Back to the scanner
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   if (loading && !scan) {
     return (
       <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
@@ -128,7 +141,7 @@ export default function ScanPage() {
     );
   }
 
-  if (error || !scan) {
+  if (!scan) {
     return (
       <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
         <div className="mx-auto max-w-xl rounded-2xl border border-rose-500/20 bg-slate-900 p-8 text-center">

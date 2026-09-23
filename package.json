@@ -1,8 +1,8 @@
 {
-  "name": "reconlab",
+  "name": "domain-attack-surface-scanner",
   "version": "1.0.0",
   "private": true,
-  "description": "ReconLab — Cybersecurity Information Gathering Platform",
+  "description": "Passive public-domain attack surface scanner",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "npm run dev --workspace=server",

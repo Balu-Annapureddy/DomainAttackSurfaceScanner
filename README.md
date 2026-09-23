@@ -1,147 +1,57 @@
-# ReconLab 🧪
+# Domain Attack Surface Scanner
 
-> **Cybersecurity Classroom Information-Gathering & Permission Demonstration Application**
+Domain Attack Surface Scanner is a passive reconnaissance dashboard for understanding a
+domain's publicly visible internet footprint. It reads public WHOIS/RDAP data, DNS records,
+Certificate Transparency records, live TLS certificates, HTTP responses, and intentionally
+published web metadata.
 
-ReconLab is an educational cybersecurity demonstration platform built for classroom and workshop settings. It illustrates the real-world boundaries between **passive browser fingerprinting** (data sent automatically via HTTP headers and standard JavaScript environment variables) and **active browser permission models** (Geolocation, Camera, Microphone) governed by the W3C Permissions API.
+It does not brute-force, exploit, bypass authentication, or probe private systems. Only public
+domain names are accepted, and the scanner rejects IP addresses, localhost, and common internal
+hostname patterns.
 
----
+## Features
 
-## ⚠️ Educational Scope & Security Guarantee
+- Asynchronous `POST /api/scan` jobs with polling through `GET /api/scan/:scanId`
+- WHOIS/RDAP ownership dates, registrar data, nameservers, and privacy status
+- A, AAAA, MX, TXT, NS, and CNAME DNS records
+- Certificate Transparency subdomain discovery via `crt.sh`
+- Live TLS certificate details, validity, SANs, protocol, and authorization state
+- HTTP and HTTPS headers, redirect behavior, server signals, and security-header gaps
+- Passive checks for `robots.txt`, `sitemap.xml`, and `/.well-known/security.txt`
+- Explainable 0-100 external hygiene score
+- Browser-local scan history
+- In-memory results with a 24-hour TTL
 
-ReconLab is strictly designed for **voluntary, informed, classroom demonstrations**:
-- **No Exploits or Bypasses**: Standard browser security models and permission prompts are respected at all times.
-- **Explicit Consent**: Participants are greeted with a clear consent screen explaining what will happen and why.
-- **Voluntary Testing**: Participants individually trigger permission requests (GPS, Camera, Microphone) and countdown captures.
-- **Safe & Non-Persistent**: All sessions are stored in-memory with automatic TTL expiration (default 30 minutes). No permanent tracking, cookies, or cross-site tracking.
-- **Known deployment limit**: the in-memory session store is cleared by a server restart or crash and is not suitable for multiple server instances. This is intentional for classroom use.
-- **Manual Termination**: Administrators can terminate any active demonstration session instantly from the dashboard.
-
----
-
-## 🌟 Key Features
-
-### 👨‍🏫 Instructor / Admin Dashboard (`/admin`)
-- **Secure Authentication**: Protected via HTTP Basic Auth (configurable via environment variables).
-- **Demo Link Generation**: Generate time-limited demonstration URLs bound to custom decoy media (Image, PDF, or Video).
-- **Real-Time Participant Monitoring**:
-  - **Passive Reconnaissance**: Remote IP, User-Agent, Browser name & version, Operating System & version, Device Category (desktop/mobile/tablet), Screen Resolution & Color Depth, Language, Timezone, Cookies Enabled, Do Not Track (DNT) preference.
-  - **Active Permission Auditing**: Real-time tracking of Geolocation, Camera, and Microphone permission states (`not_requested`, `granted`, `denied`, `unavailable`).
-  - **Voluntary Media Capture Inspection**: View captured participant snapshots, audio notes, or video clips submitted during the interactive exercise.
-- **Export & Cleanup**:
-  - Export classroom reconnaissance data directly to CSV with full RFC 4180 escaping.
-  - One-click session termination with immediate media disk cleanup.
-
-### 🧑‍🎓 Participant Demonstration View (`/d/:demoId`)
-- **Informed Consent Gate**: Explains the demonstration and requests confirmation before proceeding.
-- **Decoy Presentation**: Displays the instructor's selected media (e.g., cybersecurity infographic, sample research report, or demonstration clip).
-- **Interactive Permission Playground**:
-  - **Location Request**: Queries the Geolocation API and displays reported coordinates and accuracy radius.
-  - **Photo Capture**: 3-second visual countdown before snapshot capture via HTML5 Canvas.
-  - **Video Capture**: 3-second recording via standard `MediaRecorder` API.
-  - **Audio Capture**: 3-second audio recording via `MediaRecorder` API.
-  - Camera/Mic streams are immediately closed upon completion to turn off device hardware indicators.
-
----
-
-## 🛠️ Architecture & Tech Stack
+## Project layout
 
 ```text
-ReconLab/
-├── client/              # React 19 + TypeScript + Vite + Tailwind CSS + Lucide Icons
-│   ├── src/
-│   │   ├── pages/       # AdminDashboard, ParticipantPage
-│   │   ├── lib/         # API Client & auth helpers
-│   │   └── index.css    # Modern cybersecurity dark theme styling
-├── server/              # Node.js + Express + TypeScript
-│   ├── src/
-│   │   ├── routes/      # /api/admin & /api/d routers
-│   │   ├── services/    # sessionStore, mediaStore, csvExport
-│   │   ├── middleware/  # adminAuth, rateLimiter, errorHandling
-│   │   ├── utils/       # user-agent parser, IP resolver
-│   │   └── types/       # Shared domain types & DTOs
-├── shared/              # Monorepo shared types
-└── docs/                # Architectural, Security, Testing & Deployment manuals
+client/       React, TypeScript, Vite, Tailwind CSS
+server/       Node.js, TypeScript, Express
+shared/       Request and response contracts
+docs/         Architecture, security, testing, deployment, and scoring notes
 ```
 
-- **Frontend**: React 19, Vite 8, Tailwind CSS v4, React Router 7, Lucide React icons.
-- **Backend**: Express 4, TypeScript, Helmet security headers, Express Rate Limit, Multer (file upload), ua-parser-js, nanoid.
-- **Testing**: Jest 29, ts-jest, Supertest.
+## Getting started
 
----
-
-## 🚀 Getting Started (Local Development)
-
-### Prerequisites
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-
-### Installation
-
-1. **Clone the repository and install root dependencies**:
-   ```bash
-   cd ReconLab
-   npm install
-   ```
-
-2. **Install client and server dependencies**:
-   ```bash
-   npm run install:all
-   ```
-
-3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Configure a unique `ADMIN_PASSWORD`; production refuses the documented placeholder.
-   - Port: `3001` (Backend) / `5173` (Vite Frontend)
-   - Admin Username: `admin` by default
-
-4. **Run in Development Mode**:
-   ```bash
-   npm run dev
-   ```
-   This runs both the Express backend and the Vite frontend concurrently.
-   - Admin Dashboard: [http://localhost:5173/admin](http://localhost:5173/admin)
-   - API Backend: [http://localhost:3001](http://localhost:3001)
-
----
-
-## 🧪 Running Automated Tests
-
-ReconLab includes unit and integration tests covering the session state store, API security, input validation, permission tracking, and CSV export.
+Requirements: Node.js 18 or newer and npm 9 or newer.
 
 ```bash
-# Run server test suites
-npm test
-
-# Run build checks across entire monorepo
-npm run build
+npm install
+npm run dev
 ```
 
----
+The client runs on `http://localhost:5173` and the API runs on `http://localhost:3001`.
+Copy `.env.example` to `.env` when changing the default port or client origin.
 
-## 📚 Documentation Directory
+## Validation
 
-Detailed project documentation is available in the [`docs/`](./docs) folder:
-- [Architecture Guide](./docs/ARCHITECTURE.md) — System design, data flow diagrams, and state management.
-- [Security Model & Safeguards](./docs/SECURITY.md) — Ethical boundaries, permissions handling, and mitigation of abuse.
-- [Testing Guide](./docs/TESTING.md) — Test suites, edge cases, and automated test coverage.
-- [Deployment Guide](./docs/DEPLOYMENT.md) — Production build, reverse proxy (Nginx/Caddy), HTTPS setup, and Docker recommendations.
-- [Development Log](./docs/DEVELOPMENT_LOG.md) — Append-only chronological changelog of implementations.
+```bash
+npm run build
+npm test
+npm run lint
+```
 
-## 🖼️ Screenshots / Walkthrough
+## Responsible use
 
-This section is reserved for screenshots and a short walkthrough GIF. Add media here without including real participant data.
-
----
-
-## 📄 License
-ReconLab is Educational Use Only. See the [LICENSE](./LICENSE) for the full restriction.
-
-### Threat-model highlights
-
-- Admin APIs are protected in production and authentication attempts are rate-limited.
-- Participant permissions are explicit and browser-controlled; ReconLab does not bypass prompts.
-- Tokens and visitor data are temporary, and media is deleted at expiry or termination.
-- CSV exports neutralize formula-like cells so untrusted browser strings cannot become spreadsheet formulas.
+Scan domains you own or are authorized to assess. The data sources are public and the checks are
+deliberately limited to passive lookups and ordinary web responses.

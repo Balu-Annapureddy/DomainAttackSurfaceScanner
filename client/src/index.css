@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── ReconLab Dark Theme ─────────────────────────────────────── */
+/* Domain Attack Surface Scanner theme */
 @theme {
   --color-bg-primary: #080c14;
   --color-bg-secondary: #0d1117;
@@ -578,7 +578,7 @@ body {
 .perm-card.granted { border-color: rgba(16, 185, 129, 0.3); }
 .perm-card.denied  { border-color: rgba(239, 68, 68, 0.2); }
 
-/* ─── Visitor page content wrappers ─────────────────────────────── */
+/* Content wrappers */
 .content-full {
   width: 100%;
   max-width: 100%;
