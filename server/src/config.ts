@@ -28,11 +28,17 @@ function validateConfig() {
     throw new Error('[config] CLIENT_ORIGIN must be a valid absolute URL.');
   }
 
+  const scanRateLimitDefaults = nodeEnv === 'production'
+    ? { max: '10', windowMs: '3600000' }
+    : { max: '100', windowMs: '900000' };
+
   return {
     port: integer('PORT', '3001', 1),
     nodeEnv,
     isDev: nodeEnv === 'development',
     clientOrigin,
+    scanRateLimitMax: integer('SCAN_RATE_LIMIT_MAX', scanRateLimitDefaults.max, 1),
+    scanRateLimitWindowMs: integer('SCAN_RATE_LIMIT_WINDOW_MS', scanRateLimitDefaults.windowMs, 1),
   };
 }
 

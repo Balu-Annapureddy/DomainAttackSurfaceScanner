@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { config } from '../config';
 import { validateDomain } from '../services/domainValidation';
 import { createScanRecord, getScanRecord, markScanFinished, setScanScore, updateCategoryStatus } from '../services/scanStore';
 import { runWhois } from '../services/whois';
@@ -14,8 +15,8 @@ import type { ScanCategory } from '../../../shared/types';
 const router = Router();
 
 router.use(rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
+  windowMs: config.scanRateLimitWindowMs,
+  max: config.scanRateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many scans. Please wait an hour before starting another one.', code: 'SCAN_RATE_LIMIT' },
