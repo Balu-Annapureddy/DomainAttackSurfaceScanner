@@ -1,6 +1,25 @@
 // ─── ReconLab API Client ──────────────────────────────────────────────────────
+import type { DomainScan } from '../../../shared/types/index';
 
 const API_BASE = '/api';
+
+export async function createScan(domain: string): Promise<Pick<DomainScan, 'scanId' | 'domain' | 'status' | 'createdAt'>> {
+  const res = await fetch(`${API_BASE}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ domain }),
+  });
+  const data = await res.json() as { error?: string };
+  if (!res.ok) throw new Error(data.error || 'Unable to start scan');
+  return data as Pick<DomainScan, 'scanId' | 'domain' | 'status' | 'createdAt'>;
+}
+
+export async function getScan(scanId: string): Promise<DomainScan> {
+  const res = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`);
+  const data = await res.json() as DomainScan & { error?: string };
+  if (!res.ok) throw new Error(data.error || 'Unable to load scan');
+  return data;
+}
 
 function adminHeaders(): HeadersInit {
   const credentials = sessionStorage.getItem('reconlab_admin_credentials');

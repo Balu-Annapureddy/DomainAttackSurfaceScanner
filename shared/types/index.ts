@@ -6,6 +6,18 @@ export type MediaType = 'image' | 'pdf' | 'video';
 export type PermissionStatus = 'not_requested' | 'granted' | 'denied' | 'unavailable';
 export type GeoStatus = 'available' | 'localhost' | 'private' | 'unavailable' | 'failed';
 
+export type ScanCategory = 'whois' | 'dns' | 'subdomains' | 'tls' | 'http' | 'exposure' | 'scoring';
+export type ScanStatus = 'running' | 'completed' | 'failed';
+export interface DomainScan {
+  scanId: string;
+  domain: string;
+  createdAt: string;
+  expiresAt: string;
+  status: ScanStatus;
+  categories: Record<ScanCategory, { status: 'pending' | 'running' | 'completed' | 'failed'; data?: unknown; error?: string }>;
+  score?: number;
+}
+
 // ─── Geo Information (IP-based) ───────────────────────────────────────────────
 export interface GeoInfo {
   ip: string;
