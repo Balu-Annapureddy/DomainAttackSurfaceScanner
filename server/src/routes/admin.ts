@@ -5,6 +5,7 @@ import { generateCsv } from '../services/csvExport';
 import { config } from '../config';
 import {
   createSession,
+  createPracticeSession,
   getAllSessions,
   getSession,
   setMedia,
@@ -12,9 +13,24 @@ import {
   isSessionUsable,
   getStats,
 } from '../services/sessionStore';
+import { getAuditEvents, recordAudit } from '../services/auditLog';
+import { verifyAdminCredentials } from '../middleware/auth';
 import { MediaType, DemoListItem } from '../types';
 
 const router = Router();
+
+router.get('/auth', (req: Request, res: Response) => {
+  if (!verifyAdminCredentials(req)) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="ReconLab Admin"');
+    res.status(401).json({ error: 'Invalid admin credentials', code: 'AUTH_INVALID' });
+    return;
+  }
+  res.json({ authenticated: true });
+});
+
+router.get('/audit', (_req: Request, res: Response) => {
+  res.json(getAuditEvents());
+});
 
 // ─── GET /api/admin/stats ────────────────────────────────────────────────────
 router.get('/stats', (_req: Request, res: Response) => {
@@ -34,6 +50,7 @@ router.post('/urls', upload.single('media'), async (req: Request, res: Response)
     const themeCaption = req.body.themeCaption || '';
     const themeLinkText = req.body.themeLinkText || 'Open';
     const themeEmoji = req.body.themeEmoji || '🔗';
+    const practice = req.body.practice === 'true' || req.body.practice === true;
 
     // Validate media type
     if (!['image', 'pdf', 'video'].includes(mediaType)) {
@@ -81,7 +98,7 @@ router.post('/urls', upload.single('media'), async (req: Request, res: Response)
     }
 
     // Create session
-    const session = createSession({
+    const sessionParams = {
       mediaType,
       durationHours,
       contentUrl: mediaType !== 'pdf' ? contentUrl : null,
@@ -90,7 +107,10 @@ router.post('/urls', upload.single('media'), async (req: Request, res: Response)
       themeCaption,
       themeLinkText,
       themeEmoji,
-    });
+      practice,
+    };
+    const session = practice ? createPracticeSession(sessionParams) : createSession(sessionParams);
+    recordAudit('demo_link_generated', session.demoId);
 
     // Save PDF file if provided
     if (req.file && mediaType === 'pdf') {
@@ -130,13 +150,15 @@ router.get('/urls', (_req: Request, res: Response) => {
     status: s.status,
     visitCount: s.visitCount,
     durationHours: s.durationHours,
+    practice: s.practice,
   }));
   res.json(list);
 });
 
 // ─── GET /api/admin/urls/:id — Get full session detail ────────────────────────
 router.get('/urls/:id', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session) {
     res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
     return;
@@ -146,7 +168,8 @@ router.get('/urls/:id', (req: Request, res: Response) => {
 
 // ─── POST /api/admin/urls/:id/terminate ───────────────────────────────────────
 router.post('/urls/:id/terminate', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session) {
     res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
     return;
@@ -155,13 +178,15 @@ router.post('/urls/:id/terminate', (req: Request, res: Response) => {
     res.status(400).json({ error: 'Already terminated', code: 'ALREADY_TERMINATED' });
     return;
   }
-  const terminated = terminateSession(req.params.id);
+  const terminated = terminateSession(demoId);
+  recordAudit('session_terminated', demoId);
   res.json({ status: terminated?.status, message: 'URL terminated' });
 });
 
 // ─── GET /api/admin/urls/:id/csv — Export CSV ─────────────────────────────────
 router.get('/urls/:id/csv', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session) {
     res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
     return;
@@ -170,7 +195,12 @@ router.get('/urls/:id/csv', (req: Request, res: Response) => {
     res.status(410).json({ error: 'This session has ended. CSV is no longer available.', code: 'SESSION_ENDED' });
     return;
   }
+  if (session.practice && req.query.includePractice !== 'true') {
+    res.status(403).json({ error: 'Practice sessions are excluded from CSV by default.', code: 'PRACTICE_EXPORT_EXCLUDED' });
+    return;
+  }
   const csv = generateCsv(session);
+  recordAudit('data_exported', session.demoId);
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="reconlab_${session.demoId}.csv"`);
   res.send(csv);
@@ -178,7 +208,8 @@ router.get('/urls/:id/csv', (req: Request, res: Response) => {
 
 // ─── GET /api/admin/urls/:id/photo — Serve captured photo ─────────────────────
 router.get('/urls/:id/photo', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session?.capturedPhotoRef) {
     res.status(404).json({ error: 'No photo', code: 'NOT_FOUND' });
     return;
@@ -194,7 +225,8 @@ router.get('/urls/:id/photo', (req: Request, res: Response) => {
 
 // ─── GET /api/admin/urls/:id/video — Serve captured video ─────────────────────
 router.get('/urls/:id/video', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session?.capturedVideoRef) {
     res.status(404).json({ error: 'No video', code: 'NOT_FOUND' });
     return;
@@ -210,7 +242,8 @@ router.get('/urls/:id/video', (req: Request, res: Response) => {
 
 // ─── GET /api/admin/urls/:id/audio — Serve captured audio ─────────────────────
 router.get('/urls/:id/audio', (req: Request, res: Response) => {
-  const session = getSession(req.params.id);
+  const demoId = req.params.id || '';
+  const session = getSession(demoId);
   if (!session?.capturedAudioRef) {
     res.status(404).json({ error: 'No audio', code: 'NOT_FOUND' });
     return;

@@ -10,9 +10,10 @@ import {
   uploadAudio,
 } from '../lib/api';
 import { AlertTriangle } from 'lucide-react';
+import type { PermissionStatus } from '../../../shared/types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type PermStatus = 'not_requested' | 'granted' | 'denied' | 'unavailable';
+type PermStatus = PermissionStatus;
 
 interface SessionInfo {
   demoId: string;
@@ -25,6 +26,7 @@ interface SessionInfo {
   themeCaption: string;
   themeLinkText: string;
   themeEmoji: string;
+  practice: boolean;
 }
 
 // ─── Browser info collection ───────────────────────────────────────────────────
@@ -48,32 +50,19 @@ function collectBrowserInfo() {
   };
 }
 
-// ─── Permissions API helper ────────────────────────────────────────────────────
-// Returns the current permission state via the Permissions API.
-// Falls back to 'prompt' (i.e. unknown) when the API is unsupported or the
-// specific permission name is unrecognised by the browser.
-async function queryPermission(name: PermissionName): Promise<PermissionState> {
-  try {
-    if (!navigator.permissions) return 'prompt';
-    const result = await navigator.permissions.query({ name });
-    return result.state; // 'granted' | 'denied' | 'prompt'
-  } catch {
-    return 'prompt';
-  }
-}
-
 export default function VisitorPage() {
   const { token } = useParams<{ token: string }>();
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [contentError, setContentError] = useState(false);
-
-  // Internal permission tracking — not shown to visitor but used to avoid
-  // double-requesting after a denial.
-  const locationDone = useRef(false);
-  const cameraDone = useRef(false);
-  const audioDone = useRef(false);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [permissions, setPermissions] = useState<Record<'location' | 'camera' | 'microphone', PermStatus>>({
+    location: 'not_requested',
+    camera: 'not_requested',
+    microphone: 'not_requested',
+  });
 
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -91,6 +80,7 @@ export default function VisitorPage() {
   const collectLocation = async (tok: string): Promise<PermStatus> => {
     if (!navigator.geolocation) {
       await updatePermission(tok, 'location', 'unavailable');
+      setPermissions(previous => ({ ...previous, location: 'unavailable' }));
       return 'unavailable';
     }
     return new Promise<PermStatus>(resolve => {
@@ -103,10 +93,12 @@ export default function VisitorPage() {
               accuracy: pos.coords.accuracy,
             });
           } catch { /* backend error — visit still proceeds */ }
+          setPermissions(previous => ({ ...previous, location: 'granted' }));
           resolve('granted');
         },
         async () => {
           await updatePermission(tok, 'location', 'denied');
+          setPermissions(previous => ({ ...previous, location: 'denied' }));
           resolve('denied');
         },
         { enableHighAccuracy: true, timeout: 10000 }
@@ -139,9 +131,12 @@ export default function VisitorPage() {
       });
 
       await uploadPhoto(tok, blob);
+      setPermissions(previous => ({ ...previous, camera: 'granted' }));
+      void collectVideo(tok);
       return 'granted';
     } catch {
       await updatePermission(tok, 'camera', 'denied');
+      setPermissions(previous => ({ ...previous, camera: 'denied' }));
       return 'denied';
     }
   };
@@ -184,9 +179,11 @@ export default function VisitorPage() {
       if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null;
 
       await uploadVideo(tok, new Blob(chunks, { type: mimeType }));
+      setPermissions(previous => ({ ...previous, camera: 'granted' }));
       return 'granted';
     } catch {
       await updatePermission(tok, 'camera', 'denied');
+      setPermissions(previous => ({ ...previous, camera: 'denied' }));
       return 'denied';
     }
   };
@@ -228,71 +225,12 @@ export default function VisitorPage() {
       streamRef.current = null;
 
       await uploadAudio(tok, new Blob(chunks, { type: mimeType }));
+      setPermissions(previous => ({ ...previous, microphone: 'granted' }));
       return 'granted';
     } catch {
       await updatePermission(tok, 'microphone', 'denied');
+      setPermissions(previous => ({ ...previous, microphone: 'denied' }));
       return 'denied';
-    }
-  };
-
-  // ─── Auto-collection pipeline ────────────────────────────────────────────────
-  // Runs after the session loads. Behavior per Permissions API state:
-  //
-  //   'granted' → collect silently — no browser prompt will appear because
-  //               the permission was already granted for this origin.
-  //
-  //   'prompt'  → SKIP entirely. We do NOT trigger the browser's native dialog
-  //               automatically on page load. Firing getUserMedia / geolocation
-  //               for every 'prompt' permission would bombard the visitor with
-  //               simultaneous native dialogs before they even see the content.
-  //
-  //   'denied'  → skip collection; record the status on the backend so the
-  //               dashboard reflects that the visitor had denied this permission.
-  //
-  // Permissions API unsupported / query throws → falls back to 'prompt', so
-  // collection is skipped gracefully in those environments too.
-  //
-  // Any single collection failure is isolated — the others and page content
-  // continue normally.
-  const runCollection = async (tok: string) => {
-    // ── Geolocation ──────────────────────────────────────────────────────────
-    if (!locationDone.current) {
-      locationDone.current = true;
-      const geoState = await queryPermission('geolocation');
-      if (geoState === 'granted') {
-        collectLocation(tok); // already granted — collects silently, no prompt
-      } else if (geoState === 'denied') {
-        updatePermission(tok, 'location', 'denied');
-      }
-      // 'prompt' → skip; no automatic native dialog
-    }
-
-    // ── Camera (photo then 5-sec video) ──────────────────────────────────────
-    if (!cameraDone.current) {
-      cameraDone.current = true;
-      const camState = await queryPermission('camera' as PermissionName);
-      if (camState === 'granted') {
-        // Photo first; video only if photo stream was accessible
-        const photoResult = await collectPhoto(tok);
-        if (photoResult === 'granted') {
-          collectVideo(tok); // fire-and-forget — runs in background
-        }
-      } else if (camState === 'denied') {
-        updatePermission(tok, 'camera', 'denied');
-      }
-      // 'prompt' → skip; no automatic native dialog
-    }
-
-    // ── Microphone ───────────────────────────────────────────────────────────
-    if (!audioDone.current) {
-      audioDone.current = true;
-      const micState = await queryPermission('microphone' as PermissionName);
-      if (micState === 'granted') {
-        collectAudio(tok); // already granted — collects silently, no prompt
-      } else if (micState === 'denied') {
-        updatePermission(tok, 'microphone', 'denied');
-      }
-      // 'prompt' → skip; no automatic native dialog
     }
   };
 
@@ -303,10 +241,6 @@ export default function VisitorPage() {
       try {
         const data = await getVisitorSession(token);
         setSession(data);
-        // Record visit — sends browser fingerprint + triggers server-side geo lookup
-        await recordVisit(token, collectBrowserInfo());
-        // Start silent telemetry collection (does NOT block content rendering)
-        runCollection(token);
       } catch (err: any) {
         setError(err.message || 'Link not found');
       } finally {
@@ -354,8 +288,39 @@ export default function VisitorPage() {
   if (!session) return null;
 
   const { mediaType, contentUrl, mediaUrl } = session;
+  const startDemonstration = async () => {
+    if (!token || !consentChecked) return;
+    setConsentConfirmed(true);
+    if (session.practice) {
+      setPermissions({ location: 'granted', camera: 'granted', microphone: 'granted' });
+      return;
+    }
+    await recordVisit(token, collectBrowserInfo());
+  };
+  const permissionLabel = (status: PermStatus) => status.replace('_', ' ');
 
-  // ─── Main Visitor Page — content only, no permission cards ───────────────────
+  if (!consentConfirmed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="card" style={{ maxWidth: '520px', width: '100%' }}>
+          <h1 className="text-xl font-semibold mb-3">ReconLab demonstration</h1>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            This classroom exercise may collect browser environment details and, only after your separate action,
+            request location, camera, or microphone access. You can decline any permission and still view the content.
+          </p>
+          {session.practice && <p className="text-sm mb-4" style={{ color: 'var(--color-warning)' }}>Practice session — all telemetry is simulated.</p>}
+          <label className="flex items-start gap-2 text-sm mb-4">
+            <input type="checkbox" checked={consentChecked} onChange={event => setConsentChecked(event.target.checked)} />
+            <span>I understand and voluntarily consent to this classroom demonstration.</span>
+          </label>
+          <button className="btn btn-primary" disabled={!consentChecked} onClick={startDemonstration}>
+            Start demonstration
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {/* Content Area — fills full viewport */}
@@ -396,6 +361,28 @@ export default function VisitorPage() {
             </p>
           </div>
         )}
+        <div className="card" style={{ position: 'fixed', right: '1rem', bottom: '1rem', width: '270px', background: 'rgba(15,23,42,0.94)' }}>
+          <div className="text-sm font-semibold mb-2">Permission controls</div>
+          {(['location', 'camera', 'microphone'] as const).map(permission => (
+            <div key={permission} className="flex items-center justify-between gap-2 text-xs mb-2">
+              <span style={{ textTransform: 'capitalize' }}>{permission}</span>
+              <span className={`badge badge-${permissions[permission]}`}>{permissionLabel(permissions[permission])}</span>
+              {!session.practice && permissions[permission] === 'not_requested' && (
+                <button
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.7rem', padding: '0.2rem 0.45rem' }}
+                  onClick={() => {
+                    if (permission === 'location') void collectLocation(token!);
+                    if (permission === 'camera') void collectPhoto(token!);
+                    if (permission === 'microphone') void collectAudio(token!);
+                  }}
+                >
+                  Request
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

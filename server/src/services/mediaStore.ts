@@ -55,7 +55,7 @@ class LocalStorage implements StorageProvider {
       if (!path.resolve(filePath).startsWith(this.dir)) return;
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     } catch (err) {
-      console.error(`[storage] Remove failed id=${id}:`, err);
+      console.error('[storage] Remove failed:', err instanceof Error ? err.message : 'unknown error');
     }
   }
 }

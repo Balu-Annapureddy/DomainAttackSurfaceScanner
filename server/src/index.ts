@@ -43,7 +43,7 @@ if (!config.isDev) {
 }
 
 // ─── Error handler ────────────────────────────────────────────────────────────
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     res.status(413).json({ error: `File too large (max ${config.maxFileSizeMb}MB)`, code: 'FILE_TOO_LARGE' });
     return;
@@ -52,7 +52,9 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     res.status(400).json({ error: err.message, code: 'UNSUPPORTED_FILE' });
     return;
   }
-  console.error('[server] Unhandled error:', err);
+  const safePath = req.path.replace(/\/(r|urls)\/[A-Za-z0-9_-]{10,}/g, '/$1/[redacted]');
+  const safeMessage = err instanceof Error ? err.message.replace(/[A-Za-z0-9_-]{10,}/g, '[redacted]') : 'unknown error';
+  console.error(`[server] Unhandled error ${req.method} ${safePath}:`, safeMessage);
   res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
 });
 

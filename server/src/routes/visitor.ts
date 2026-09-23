@@ -27,7 +27,7 @@ const captureUpload = multer({
 
 // ─── Helper: validate token and get usable session ────────────────────────────
 function getUsableSession(req: Request, res: Response) {
-  const token = req.params.token;
+  const token = req.params.token || '';
   const session = getSession(token);
 
   if (!session) {
@@ -66,6 +66,7 @@ router.get('/:token', (req: Request, res: Response) => {
     themeCaption: session.themeCaption,
     themeLinkText: session.themeLinkText,
     themeEmoji: session.themeEmoji,
+    practice: session.practice,
   });
 });
 

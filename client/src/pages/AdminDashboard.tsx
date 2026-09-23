@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import {
   getStats, createUrl, listUrls, getUrlDetail, terminateUrl,
-  exportCsv, getCapturedPhotoUrl, getCapturedVideoUrl, getCapturedAudioUrl,
+  exportCsv, getAuditEvents, setAdminCredentials, clearAdminCredentials,
+  getCapturedPhotoUrl, getCapturedVideoUrl, getCapturedAudioUrl,
 } from '../lib/api';
 
 // ─── Theme Definitions ────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ interface UrlItem {
   status: string;
   visitCount: number;
   durationHours: number;
+  practice: boolean;
 }
 
 interface Stats {
@@ -113,6 +115,9 @@ export default function Dashboard() {
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [error, setError] = useState('');
+  const [authRequired, setAuthRequired] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [auditEvents, setAuditEvents] = useState<Array<{ id: string; action: string; demoRef: string | null; timestamp: string }>>([]);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -121,22 +126,44 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     try {
-      const [urlData, statsData] = await Promise.all([listUrls(), getStats()]);
+      const [urlData, statsData, auditData] = await Promise.all([listUrls(), getStats(), getAuditEvents()]);
       setUrls(urlData);
       setStats(statsData);
+      setAuditEvents(auditData);
       setError('');
-    } catch {
-      setError('Failed to load data');
+    } catch (loadError) {
+      if (loadError instanceof Error && loadError.message.includes('authentication')) {
+        setAuthRequired(true);
+      } else {
+        setError('Failed to load data');
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleLogin = async (username: string, password: string) => {
+    setAdminCredentials(username, password);
+    try {
+      await getStats();
+      setAuthRequired(false);
+      setLoginError('');
+      await loadData();
+    } catch {
+      clearAdminCredentials();
+      setLoginError('Invalid admin credentials');
+    }
+  };
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  if (authRequired) {
+    return <AdminLogin error={loginError} onLogin={handleLogin} />;
+  }
 
   const handleTerminate = async (id: string) => {
     if (!confirm('Terminate this URL? All collected information will be deleted.')) return;
@@ -148,6 +175,7 @@ export default function Dashboard() {
     } catch {
       showToast('Failed to terminate', 'error');
     }
+
   };
 
   const handleExportCsv = async (id: string) => {
@@ -266,6 +294,7 @@ export default function Dashboard() {
               <StatCard label="Visits"      value={stats.visits}     icon={<Activity size={18} />} color="cyan" />
               <StatCard label="Expiring Soon" value={stats.expiringSoon} icon={<Clock size={18} />} color="amber" />
             </div>
+            <AuditPanel events={auditEvents} />
 
             {/* URL Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -312,6 +341,7 @@ export default function Dashboard() {
                             </td>
                             <td className="text-sm">
                               <span>{item.themeEmoji} {item.themeLabel}</span>
+                              {item.practice && <span className="badge badge-warning ml-2">practice</span>}
                             </td>
                             <td className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                               {formatDate(item.createdAt)}
@@ -403,6 +433,23 @@ export default function Dashboard() {
   );
 }
 
+function AdminLogin({ error, onLogin }: { error: string; onLogin: (username: string, password: string) => Promise<void> }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--color-bg-primary)' }}>
+      <form className="card space-y-4" style={{ maxWidth: '380px', width: '100%' }} onSubmit={event => { event.preventDefault(); void onLogin(username, password); }}>
+        <h1 className="text-xl font-semibold">ReconLab Admin</h1>
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Production admin access requires Basic Auth credentials.</p>
+        {error && <p className="text-sm" style={{ color: 'var(--color-danger)' }}>{error}</p>}
+        <input className="input-field" aria-label="Username" value={username} onChange={event => setUsername(event.target.value)} placeholder="Username" />
+        <input className="input-field" aria-label="Password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password" />
+        <button className="btn btn-primary" type="submit">Sign in</button>
+      </form>
+    </div>
+  );
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
   const colorMap: Record<string, { text: string; bg: string }> = {
@@ -411,7 +458,7 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
     cyan:  { text: 'var(--color-info)',     bg: 'rgba(6, 182, 212, 0.1)'  },
     amber: { text: 'var(--color-warning)',  bg: 'rgba(245, 158, 11, 0.1)' },
   };
-  const c = colorMap[color];
+  const c = colorMap[color] ?? { text: 'var(--color-accent)', bg: 'rgba(59, 130, 246, 0.1)' };
   return (
     <div className={`stat-card stat-card-${color}`}>
       <div className="flex items-center justify-between mb-3">
@@ -421,6 +468,24 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
         </div>
       </div>
       <div className="stat-value" style={{ color: c.text }}>{value}</div>
+    </div>
+  );
+}
+
+function AuditPanel({ events }: { events: Array<{ id: string; action: string; demoRef: string | null; timestamp: string }> }) {
+  return (
+    <div className="card">
+      <div className="info-section-title"><Activity size={13} /> Admin audit log</div>
+      {events.length === 0 ? <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>No admin actions yet.</div> : (
+        <div className="space-y-1">
+          {events.slice(0, 10).map(event => (
+            <div key={event.id} className="flex justify-between gap-3 text-xs">
+              <span>{event.action.replaceAll('_', ' ')}{event.demoRef ? ` (ref ${event.demoRef})` : ''}</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>{formatDate(event.timestamp)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -442,6 +507,7 @@ function WizardModal({ onClose, onCreated, showToast }: {
   const [customLinkText, setCustomLinkText] = useState('Open');
   const [themeCategory, setThemeCategory] = useState('Festival');
   const [duration, setDuration] = useState(24);
+  const [practice, setPractice] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdResult, setCreatedResult] = useState<any>(null);
   const [copyState, setCopyState] = useState<'url' | 'msg' | null>(null);
@@ -452,6 +518,7 @@ function WizardModal({ onClose, onCreated, showToast }: {
       const formData = new FormData();
       formData.append('mediaType', mediaType);
       formData.append('durationHours', String(duration));
+      formData.append('practice', String(practice));
       if (mediaType !== 'pdf') {
         formData.append('contentUrl', contentUrl);
       } else if (pdfFile) {
@@ -621,6 +688,11 @@ function WizardModal({ onClose, onCreated, showToast }: {
                   )}
                 </div>
               )}
+
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" checked={practice} onChange={event => setPractice(event.target.checked)} />
+                <span>Practice / rehearsal mode — simulate participant telemetry</span>
+              </label>
 
               {/* Duration */}
               <div>
@@ -877,6 +949,7 @@ function DetailModal({ session, onClose, onTerminate, onExportCsv, onCopyUrl, on
               <InfoRow label="URL ID" value={<span className="info-value-mono">{session.demoId}</span>} />
               <InfoRow label="Status" value={<span className={`badge badge-${session.status}`}>{session.status}</span>} />
               <InfoRow label="Theme" value={`${session.themeEmoji || ''} ${session.themeLabel || '—'}`} />
+              {session.practice && <InfoRow label="Mode" value={<span className="badge badge-warning">practice / simulated</span>} />}
               <InfoRow label="Content" value={<span style={{ textTransform: 'capitalize' }}>{session.mediaType}</span>} />
               <InfoRow label="Visits" value={<strong>{session.visitCount}</strong>} />
               <InfoRow label="First Visit" value={session.visitedAt ? formatDate(session.visitedAt) : 'Not yet'} />

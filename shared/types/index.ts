@@ -162,6 +162,7 @@ export interface DemoSession {
   timeline: TimelineEvent[];
   lastActivityAt: string | null;
   durationHours: number;
+  practice: boolean;
 }
 
 // ─── Structured Detail View for API ───────────────────────────────────────────
@@ -263,6 +264,7 @@ export interface CreateUrlRequest {
   themeCaption: string;
   themeLinkText: string;
   themeEmoji: string;
+  practice?: boolean;
 }
 
 export interface CreateUrlResponse {
@@ -287,6 +289,7 @@ export interface DemoListItem {
   status: DemoStatus;
   visitCount: number;
   durationHours: number;
+  practice: boolean;
 }
 
 export interface VisitorPageInfo {
@@ -300,6 +303,7 @@ export interface VisitorPageInfo {
   themeCaption: string;
   themeLinkText: string;
   themeEmoji: string;
+  practice: boolean;
 }
 
 export interface LocationRequest {

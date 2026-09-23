@@ -15,6 +15,10 @@ cd ../client && npm install
 # Run server tests
 cd server
 npm test
+
+# Run frontend consent/permission tests
+cd ../client
+npm test
 ```
 
 ### Test Suites
@@ -97,6 +101,8 @@ Permission states tested through the API:
 - `granted` → after successful permission + data submission
 - `denied` → after permission denial + status update
 - `unavailable` → when API not available (e.g., no geolocation)
+
+Frontend tests cover the consent gate and explicit permission controls using mocked browser APIs.
 
 ### Expiration Testing
 

@@ -5,6 +5,7 @@
 ReconLab is a two-sided cybersecurity classroom demonstration application:
 - **Admin side** — create demos, monitor sessions, export data, terminate
 - **Participant side** — view media, consent, grant/deny browser permissions
+- **Practice side** — admin-created rehearsal sessions use clearly labeled simulated telemetry and never invoke participant browser APIs
 
 ## Stack
 
@@ -46,6 +47,7 @@ ReconLab/
 6. Participant grants permissions → individual `POST` endpoints for location/photo/video/audio
 7. Admin dashboard polls `GET /api/admin/demos` every 5 seconds
 8. Admin views detail via `GET /api/admin/demos/:id`
+9. Admin reads the temporary audit list via `GET /api/admin/audit`
 
 ## Session Lifecycle
 
@@ -67,6 +69,7 @@ Active → Visited → Expired (automatic)
 | GET | /api/admin/demos/:id | Admin | Get detail |
 | POST | /api/admin/demos/:id/terminate | Admin | Terminate |
 | GET | /api/admin/demos/:id/csv | Admin | Export CSV |
+| GET | /api/admin/audit | Admin | Read temporary admin audit events |
 | GET | /api/d/:token | Public | Get demo info |
 | GET | /api/d/:token/media | Public | Serve media |
 | POST | /api/d/:token/start | Public | Start demo |
@@ -86,3 +89,7 @@ Active → Visited → Expired (automatic)
 - `remove(id)` → deletes file
 
 Current implementation: `LocalStorage` (filesystem). Can be replaced with S3/GCS for production.
+
+## Known limits
+
+The session store and audit log are in-memory. They are cleared by a server restart or crash and do not scale across multiple server instances. This is intentional for the educational retention model.

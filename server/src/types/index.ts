@@ -2,7 +2,9 @@
 
 export type DemoStatus = 'active' | 'visited' | 'expired' | 'terminated';
 export type MediaType = 'image' | 'pdf' | 'video';
-export type PermissionStatus = 'not_requested' | 'granted' | 'denied' | 'unavailable';
+import type { PermissionStatus } from '../../../shared/types';
+
+export type { PermissionStatus };
 export type GeoStatus = 'available' | 'localhost' | 'private' | 'unavailable' | 'failed';
 
 // ─── Geo Information (IP-based) ───────────────────────────────────────────────
@@ -171,6 +173,7 @@ export interface DemoSession {
   // Meta
   lastActivityAt: string | null;
   durationHours: number;
+  practice: boolean;
 }
 
 // ─── Structured Detail View for API ───────────────────────────────────────────
@@ -192,6 +195,7 @@ export interface StructuredSessionDetail {
     visitedAt: string | null;
     lastVisitAt: string | null;
     durationHours: number;
+    practice: boolean;
   };
   location: {
     ip: GeoInfo | null;
@@ -296,6 +300,7 @@ export interface DemoListItem {
   status: DemoStatus;
   visitCount: number;
   durationHours: number;
+  practice: boolean;
 }
 
 export interface VisitorPageInfo {

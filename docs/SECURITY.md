@@ -44,6 +44,8 @@ ReconLab is an **educational** cybersecurity classroom tool. It demonstrates how
 ### Authentication
 - HTTP Basic Auth for admin routes
 - Credentials from environment variables (never hardcoded)
+- Production startup refuses missing or known-placeholder admin passwords.
+- Authentication attempts use a dedicated stricter rate limit and constant-time credential comparison.
 - Production should use a stronger auth mechanism (OAuth, SSO)
 
 ### Session Tokens
@@ -68,20 +70,24 @@ ReconLab is an **educational** cybersecurity classroom tool. It demonstrates how
 ### Rate Limiting
 - General API: 100 requests/minute
 - Demo participant endpoints: 30 requests/minute
+- Admin authentication attempts: 10 requests/minute per IP
 
 ### Input Validation
 - Media type validated against `image | pdf | video`
 - Duration validated against allowed values
 - Location data type-checked
 - Permission values validated against enum
+- CSV fields beginning with `=`, `+`, `-`, `@`, tab, or carriage return are prefixed before export to prevent spreadsheet formula injection.
 
 ## Temporary Data Model
 
 - Sessions stored in-memory (Node.js Map)
+- The in-memory session store does not survive a server restart or crash and cannot safely scale across multiple server instances. This is a documented classroom limitation, not durable storage.
 - No database, no persistent storage of visitor data
 - Cleanup job runs every 60 seconds
 - Expired sessions: data nullified, files deleted
 - Terminated sessions: immediately invalidated and cleaned
+- Practice/rehearsal sessions contain simulated data and are excluded from CSV export unless explicitly requested.
 
 ## Deployment Security
 

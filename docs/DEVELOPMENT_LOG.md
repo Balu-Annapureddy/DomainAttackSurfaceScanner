@@ -56,3 +56,11 @@
 - Monorepo production builds (`npm run build`) verified clean for Vite frontend and Express backend.
 - Full comprehensive `README.md` and complete documentation suite in `docs/`.
 
+## 2026-09-23 — Security, Rehearsal, and CI Hardening
+
+- Replaced the working example password with a production-rejected placeholder and added fail-fast environment validation.
+- Added production Basic Auth verification, constant-time credential comparison, dedicated authentication rate limiting, token-safe error logging, and CSV formula-injection protection.
+- Documented the in-memory single-instance limitation and added temporary admin audit events.
+- Added opt-in practice sessions with simulated telemetry, explicit labeling, and default CSV exclusion.
+- Restored the participant consent gate and explicit permission controls.
+- Enabled strict TypeScript indexed-access checks, added frontend Vitest/Testing Library coverage, and added GitHub Actions build/test CI.

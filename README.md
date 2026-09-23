@@ -13,6 +13,7 @@ ReconLab is strictly designed for **voluntary, informed, classroom demonstration
 - **Explicit Consent**: Participants are greeted with a clear consent screen explaining what will happen and why.
 - **Voluntary Testing**: Participants individually trigger permission requests (GPS, Camera, Microphone) and countdown captures.
 - **Safe & Non-Persistent**: All sessions are stored in-memory with automatic TTL expiration (default 30 minutes). No permanent tracking, cookies, or cross-site tracking.
+- **Known deployment limit**: the in-memory session store is cleared by a server restart or crash and is not suitable for multiple server instances. This is intentional for classroom use.
 - **Manual Termination**: Administrators can terminate any active demonstration session instantly from the dashboard.
 
 ---
@@ -92,10 +93,9 @@ ReconLab/
    ```bash
    cp .env.example .env
    ```
-   Default credentials:
+   Configure a unique `ADMIN_PASSWORD`; production refuses the documented placeholder.
    - Port: `3001` (Backend) / `5173` (Vite Frontend)
-   - Admin Username: `admin`
-   - Admin Password: `changeme123`
+   - Admin Username: `admin` by default
 
 4. **Run in Development Mode**:
    ```bash
@@ -130,7 +130,18 @@ Detailed project documentation is available in the [`docs/`](./docs) folder:
 - [Deployment Guide](./docs/DEPLOYMENT.md) — Production build, reverse proxy (Nginx/Caddy), HTTPS setup, and Docker recommendations.
 - [Development Log](./docs/DEVELOPMENT_LOG.md) — Append-only chronological changelog of implementations.
 
+## 🖼️ Screenshots / Walkthrough
+
+This section is reserved for screenshots and a short walkthrough GIF. Add media here without including real participant data.
+
 ---
 
 ## 📄 License
-Educational Use Only — Designed strictly for accredited cybersecurity training and educational presentations.
+ReconLab is Educational Use Only. See the [LICENSE](./LICENSE) for the full restriction.
+
+### Threat-model highlights
+
+- Admin APIs are protected in production and authentication attempts are rate-limited.
+- Participant permissions are explicit and browser-controlled; ReconLab does not bypass prompts.
+- Tokens and visitor data are temporary, and media is deleted at expiry or termination.
+- CSV exports neutralize formula-like cells so untrusted browser strings cannot become spreadsheet formulas.

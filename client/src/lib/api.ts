@@ -2,18 +2,39 @@
 
 const API_BASE = '/api';
 
+function adminHeaders(): HeadersInit {
+  const credentials = sessionStorage.getItem('reconlab_admin_credentials');
+  return credentials ? { Authorization: `Basic ${credentials}` } : {};
+}
+
+export function setAdminCredentials(username: string, password: string): void {
+  sessionStorage.setItem('reconlab_admin_credentials', btoa(`${username}:${password}`));
+}
+
+export function clearAdminCredentials(): void {
+  sessionStorage.removeItem('reconlab_admin_credentials');
+}
+
 // ─── Admin API ────────────────────────────────────────────────────────────────
 
 export async function getStats() {
-  const res = await fetch(`${API_BASE}/admin/stats`);
+  const res = await fetch(`${API_BASE}/admin/stats`, { headers: adminHeaders() });
+  if (res.status === 401) throw new Error('Admin authentication required');
   if (!res.ok) throw new Error('Failed to load stats');
   return res.json() as Promise<{ activeUrls: number; visitors: number; visits: number; expiringSoon: number }>;
+}
+
+export async function getAuditEvents() {
+  const res = await fetch(`${API_BASE}/admin/audit`, { headers: adminHeaders() });
+  if (!res.ok) throw new Error('Failed to load audit log');
+  return res.json() as Promise<Array<{ id: string; action: string; demoRef: string | null; timestamp: string }>>;
 }
 
 export async function createUrl(formData: FormData) {
   const res = await fetch(`${API_BASE}/admin/urls`, {
     method: 'POST',
     body: formData,
+    headers: adminHeaders(),
   });
   if (!res.ok) {
     const data = await res.json();
@@ -23,25 +44,26 @@ export async function createUrl(formData: FormData) {
 }
 
 export async function listUrls() {
-  const res = await fetch(`${API_BASE}/admin/urls`);
+  const res = await fetch(`${API_BASE}/admin/urls`, { headers: adminHeaders() });
   if (!res.ok) throw new Error('Failed to list URLs');
   return res.json();
 }
 
 export async function getUrlDetail(id: string) {
-  const res = await fetch(`${API_BASE}/admin/urls/${id}`);
+  const res = await fetch(`${API_BASE}/admin/urls/${id}`, { headers: adminHeaders() });
   if (!res.ok) throw new Error('Failed to get URL detail');
   return res.json();
 }
 
 export async function terminateUrl(id: string) {
-  const res = await fetch(`${API_BASE}/admin/urls/${id}/terminate`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/admin/urls/${id}/terminate`, { method: 'POST', headers: adminHeaders() });
   if (!res.ok) throw new Error('Failed to terminate URL');
   return res.json();
 }
 
-export async function exportCsv(id: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/admin/urls/${id}/csv`);
+export async function exportCsv(id: string, includePractice = false): Promise<string> {
+  const query = includePractice ? '?includePractice=true' : '';
+  const res = await fetch(`${API_BASE}/admin/urls/${id}/csv${query}`, { headers: adminHeaders() });
   if (!res.ok) throw new Error('CSV export unavailable');
   return res.text();
 }

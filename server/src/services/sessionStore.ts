@@ -47,6 +47,7 @@ export interface CreateSessionParams {
   themeCaption: string;
   themeLinkText: string;
   themeEmoji: string;
+  practice?: boolean;
 }
 
 export function createSession(params: CreateSessionParams): DemoSession {
@@ -86,9 +87,103 @@ export function createSession(params: CreateSessionParams): DemoSession {
     timeline: [],
     lastActivityAt: now(),
     durationHours: params.durationHours,
+    practice: params.practice === true,
   };
   sessions.set(demoId, session);
   return session;
+}
+
+export function createPracticeSession(params: CreateSessionParams): DemoSession {
+  const session = createSession({ ...params, practice: true });
+  const timestamp = now();
+  const updated: DemoSession = {
+    ...session,
+    status: 'visited',
+    visitCount: 1,
+    visitedAt: timestamp,
+    lastVisitAt: timestamp,
+    networkInfo: {
+      ipAddress: 'practice',
+      ipVersion: 'unknown',
+      isLocalhostOrPrivate: true,
+      userAgent: 'ReconLab Practice Mode',
+      browser: 'Practice Browser',
+      browserVersion: '1.0',
+      engine: 'Practice Engine',
+      os: 'Practice OS',
+      osVersion: '1.0',
+      platform: 'Practice',
+      deviceCategory: 'desktop',
+      referrer: null,
+      timestamp,
+      accept: null,
+      acceptLanguage: 'en-US',
+      acceptEncoding: null,
+      origin: null,
+      secFetchSite: null,
+      secFetchMode: null,
+      secFetchDest: null,
+      uaClientHint: null,
+      secChUaPlatform: null,
+      secChUaMobile: null,
+    },
+    geoInfo: {
+      ip: 'practice',
+      ipVersion: 'unknown',
+      status: 'unavailable',
+      country: 'Practice',
+      countryCode: null,
+      region: null,
+      city: null,
+      postalCode: null,
+      latitude: 17.385,
+      longitude: 78.4867,
+      timezone: 'Asia/Kolkata',
+      isp: 'Practice Provider',
+      org: 'ReconLab',
+      asn: null,
+      provider: 'ReconLab Practice',
+      lookupTimestamp: timestamp,
+      note: 'Simulated practice data; not a real participant location.',
+    },
+    location: {
+      latitude: 17.385,
+      longitude: 78.4867,
+      accuracy: 100,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+      timestamp,
+    },
+    locationPermission: 'granted',
+    cameraPermission: 'granted',
+    microphonePermission: 'granted',
+    browserInfo: {
+      screenWidth: 1536,
+      screenHeight: 864,
+      availScreenWidth: 1536,
+      availScreenHeight: 816,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+      devicePixelRatio: 1,
+      colorDepth: 24,
+      pixelDepth: 24,
+      language: 'en-US',
+      languages: ['en-US'],
+      timezone: 'Asia/Kolkata',
+      timezoneOffset: -330,
+      cookiesEnabled: true,
+      doNotTrack: null,
+      touchSupport: false,
+      maxTouchPoints: 0,
+      hardwareConcurrency: 8,
+      deviceMemory: 8,
+      online: true,
+    },
+  };
+  sessions.set(session.demoId, updated);
+  return updated;
 }
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
@@ -378,6 +473,7 @@ export function getStructuredSessionDetail(session: DemoSession): StructuredSess
       visitedAt: session.visitedAt,
       lastVisitAt: session.lastVisitAt,
       durationHours: session.durationHours,
+      practice: session.practice,
     },
     location: {
       ip: g,
@@ -483,7 +579,7 @@ function cleanupSessionFiles(session: DemoSession): void {
       if (!resolved.startsWith(base)) continue;
       if (fs.existsSync(resolved)) fs.unlinkSync(resolved);
     } catch (err) {
-      console.error(`[cleanup] Failed to delete file ref=${ref}:`, err);
+      console.error('[cleanup] Failed to delete a session file:', err instanceof Error ? err.message : 'unknown error');
     }
   }
 }

@@ -8,6 +8,8 @@ import adminRouter from '../routes/admin';
 import visitorRouter from '../routes/visitor';
 import path from 'path';
 import fs from 'fs';
+import { generateCsv } from '../services/csvExport';
+import { clearAuditEvents } from '../services/auditLog';
 
 const defaultParams = {
   mediaType: 'image' as const,
@@ -26,6 +28,7 @@ app.use('/api/r', visitorRouter);
 
 beforeEach(() => {
   clearAllSessions();
+  clearAuditEvents();
 });
 
 describe('Admin API', () => {
@@ -71,6 +74,34 @@ describe('Admin API', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('NO_CONTENT_URL');
+  });
+
+  test('POST /api/admin/urls — practice mode is simulated and excluded from CSV', async () => {
+    const res = await request(app)
+      .post('/api/admin/urls')
+      .field('mediaType', 'image')
+      .field('durationHours', '1')
+      .field('contentUrl', 'https://example.com/image.jpg')
+      .field('practice', 'true')
+      .field('theme', 'test')
+      .field('themeLabel', 'Test')
+      .field('themeCaption', 'Test caption')
+      .field('themeLinkText', 'Open')
+      .field('themeEmoji', '🧪');
+
+    expect(res.status).toBe(201);
+    const detail = await request(app).get(`/api/admin/urls/${res.body.demoId}`);
+    expect(detail.body.practice).toBe(true);
+    expect(detail.body.locationPermission).toBe('granted');
+
+    const csv = await request(app).get(`/api/admin/urls/${res.body.demoId}/csv`);
+    expect(csv.status).toBe(403);
+    expect(csv.body.code).toBe('PRACTICE_EXPORT_EXCLUDED');
+
+    const audit = await request(app).get('/api/admin/audit');
+    expect(audit.body[0].action).toBe('demo_link_generated');
+    expect(audit.body[0].demoId).toBeUndefined();
+    expect(audit.body[0].demoRef).toBeDefined();
   });
 
   test('POST /api/admin/urls/:id/terminate', async () => {
@@ -135,6 +166,35 @@ describe('Visitor API', () => {
     expect(res.status).toBe(200);
     const s = getSession(session.demoId)!;
     expect(s.cameraPermission).toBe('denied');
+  });
+
+  test('CSV prefixes formula-like untrusted values', () => {
+    const session = createSession(defaultParams);
+    session.networkInfo = {
+      ipAddress: '127.0.0.1',
+      userAgent: '=cmd|"/C calc"!A0',
+      browser: '+Browser',
+      browserVersion: '1',
+      os: 'Windows',
+      osVersion: '1',
+      platform: '=@platform',
+      deviceCategory: 'desktop',
+      referrer: '-https://example.test',
+      timestamp: new Date().toISOString(),
+      accept: null,
+      acceptLanguage: '\tunsafe',
+      acceptEncoding: null,
+      origin: null,
+      secFetchSite: null,
+      secFetchMode: null,
+      secFetchDest: null,
+      uaClientHint: null,
+    };
+    const csv = generateCsv(session);
+    expect(csv).toContain("'=cmd|");
+    expect(csv).toContain("'+Browser");
+    expect(csv).toContain("'-https://example.test");
+    expect(csv).toContain("'\tunsafe");
   });
 });
 

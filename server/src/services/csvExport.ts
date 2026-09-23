@@ -5,7 +5,8 @@ import { DemoSession } from '../types';
 
 function escapeField(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
+  const raw = String(value);
+  const str = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }

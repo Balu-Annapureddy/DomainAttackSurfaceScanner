@@ -21,7 +21,7 @@ export function parseRequest(req: Request): NetworkInfo {
   let rawIp: string;
   if (typeof forwarded === 'string' && forwarded.trim().length > 0) {
     // In proxy setups, take the first valid IP from the chain
-    rawIp = forwarded.split(',')[0].trim();
+    rawIp = (forwarded.split(',')[0] || 'unknown').trim();
   } else {
     rawIp = req.socket.remoteAddress || req.ip || 'unknown';
   }

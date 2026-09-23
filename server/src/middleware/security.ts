@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config';
 import { Express } from 'express';
+import { adminAuth } from './auth';
 
 export function applySecurity(app: Express): void {
   // Secure headers
@@ -33,6 +34,18 @@ export function applySecurity(app: Express): void {
     legacyHeaders: false,
     message: { error: 'Too many requests', code: 'RATE_LIMIT' },
   }));
+
+  // Authentication attempts get their own stricter limiter.
+  app.use('/api/admin/auth', rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts', code: 'AUTH_RATE_LIMIT' },
+  }));
+
+  // Admin APIs are protected in production; development remains intentionally direct for classroom setup.
+  app.use('/api/admin', adminAuth);
 
   // Remove X-Powered-By
   app.disable('x-powered-by');
