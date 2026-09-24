@@ -63,3 +63,42 @@ export interface DomainScan {
   findings: Finding[];
   warnings: string[];
 }
+
+export interface CertificateDiff {
+  changed: boolean;
+  baselineFingerprint?: string;
+  currentFingerprint?: string;
+  baselineIssuer?: string;
+  currentIssuer?: string;
+  baselineValidTo?: string;
+  currentValidTo?: string;
+}
+
+export interface DnsDiff {
+  changed: boolean;
+  baselineSpf?: string;
+  currentSpf?: string;
+  baselineDmarc?: string;
+  currentDmarc?: string;
+  addedNameservers: string[];
+  removedNameservers: string[];
+}
+
+export interface ScanComparison {
+  domain: string;
+  baselineScanId: string;
+  currentScanId: string;
+  baselineCreatedAt: string;
+  currentCreatedAt: string;
+  baselineScore: number | null;
+  currentScore: number | null;
+  scoreDelta: number;
+  addedAssets: Asset[];
+  removedAssets: Asset[];
+  persistedAssetsCount: number;
+  newFindings: Finding[];
+  resolvedFindings: Finding[];
+  persistingFindingsCount: number;
+  certificateDiff: CertificateDiff;
+  dnsDiff: DnsDiff;
+}

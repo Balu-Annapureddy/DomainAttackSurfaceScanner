@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Shield, AlertTriangle, Layers, GitFork, Lock, Globe, ExternalLink, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, AlertTriangle, Layers, GitFork, Lock, Globe, ExternalLink, Calendar, CheckCircle, XCircle, Download } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
+import { exportScanJson, exportAssetsCsv } from '../lib/export';
 
 interface ScanOverviewCardProps {
   scan: DomainScan;
@@ -117,6 +118,28 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
                   {safeFinalUrl}
                 </a>
               )}
+            </div>
+
+            {/* Export Actions */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => exportScanJson(scan)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-cyan-500/50 hover:bg-slate-800 hover:text-cyan-300"
+                title="Download full normalized scan in JSON format"
+              >
+                <Download size={12} />
+                Export JSON
+              </button>
+              <button
+                type="button"
+                onClick={() => exportAssetsCsv(scan)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-cyan-500/50 hover:bg-slate-800 hover:text-cyan-300"
+                title="Download inventory of assets in CSV spreadsheet format"
+              >
+                <Download size={12} />
+                Export Assets CSV
+              </button>
             </div>
           </div>
 

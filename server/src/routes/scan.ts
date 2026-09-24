@@ -20,6 +20,7 @@ import { computeExposureScore } from '../services/scoring';
 import { runIpIntelligence, type IpIntelligence } from '../services/ipIntelligence';
 import { buildNormalizedAssets } from '../services/normalization';
 import { buildFindings } from '../services/findings';
+import { compareScans } from '../services/diff';
 import { ScanRequestBudget } from '../services/scanBudget';
 import { logError, logEvent } from '../utils/logger';
 import type { ScanCategory } from '../../../shared/types';
@@ -180,6 +181,31 @@ router.post('/', (req, res) => {
     res.status(400).json({
       error: error instanceof Error ? error.message : 'Invalid domain',
       code: 'INVALID_DOMAIN',
+    });
+  }
+});
+
+router.get('/compare/:baselineId/:targetId', (req, res) => {
+  const { baselineId, targetId } = req.params;
+  const baseline = getScanRecord(baselineId);
+  const target = getScanRecord(targetId);
+
+  if (!baseline) {
+    res.status(404).json({ error: `Baseline scan ${baselineId} not found or expired`, code: 'BASELINE_NOT_FOUND' });
+    return;
+  }
+  if (!target) {
+    res.status(404).json({ error: `Target scan ${targetId} not found or expired`, code: 'TARGET_NOT_FOUND' });
+    return;
+  }
+
+  try {
+    const comparison = compareScans(baseline, target);
+    res.json(comparison);
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Comparison failed',
+      code: 'COMPARISON_FAILED',
     });
   }
 });

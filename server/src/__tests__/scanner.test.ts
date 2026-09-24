@@ -7,6 +7,7 @@ import { buildNormalizedAssets } from '../services/normalization';
 import { computeExposureScore } from '../services/scoring';
 import { ScanRequestBudget } from '../services/scanBudget';
 import { buildFindings } from '../services/findings';
+import { compareScans } from '../services/diff';
 import type { DomainScan } from '../../../shared/types';
 
 const app = express();
@@ -243,5 +244,120 @@ describe('scan route', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('INVALID_DOMAIN');
+  });
+});
+
+describe('scan differencing & change detection', () => {
+  const baseScan: DomainScan = {
+    scanId: 'base-1',
+    domain: 'example.com',
+    createdAt: '2026-09-20T10:00:00Z',
+    expiresAt: '2026-09-21T10:00:00Z',
+    status: 'completed',
+    score: 80,
+    categories: {
+      whois: { status: 'completed' },
+      dns: {
+        status: 'completed',
+        data: {
+          spf: { present: true, policy: 'v=spf1 include:_spf.example.com ~all' },
+          dmarc: { present: true, policy: 'p=none' },
+          ns: ['ns1.example.com', 'ns2.example.com'],
+        },
+      },
+      subdomains: { status: 'completed' },
+      tls: {
+        status: 'completed',
+        data: {
+          fingerprint256: 'AA:11:22:33',
+          validTo: '2026-12-31T00:00:00Z',
+          issuer: 'Let\'s Encrypt',
+        },
+      },
+      http: { status: 'completed' },
+      exposure: { status: 'completed' },
+      scoring: { status: 'completed' },
+    },
+    assets: [
+      { id: '1', type: 'DOMAIN', value: 'example.com', targetDomain: 'example.com', discoveredAt: '2026-09-20T10:00:00Z', evidence: [] },
+      { id: '2', type: 'SUBDOMAIN', value: 'old.example.com', targetDomain: 'example.com', discoveredAt: '2026-09-20T10:00:00Z', evidence: [] },
+      { id: '3', type: 'IP', value: '93.184.216.34', targetDomain: 'example.com', discoveredAt: '2026-09-20T10:00:00Z', evidence: [] },
+    ],
+    relationships: [],
+    findings: [
+      {
+        id: 'f1',
+        title: 'Missing content-security-policy response header',
+        severity: 'low',
+        kind: 'configuration_weakness',
+        category: 'http',
+        description: 'Missing CSP',
+        recommendation: 'Add CSP',
+        evidence: [],
+        confidence: 'high',
+      },
+    ],
+    warnings: [],
+  };
+
+  const currentScan: DomainScan = {
+    ...baseScan,
+    scanId: 'curr-2',
+    createdAt: '2026-09-24T10:00:00Z',
+    score: 95,
+    categories: {
+      ...baseScan.categories,
+      dns: {
+        status: 'completed',
+        data: {
+          spf: { present: true, policy: 'v=spf1 include:_spf.example.com -all' }, // Strengthened SPF
+          dmarc: { present: true, policy: 'p=reject' }, // Strengthened DMARC
+          ns: ['ns1.example.com', 'ns3.example.com'], // ns2 removed, ns3 added
+        },
+      },
+      tls: {
+        status: 'completed',
+        data: {
+          fingerprint256: 'BB:44:55:66', // Rotated cert
+          validTo: '2027-03-31T00:00:00Z',
+          issuer: 'DigiCert',
+        },
+      },
+    },
+    assets: [
+      { id: '1', type: 'DOMAIN', value: 'example.com', targetDomain: 'example.com', discoveredAt: '2026-09-24T10:00:00Z', evidence: [] },
+      { id: '4', type: 'SUBDOMAIN', value: 'api.example.com', targetDomain: 'example.com', discoveredAt: '2026-09-24T10:00:00Z', evidence: [] }, // New
+      { id: '3', type: 'IP', value: '93.184.216.34', targetDomain: 'example.com', discoveredAt: '2026-09-24T10:00:00Z', evidence: [] },
+    ],
+    findings: [], // CSP issue resolved
+  };
+
+  test('detects added and removed assets, score delta, cert rotation, and resolved findings', () => {
+    const diff = compareScans(baseScan, currentScan);
+
+    expect(diff.scoreDelta).toBe(15); // 95 - 80
+    expect(diff.addedAssets.some((a) => a.value === 'api.example.com')).toBe(true);
+    expect(diff.removedAssets.some((a) => a.value === 'old.example.com')).toBe(true);
+    expect(diff.persistedAssetsCount).toBe(2); // example.com + 93.184.216.34
+
+    // Findings delta
+    expect(diff.resolvedFindings.length).toBe(1);
+    expect(diff.resolvedFindings[0]?.title).toContain('content-security-policy');
+    expect(diff.newFindings.length).toBe(0);
+
+    // Certificate rotation
+    expect(diff.certificateDiff.changed).toBe(true);
+    expect(diff.certificateDiff.baselineFingerprint).toBe('AA:11:22:33');
+    expect(diff.certificateDiff.currentFingerprint).toBe('BB:44:55:66');
+
+    // DNS changes
+    expect(diff.dnsDiff.changed).toBe(true);
+    expect(diff.dnsDiff.addedNameservers).toContain('ns3.example.com');
+    expect(diff.dnsDiff.removedNameservers).toContain('ns2.example.com');
+  });
+
+  test('refuses to compare scans for different domains', () => {
+    const mismatched = { ...currentScan, domain: 'another.com' };
+    expect(() => compareScans(baseScan, mismatched)).toThrow(/different domains/);
   });
 });

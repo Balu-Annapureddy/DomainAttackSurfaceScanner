@@ -27,3 +27,21 @@ export async function getScan(scanId: string): Promise<DomainScan> {
 
   return data;
 }
+
+export async function getScanComparison(
+  baselineId: string,
+  targetId: string
+): Promise<import('../../../shared/types').ScanComparison> {
+  const response = await fetch(
+    `${API_BASE}/scan/compare/${encodeURIComponent(baselineId)}/${encodeURIComponent(targetId)}`
+  );
+  const data = (await response.json()) as import('../../../shared/types').ScanComparison & {
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Unable to compare scans');
+  }
+
+  return data;
+}
