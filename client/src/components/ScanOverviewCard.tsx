@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Shield, AlertTriangle, Layers, GitFork, Lock, Globe, ExternalLink, Calendar, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Shield, AlertTriangle, Layers, GitFork, Lock, Globe, ExternalLink, Calendar, CheckCircle, XCircle, Download, FileText } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
-import { exportScanJson, exportAssetsCsv } from '../lib/export';
+import { exportScanJson, exportAssetsCsv, exportFindingsCsv } from '../lib/export';
 
 interface ScanOverviewCardProps {
   scan: DomainScan;
@@ -122,6 +123,14 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
 
             {/* Export Actions */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Link
+                to={`/report/${scan.scanId}`}
+                className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-500/20 hover:text-white"
+                title="Open clean printable intelligence report"
+              >
+                <FileText size={12} />
+                View Report / Dossier
+              </Link>
               <button
                 type="button"
                 onClick={() => exportScanJson(scan)}
@@ -138,7 +147,16 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
                 title="Download inventory of assets in CSV spreadsheet format"
               >
                 <Download size={12} />
-                Export Assets CSV
+                Assets CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => exportFindingsCsv(scan)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:border-cyan-500/50 hover:bg-slate-800 hover:text-cyan-300"
+                title="Download observed findings in CSV format"
+              >
+                <Download size={12} />
+                Findings CSV
               </button>
             </div>
           </div>

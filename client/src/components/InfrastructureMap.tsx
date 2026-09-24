@@ -136,19 +136,28 @@ export default function InfrastructureMap({
         className: 'infrastructure-marker',
       }).addTo(map);
 
+      const escapeHtml = (str?: string) =>
+        (str || '').replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c] || c));
+
+      const safeIp = escapeHtml(point.ip);
+      const safeCity = escapeHtml(point.city);
+      const safeCountry = escapeHtml(point.country ?? 'Unknown Location');
+      const safeAsn = escapeHtml(point.asn);
+      const safeOrg = escapeHtml(point.organization);
+
       const popupContent = `
         <div style="font-family: inherit; color: #0f172a; padding: 4px; min-width: 180px;">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #0284c7; font-weight: 700; margin-bottom: 2px;">
             Target Infrastructure
           </div>
           <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; font-family: monospace;">
-            ${point.ip}
+            ${safeIp}
           </div>
           <div style="font-size: 12px; color: #475569; margin-bottom: 2px;">
-            📍 ${point.city ? `${point.city}, ` : ''}${point.country ?? 'Unknown Location'}
+            📍 ${safeCity ? `${safeCity}, ` : ''}${safeCountry}
           </div>
-          ${point.asn ? `<div style="font-size: 11px; color: #64748b; font-family: monospace;">ASN: ${point.asn}</div>` : ''}
-          ${point.organization ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Org: ${point.organization}</div>` : ''}
+          ${safeAsn ? `<div style="font-size: 11px; color: #64748b; font-family: monospace;">ASN: ${safeAsn}</div>` : ''}
+          ${safeOrg ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Org: ${safeOrg}</div>` : ''}
           <div style="margin-top: 8px; font-size: 10px; color: #94a3b8; font-style: italic;">
             Approximate network location
           </div>

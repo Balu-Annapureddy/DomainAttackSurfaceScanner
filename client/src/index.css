@@ -586,3 +586,35 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* ─── Print & PDF Optimization ─────────────────────────────────── */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+  }
+
+  nav, button, .print\:hidden {
+    display: none !important;
+  }
+
+  article {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #e2e8f0 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  a {
+    color: #0284c7 !important;
+    text-decoration: underline;
+  }
+}

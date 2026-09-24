@@ -10,6 +10,7 @@ import {
   Layers,
   AlertTriangle,
   FileText,
+  ShieldCheck,
 } from 'lucide-react';
 import { getScan } from '../lib/api';
 import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
@@ -21,8 +22,9 @@ import FindingsSection from '../components/FindingsSection';
 import AssetsInventoryTable from '../components/AssetsInventoryTable';
 import CategoryInspectionTabs from '../components/CategoryInspectionTabs';
 import AssetDetailModal from '../components/AssetDetailModal';
+import ExecutiveSummary from '../components/ExecutiveSummary';
 
-type ActiveViewTab = 'surface' | 'inventory' | 'findings' | 'raw';
+type ActiveViewTab = 'surface' | 'summary' | 'inventory' | 'findings' | 'raw';
 
 export default function ScanPage() {
   const { scanId } = useParams();
@@ -46,6 +48,37 @@ export default function ScanPage() {
         setScan(current);
         setLoading(false);
         setError(null);
+
+        // Enrich browser localStorage history with scan metrics
+        try {
+          const stored = JSON.parse(localStorage.getItem('domain_scanner_scans') || '[]') as Array<{
+            scanId: string;
+            domain: string;
+            createdAt: string;
+            status?: string;
+            score?: number | null;
+            assetCount?: number;
+            findingCount?: number;
+            warningsCount?: number;
+          }>;
+          const updated = stored.map((item) => {
+            if (item.scanId === current.scanId) {
+              return {
+                ...item,
+                status: current.status,
+                score: current.score,
+                assetCount: current.assets?.length ?? 0,
+                findingCount: current.findings?.length ?? 0,
+                warningsCount: current.warnings?.length ?? 0,
+              };
+            }
+            return item;
+          });
+          localStorage.setItem('domain_scanner_scans', JSON.stringify(updated));
+        } catch {
+          // Ignore localStorage errors
+        }
+
         if (current.status !== 'running') {
           return; // Stop polling on terminal statuses
         }
@@ -122,6 +155,15 @@ export default function ScanPage() {
 
           <div className="flex items-center gap-3">
             <Link
+              to={`/report/${scan.scanId}`}
+              className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:text-white transition"
+              title="Open full printable intelligence report"
+            >
+              <FileText size={13} />
+              <span>View Report</span>
+            </Link>
+
+            <Link
               to="/history"
               className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition"
             >
@@ -167,6 +209,18 @@ export default function ScanPage() {
           </button>
 
           <button
+            onClick={() => setActiveViewTab('summary')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'summary'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <ShieldCheck size={14} />
+            <span>Executive Summary</span>
+          </button>
+
+          <button
             onClick={() => setActiveViewTab('inventory')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
               activeViewTab === 'inventory'
@@ -202,6 +256,11 @@ export default function ScanPage() {
             <span>Raw Category Data</span>
           </button>
         </div>
+
+        {/* View Tab: Executive Summary */}
+        {activeViewTab === 'summary' && (
+          <ExecutiveSummary scan={scan} />
+        )}
 
         {/* View Tab 1: Attack Surface Visuals (Graph & Map) */}
         {activeViewTab === 'surface' && (
