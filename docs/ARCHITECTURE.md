@@ -19,3 +19,10 @@ The application is a two-package monorepo with shared TypeScript contracts:
 
 Results remain in memory for 24 hours and are intentionally suitable for a single application
 instance. A database-backed store can replace `scanStore.ts` later without changing the API.
+
+## Intelligence model
+
+Results now include persistence-friendly normalized assets, relationships, evidence, and
+findings. Each asset records its type, value, target domain, discovery time, source, observed
+evidence, and confidence. Relationships are only created when a source directly supports them.
+IP geolocation is explicitly labeled approximate infrastructure metadata.

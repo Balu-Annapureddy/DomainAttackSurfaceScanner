@@ -19,6 +19,15 @@ export function validateDomain(input: unknown): string {
     throw new Error('Domain format is invalid.');
   }
 
+  if ([...domain].some((character) => character.charCodeAt(0) > 127)) {
+    try {
+      const ascii = new URL(`https://${domain}`).hostname.replace(/\.$/, '');
+      if (ascii !== domain) return validateDomain(ascii);
+    } catch {
+      throw new Error('Domain format is invalid.');
+    }
+  }
+
   if (net.isIP(domain)) {
     throw new Error('IP addresses are not allowed. Provide a public domain name.');
   }

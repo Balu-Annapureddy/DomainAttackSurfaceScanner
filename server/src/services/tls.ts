@@ -1,12 +1,26 @@
 import tls from 'node:tls';
+import net from 'node:net';
+import { resolvePublicAddresses } from './publicResolution';
 
 export async function runTls(domain: string): Promise<{ available: boolean; reason?: string; subject?: string; issuer?: string; validFrom?: string; validTo?: string; protocol?: string; subjectAltNames?: string[]; signatureAlgorithm?: string; authorized?: boolean; }> {
+  let address: string;
+  try {
+    const addresses = await resolvePublicAddresses(domain);
+    address = addresses[0] ?? '';
+    if (!address) {
+      throw new Error('No public address resolved');
+    }
+  } catch (error) {
+    return { available: false, reason: error instanceof Error ? error.message : 'Target resolution failed' };
+  }
+
   return new Promise((resolve) => {
     const socket = tls.connect({
       host: domain,
       port: 443,
       servername: domain,
       rejectUnauthorized: false,
+      lookup: (_hostname, _options, callback) => callback(null, address, net.isIPv6(address) ? 6 : 4),
     });
 
     const timer = setTimeout(() => {

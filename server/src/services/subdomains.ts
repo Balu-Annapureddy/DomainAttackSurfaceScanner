@@ -1,3 +1,5 @@
+import { config } from '../config';
+
 async function fetchJsonWithTimeout(url: string): Promise<unknown> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -12,7 +14,11 @@ async function fetchJsonWithTimeout(url: string): Promise<unknown> {
       throw new Error(`CT log lookup returned ${response.status}`);
     }
 
-    return await response.json();
+    const body = await response.text();
+    if (body.length > config.maxResponseBytes) {
+      throw new Error('Certificate Transparency response exceeded the configured size limit');
+    }
+    return JSON.parse(body) as unknown;
   } finally {
     clearTimeout(timeout);
   }
@@ -39,7 +45,7 @@ export async function runSubdomains(domain: string): Promise<{ available: boolea
       }
     }
 
-    const subdomains = [...names].sort();
+    const subdomains = [...names].sort().slice(0, config.maxSubdomains);
     return {
       available: true,
       total: subdomains.length,
