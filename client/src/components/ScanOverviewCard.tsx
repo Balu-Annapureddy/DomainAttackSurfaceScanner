@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Shield, AlertTriangle, Layers, GitFork, Lock, Globe, ExternalLink, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
 
@@ -51,6 +52,21 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
     protocol?: string;
   } | undefined;
 
+  const safeFinalUrl = useMemo(() => {
+    const raw = httpData?.finalObservedUrl;
+    if (raw && (raw.startsWith('http://') || raw.startsWith('https://'))) {
+      try {
+        const u = new URL(raw);
+        if (['http:', 'https:'].includes(u.protocol)) {
+          return u.toString();
+        }
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [httpData?.finalObservedUrl]);
+
   return (
     <div className="space-y-4">
       {/* Top Banner */}
@@ -90,15 +106,15 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
                 <Calendar size={13} className="text-slate-500" />
                 Scanned {new Date(scan.createdAt).toLocaleString()}
               </span>
-              {httpData?.finalObservedUrl && (
+              {safeFinalUrl && (
                 <a
-                  href={httpData.finalObservedUrl}
+                  href={safeFinalUrl}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-1 text-cyan-400/80 hover:text-cyan-300 transition"
                 >
                   <ExternalLink size={12} />
-                  {httpData.finalObservedUrl}
+                  {safeFinalUrl}
                 </a>
               )}
             </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { GitFork, ZoomIn, ZoomOut, RotateCcw, Filter } from 'lucide-react';
+import { GitFork, ZoomIn, ZoomOut, RotateCcw, Filter, Search } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AttackSurfaceGraphProps {
@@ -29,12 +29,21 @@ export default function AttackSurfaceGraph({
 }: AttackSurfaceGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [selectedType, setSelectedType] = useState<string>('ALL');
+  const [nodeLimit, setNodeLimit] = useState<number>(50);
+  const [graphSearch, setGraphSearch] = useState<string>('');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const filteredAssets = useMemo(() => {
-    if (selectedType === 'ALL') return assets.slice(0, 45); // Reasonable limit for visual clarity
-    return assets.filter((a) => a.type === selectedType).slice(0, 45);
-  }, [assets, selectedType]);
+    let result = assets;
+    if (selectedType !== 'ALL') {
+      result = result.filter((a) => a.type === selectedType);
+    }
+    if (graphSearch.trim()) {
+      const q = graphSearch.toLowerCase();
+      result = result.filter((a) => a.value.toLowerCase().includes(q) || a.type.toLowerCase().includes(q));
+    }
+    return nodeLimit === 0 ? result : result.slice(0, nodeLimit);
+  }, [assets, selectedType, graphSearch, nodeLimit]);
 
   // Generate node coordinates using layered radial/hierarchical grouping
   const layout = useMemo(() => {
@@ -128,6 +137,18 @@ export default function AttackSurfaceGraph({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Search */}
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Find node..."
+              value={graphSearch}
+              onChange={(e) => setGraphSearch(e.target.value)}
+              className="h-7 w-28 sm:w-36 rounded-lg border border-slate-800 bg-slate-950/70 pl-7 pr-2 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-cyan-500/50"
+            />
+          </div>
+
           {/* Filter Type */}
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950/70 px-2 py-1 text-xs">
             <Filter size={13} className="text-slate-400" />
@@ -144,6 +165,20 @@ export default function AttackSurfaceGraph({
               <option value="ASN">ASNs</option>
               <option value="ORGANIZATION">Organizations</option>
               <option value="GEOLOCATION">Geolocations</option>
+            </select>
+          </div>
+
+          {/* Limit Selector */}
+          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-950/70 px-2 py-1 text-xs">
+            <select
+              value={nodeLimit}
+              onChange={(e) => setNodeLimit(Number(e.target.value))}
+              className="bg-transparent text-slate-200 outline-none cursor-pointer"
+            >
+              <option value={30}>30 nodes</option>
+              <option value={50}>50 nodes</option>
+              <option value={100}>100 nodes</option>
+              <option value={0}>All nodes</option>
             </select>
           </div>
 

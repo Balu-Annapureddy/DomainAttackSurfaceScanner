@@ -37,6 +37,8 @@ export default function ScanPage() {
     if (!scanId) return;
 
     let active = true;
+    let timer: number | undefined;
+
     const poll = async () => {
       try {
         const current = await getScan(scanId);
@@ -44,9 +46,12 @@ export default function ScanPage() {
         setScan(current);
         setLoading(false);
         setError(null);
-        if (current.status === 'completed' || current.status === 'completed_with_warnings' || current.status === 'failed') {
-          return;
+        if (current.status !== 'running') {
+          return; // Stop polling on terminal statuses
         }
+        timer = window.setTimeout(() => {
+          void poll();
+        }, 2000);
       } catch (cause) {
         if (!active) return;
         setError(cause instanceof Error ? cause.message : 'Unable to load scan');
@@ -55,13 +60,10 @@ export default function ScanPage() {
     };
 
     void poll();
-    const timer = window.setInterval(() => {
-      void poll();
-    }, 2000);
 
     return () => {
       active = false;
-      window.clearInterval(timer);
+      if (timer) window.clearTimeout(timer);
     };
   }, [scanId]);
 

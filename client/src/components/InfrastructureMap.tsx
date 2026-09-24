@@ -63,10 +63,16 @@ export default function InfrastructureMap({
         orgName = orgAsset?.value;
       }
 
+      const existingCount = geoPoints.filter(
+        (p) => Math.abs(p.lat - lat) < 0.001 && Math.abs(p.lng - lng) < 0.001,
+      ).length;
+      const adjustedLat = existingCount > 0 ? lat + (existingCount * 0.008) : lat;
+      const adjustedLng = existingCount > 0 ? lng + (existingCount * 0.008) : lng;
+
       geoPoints.push({
         ip: ipAsset?.value ?? 'Discovered Host',
-        lat,
-        lng,
+        lat: adjustedLat,
+        lng: adjustedLng,
         city: typeof geo.metadata?.city === 'string' ? geo.metadata.city : undefined,
         country: typeof geo.metadata?.country === 'string' ? geo.metadata.country : undefined,
         asn: asnName,
