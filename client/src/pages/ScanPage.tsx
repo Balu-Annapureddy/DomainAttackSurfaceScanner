@@ -1,86 +1,40 @@
-import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Clock3, Gauge, Globe2, ShieldX, Wifi, XCircle } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  Globe2,
+  Clock3,
+  ArrowLeft,
+  XCircle,
+  RotateCw,
+  GitFork,
+  Layers,
+  AlertTriangle,
+  FileText,
+} from 'lucide-react';
 import { getScan } from '../lib/api';
-import type { DomainScan, ScanCategory } from '../../../shared/types';
+import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
+import ScanOverviewCard from '../components/ScanOverviewCard';
+import ScanProgressStepper from '../components/ScanProgressStepper';
+import InfrastructureMap from '../components/InfrastructureMap';
+import AttackSurfaceGraph from '../components/AttackSurfaceGraph';
+import FindingsSection from '../components/FindingsSection';
+import AssetsInventoryTable from '../components/AssetsInventoryTable';
+import CategoryInspectionTabs from '../components/CategoryInspectionTabs';
+import AssetDetailModal from '../components/AssetDetailModal';
 
-const labels: Record<ScanCategory, string> = {
-  whois: 'WHOIS Summary',
-  dns: 'DNS Records',
-  subdomains: 'Subdomains Found',
-  tls: 'TLS Certificate',
-  http: 'HTTP & Security Headers',
-  exposure: 'Exposure Checks',
-  scoring: 'Exposure Score',
-};
-
-function formatHeaderKey(value: string): string {
-  return value.replace(/[-_]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
-}
-
-function renderArray(values: unknown): ReactNode {
-  if (!values || (Array.isArray(values) && values.length === 0)) return <span className="text-slate-500">No values reported.</span>;
-  const list = Array.isArray(values) ? values : [values];
-  return (
-    <ul className="space-y-2">
-      {list.map((item, index) => (
-        <li key={`${String(item)}-${index}`} className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 font-mono text-xs text-slate-200">
-          {typeof item === 'string' ? item : JSON.stringify(item, null, 2)}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function renderObject(value: Record<string, unknown>): ReactNode {
-  return (
-    <div className="space-y-3"> 
-      {Object.entries(value).map(([key, entry]) => (
-        <div key={key} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">{formatHeaderKey(key)}</p>
-          {entry === null || entry === undefined ? (
-            <span className="text-slate-500">Not reported</span>
-          ) : typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean' ? (
-            <span className="font-mono text-xs text-slate-200">{String(entry)}</span>
-          ) : Array.isArray(entry) ? (
-            renderArray(entry)
-          ) : typeof entry === 'object' ? (
-            renderObject(entry as Record<string, unknown>)
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function statusBadge(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20';
-    case 'running':
-      return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20';
-    case 'failed':
-      return 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/20';
-    default:
-      return 'bg-slate-800 text-slate-300 ring-1 ring-slate-700';
-  }
-}
-
-function safeValue(data: unknown): unknown {
-  return data ?? 'Not reported';
-}
+type ActiveViewTab = 'surface' | 'inventory' | 'findings' | 'raw';
 
 export default function ScanPage() {
   const { scanId } = useParams();
   const [scan, setScan] = useState<DomainScan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeViewTab, setActiveViewTab] = useState<ActiveViewTab>('surface');
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<ScanCategory>('dns');
 
   useEffect(() => {
-    if (!scanId) {
-      return;
-    }
+    if (!scanId) return;
 
     let active = true;
     const poll = async () => {
@@ -90,7 +44,9 @@ export default function ScanPage() {
         setScan(current);
         setLoading(false);
         setError(null);
-        if (current.status === 'completed' || current.status === 'failed') return;
+        if (current.status === 'completed' || current.status === 'completed_with_warnings' || current.status === 'failed') {
+          return;
+        }
       } catch (cause) {
         if (!active) return;
         setError(cause instanceof Error ? cause.message : 'Unable to load scan');
@@ -99,7 +55,9 @@ export default function ScanPage() {
     };
 
     void poll();
-    const timer = window.setInterval(() => { void poll(); }, 2000);
+    const timer = window.setInterval(() => {
+      void poll();
+    }, 2000);
 
     return () => {
       active = false;
@@ -107,23 +65,27 @@ export default function ScanPage() {
     };
   }, [scanId]);
 
-  const scoreText = useMemo(() => {
-    if (!scan?.score && scan?.score !== 0) return 'Waiting for scoring';
-    if (scan.score >= 80) return 'Healthy external posture';
-    if (scan.score >= 60) return 'Moderate hygiene';
-    if (scan.score >= 40) return 'Needs attention';
-    return 'High exposure risk';
-  }, [scan?.score]);
+  const handleCategorySelectFromStepper = (category: ScanCategory) => {
+    setSelectedCategoryTab(category);
+    setActiveViewTab('raw');
+  };
 
   if (!scanId || error || (!scan && !loading)) {
     return (
-      <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
-        <div className="mx-auto max-w-xl rounded-2xl border border-rose-500/20 bg-slate-900 p-8 text-center">
-          <div className="mb-3 flex justify-center text-rose-400"><XCircle size={28} /></div>
-          <h1 className="text-2xl font-semibold">Unable to load scan</h1>
-          <p className="mt-3 text-slate-400">{error ?? 'Missing scan id.'}</p>
-          <Link to="/" className="mt-6 inline-flex items-center gap-2 text-cyan-400 hover:underline">
-            <ArrowLeft size={16} /> Back to the scanner
+      <main className="min-h-screen bg-slate-950 px-5 py-12 text-slate-100 flex items-center justify-center">
+        <div className="mx-auto max-w-md rounded-2xl border border-rose-500/20 bg-slate-900/90 p-8 text-center shadow-2xl backdrop-blur-xl">
+          <div className="mb-4 flex justify-center text-rose-400">
+            <XCircle size={36} />
+          </div>
+          <h1 className="text-xl font-bold text-white">Scan Unavailable</h1>
+          <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+            {error ?? 'The requested scan could not be found or has expired.'}
+          </p>
+          <Link
+            to="/"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-400"
+          >
+            <ArrowLeft size={14} /> Back to Scanner
           </Link>
         </div>
       </main>
@@ -132,161 +94,162 @@ export default function ScanPage() {
 
   if (loading && !scan) {
     return (
-      <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
-        <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 animate-spin items-center justify-center rounded-full border border-cyan-400/30 border-t-cyan-400" />
-          <p className="text-lg font-medium">Loading scan results…</p>
+      <main className="min-h-screen bg-slate-950 px-5 py-12 text-slate-100 flex items-center justify-center">
+        <div className="mx-auto max-w-sm rounded-2xl border border-slate-800 bg-slate-900/80 p-8 text-center shadow-xl backdrop-blur-xl">
+          <div className="mx-auto mb-4 flex h-12 w-12 animate-spin items-center justify-center rounded-full border-2 border-cyan-400/30 border-t-cyan-400" />
+          <p className="text-sm font-semibold text-white">Connecting to Scanner Service…</p>
+          <p className="mt-1 text-xs text-slate-400">Retrieving intelligence pipeline state</p>
         </div>
       </main>
     );
   }
 
-  if (!scan) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100">
-        <div className="mx-auto max-w-xl rounded-2xl border border-rose-500/20 bg-slate-900 p-8 text-center">
-          <div className="mb-3 flex justify-center text-rose-400"><XCircle size={28} /></div>
-          <h1 className="text-2xl font-semibold">Unable to load scan</h1>
-          <p className="mt-3 text-slate-400">{error ?? 'The scan could not be found or has expired.'}</p>
-          <Link to="/" className="mt-6 inline-flex items-center gap-2 text-cyan-400 hover:underline">
-            <ArrowLeft size={16} /> Back to the scanner
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  if (!scan) return null;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold"><Globe2 className="text-cyan-400" /> Domain Attack Surface Scanner</Link>
-        <Link to="/history" className="flex items-center gap-2 text-sm text-slate-300 hover:text-white"><Clock3 size={17} /> History</Link>
+    <main className="min-h-screen bg-slate-950 text-slate-100 pb-20 selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* Top Navbar */}
+      <nav className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+          <Link to="/" className="flex items-center gap-2.5 text-sm font-bold tracking-tight text-white hover:text-cyan-400 transition">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Globe2 size={18} />
+            </div>
+            <span>Domain Attack Surface Scanner</span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link
+              to="/history"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition"
+            >
+              <Clock3 size={14} />
+              <span>History</span>
+            </Link>
+
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 px-3.5 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400 transition shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+            >
+              <RotateCw size={13} />
+              <span>New Scan</span>
+            </Link>
+          </div>
+        </div>
       </nav>
 
-      <section className="mx-auto max-w-6xl px-5 pb-16">
-        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.25em] text-cyan-400">Scan results</p>
-            <h1 className="mt-2 text-3xl font-bold">{scan.domain}</h1>
-            <p className="mt-2 text-sm text-slate-400">{new Date(scan.createdAt).toLocaleString()} · {scan.status === 'completed' ? 'Completed' : scan.status === 'running' ? 'In progress' : 'Failed'}</p>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-right">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Exposure score</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-cyan-400">{scan.score ?? 0}</span>
-              <span className="text-sm text-slate-400">/ 100</span>
-            </div>
-          </div>
+      {/* Main Content Area */}
+      <div className="mx-auto max-w-7xl px-5 pt-6 space-y-6">
+        {/* Category Stepper Bar */}
+        <ScanProgressStepper
+          categories={scan.categories}
+          activeCategory={activeViewTab === 'raw' ? selectedCategoryTab : undefined}
+          onSelectCategory={handleCategorySelectFromStepper}
+        />
+
+        {/* Scan Overview Hero Card */}
+        <ScanOverviewCard scan={scan} />
+
+        {/* Navigation Tabs for Views */}
+        <div className="flex border-b border-slate-800/80 pb-px gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveViewTab('surface')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'surface'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <GitFork size={14} />
+            <span>Attack Surface Visuals</span>
+          </button>
+
+          <button
+            onClick={() => setActiveViewTab('inventory')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'inventory'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <Layers size={14} />
+            <span>Normalized Assets ({scan.assets?.length ?? 0})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveViewTab('findings')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'findings'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <AlertTriangle size={14} />
+            <span>Security Findings ({scan.findings?.length ?? 0})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveViewTab('raw')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'raw'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <FileText size={14} />
+            <span>Raw Category Data</span>
+          </button>
         </div>
 
-        <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">Assessment</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-100">{scoreText}</h2>
-            </div>
-            <div className="rounded-full px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-slate-700">
-              {scan.status}
-            </div>
+        {/* View Tab 1: Attack Surface Visuals (Graph & Map) */}
+        {activeViewTab === 'surface' && (
+          <div className="space-y-6">
+            <AttackSurfaceGraph
+              assets={scan.assets ?? []}
+              relationships={scan.relationships ?? []}
+              onSelectAsset={(asset) => setSelectedAsset(asset)}
+            />
+
+            <InfrastructureMap
+              assets={scan.assets ?? []}
+              relationships={scan.relationships ?? []}
+              onSelectAsset={(asset) => setSelectedAsset(asset)}
+            />
           </div>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-            This score blends the presence of security headers, HTTPS configuration, certificate validity, discovered subdomains, and WHOIS privacy signals into one simple external hygiene heuristic.
-          </p>
-        </div>
+        )}
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          {(Object.keys(labels) as ScanCategory[]).map(category => {
-            const categoryState = scan.categories[category];
-            const data = categoryState.data;
-            const isCompleted = categoryState.status === 'completed';
-            const isFailed = categoryState.status === 'failed';
+        {/* View Tab 2: Assets Inventory Table */}
+        {activeViewTab === 'inventory' && (
+          <AssetsInventoryTable
+            assets={scan.assets ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        )}
 
-            const content = (() => {
-              if (category === 'scoring') {
-                return (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-cyan-300">
-                      <Gauge size={16} />
-                      <span className="font-medium">Score: {scan.score ?? 0}/100</span>
-                    </div>
-                    <p className="text-sm text-slate-400">{scoreText}</p>
-                  </div>
-                );
-              }
+        {/* View Tab 3: Security Findings */}
+        {activeViewTab === 'findings' && (
+          <FindingsSection findings={scan.findings ?? []} />
+        )}
 
-              if (isFailed) {
-                return (
-                  <div className="flex items-start gap-3 text-rose-300">
-                    <ShieldX size={18} className="mt-0.5" />
-                    <span className="text-sm">{categoryState.error ?? 'This category is unavailable.'}</span>
-                  </div>
-                );
-              }
+        {/* View Tab 4: Raw Category Data */}
+        {activeViewTab === 'raw' && (
+          <CategoryInspectionTabs
+            scan={scan}
+            defaultCategory={selectedCategoryTab}
+          />
+        )}
+      </div>
 
-              if (!isCompleted || data === undefined) {
-                return (
-                  <div className="flex items-center gap-2 text-amber-300">
-                    <Clock3 size={18} />
-                    <span className="text-sm">Waiting for results…</span>
-                  </div>
-                );
-              }
-
-              if (typeof data === 'object' && data !== null) {
-                const record = data as Record<string, unknown>;
-                if ('missingSecurityHeaders' in record && Array.isArray(record.missingSecurityHeaders)) {
-                  const headers = record.missingSecurityHeaders as string[];
-                  return (
-                    <div className="space-y-3">
-                      {Object.entries(record).filter(([key]) => key !== 'missingSecurityHeaders').map(([key, value]) => (
-                        <div key={key} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">{formatHeaderKey(key)}</p>
-                          <p className="font-mono text-xs text-slate-200">{safeValue(value) as string}</p>
-                        </div>
-                      ))}
-                      <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">Security Headers</p>
-                        {!headers.length ? (
-                          <div className="flex items-center gap-2 text-emerald-300"><CheckCircle2 size={15} /> <span>All key security headers are present.</span></div>
-                        ) : (
-                          <div className="space-y-2">
-                            {headers.map(header => (
-                              <p key={header} className="font-mono text-xs text-amber-300">Missing: {header}</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (typeof record.subdomains === 'object') {
-                  return renderArray((record.subdomains as { subdomains?: string[] }).subdomains ?? []);
-                }
-
-                return renderObject(record);
-              }
-
-              return <p className="font-mono text-xs text-slate-200">{String(data)}</p>;
-            })();
-
-            return (
-              <article key={category} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {isCompleted ? <CheckCircle2 size={16} className="text-emerald-400" /> : isFailed ? <AlertTriangle size={16} className="text-rose-400" /> : <Wifi size={16} className="text-amber-400" />}
-                    <h3 className="text-lg font-semibold text-slate-100">{labels[category]}</h3>
-                  </div>
-                  <span className={`rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] ${statusBadge(categoryState.status)}`}>
-                    {categoryState.status}
-                  </span>
-                </div>
-                {content}
-              </article>
-            );
-          })}
-        </div>
-      </section>
+      {/* Asset Detail & Evidence Modal */}
+      {selectedAsset && (
+        <AssetDetailModal
+          asset={selectedAsset}
+          assets={scan.assets ?? []}
+          relationships={scan.relationships ?? []}
+          onClose={() => setSelectedAsset(null)}
+          onSelectRelatedAsset={(nextAsset) => setSelectedAsset(nextAsset)}
+        />
+      )}
     </main>
   );
 }

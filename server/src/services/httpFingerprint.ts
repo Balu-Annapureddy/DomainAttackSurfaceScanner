@@ -26,7 +26,7 @@ export interface HttpFingerprintResult {
   httpAvailable: boolean;
   httpsAvailable: boolean;
   httpRedirectsToHttps: boolean;
-  canonicalUrl: string | null;
+  finalObservedUrl: string | null;
   worryingHeaders: string[];
 }
 
@@ -79,7 +79,7 @@ export async function runHttpFingerprint(
     ...(httpResult?.redirectChain.slice(1) ?? []),
   ];
 
-  const canonicalUrl = httpsResult?.url ?? httpResult?.url ?? null;
+  const finalObservedUrl = httpsResult?.url ?? httpResult?.url ?? null;
 
   const worryingHeaders = Array.from(new Set([
     ...(httpResult?.missingSecurityHeaders ?? []),
@@ -94,7 +94,7 @@ export async function runHttpFingerprint(
     httpAvailable,
     httpsAvailable,
     httpRedirectsToHttps,
-    canonicalUrl,
+    finalObservedUrl,
     worryingHeaders,
   };
 }
