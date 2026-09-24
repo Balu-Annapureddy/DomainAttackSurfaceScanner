@@ -36,6 +36,21 @@ function validateConfig() {
   if (!ipIntelligenceUrl.includes('{ip}')) {
     throw new Error('[config] IP_INTELLIGENCE_URL must contain the {ip} placeholder.');
   }
+  let parsedIpProviderUrl: URL;
+  try {
+    parsedIpProviderUrl = new URL(ipIntelligenceUrl.replace('{ip}', '1.1.1.1'));
+  } catch {
+    throw new Error('[config] IP_INTELLIGENCE_URL must be a valid absolute URL.');
+  }
+  if (parsedIpProviderUrl.protocol !== 'https:') {
+    throw new Error('[config] IP_INTELLIGENCE_URL must use the HTTPS protocol.');
+  }
+  const defaultAllowedHosts = ['ipapi.co', 'ip-api.com', 'ipwhois.app', 'ipinfo.io'];
+  const customAllowedHosts = process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
+  const allowedProviderHosts = new Set([...defaultAllowedHosts, ...customAllowedHosts]);
+  if (!allowedProviderHosts.has(parsedIpProviderUrl.hostname.toLowerCase())) {
+    throw new Error(`[config] IP_INTELLIGENCE_URL hostname "${parsedIpProviderUrl.hostname}" is not in the allowed providers list.`);
+  }
 
   const scanRateLimitDefaults = nodeEnv === 'production'
     ? { max: '10', windowMs: '3600000' }

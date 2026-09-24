@@ -1,6 +1,7 @@
 import net from 'node:net';
+import type { ScanRequestBudget } from './scanBudget';
 
-type WhoisRecord = {
+export type WhoisRecord = {
   available: boolean;
   registrar?: string;
   creationDate?: string | null;
@@ -10,6 +11,11 @@ type WhoisRecord = {
   privacyStatus: 'public' | 'redacted' | 'unknown';
   reason?: string;
 };
+
+export interface WhoisOptions {
+  signal?: AbortSignal;
+  budget?: ScanRequestBudget;
+}
 
 function parseWhoisText(raw: string): Partial<WhoisRecord> {
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -52,8 +58,31 @@ function parseWhoisText(raw: string): Partial<WhoisRecord> {
   return result;
 }
 
-export async function runWhois(domain: string): Promise<WhoisRecord> {
+export async function runWhois(domain: string, options: WhoisOptions = {}): Promise<WhoisRecord> {
+  if (options.signal?.aborted) {
+    return {
+      available: false,
+      nameservers: [],
+      privacyStatus: 'unknown',
+      reason: 'WHOIS scan aborted before starting',
+    };
+  }
+
+  if (options.budget) {
+    options.budget.consume(1, `WHOIS: ${domain}`);
+  }
+
   return new Promise((resolve) => {
+    if (options.signal?.aborted) {
+      resolve({
+        available: false,
+        nameservers: [],
+        privacyStatus: 'unknown',
+        reason: 'WHOIS aborted',
+      });
+      return;
+    }
+
     const socket = net.createConnection(43, 'whois.iana.org');
     const chunks: Buffer[] = [];
     const timer = setTimeout(() => {
@@ -66,6 +95,21 @@ export async function runWhois(domain: string): Promise<WhoisRecord> {
       });
     }, 8000);
 
+    const onAbort = () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({
+        available: false,
+        nameservers: [],
+        privacyStatus: 'unknown',
+        reason: 'WHOIS cancelled by signal',
+      });
+    };
+
+    if (options.signal) {
+      options.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
     socket.on('connect', () => {
       socket.write(`${domain}\r\n`);
     });
@@ -74,18 +118,24 @@ export async function runWhois(domain: string): Promise<WhoisRecord> {
       chunks.push(Buffer.from(chunk));
     });
 
-    socket.on('error', () => {
+    socket.on('error', (err) => {
       clearTimeout(timer);
+      if (options.signal) {
+        options.signal.removeEventListener('abort', onAbort);
+      }
       resolve({
         available: false,
         nameservers: [],
         privacyStatus: 'unknown',
-        reason: 'WHOIS lookup unavailable',
+        reason: `WHOIS lookup unavailable: ${err.message}`,
       });
     });
 
     socket.on('close', () => {
       clearTimeout(timer);
+      if (options.signal) {
+        options.signal.removeEventListener('abort', onAbort);
+      }
       const raw = Buffer.concat(chunks).toString('utf8');
       const parsed = parseWhoisText(raw);
 

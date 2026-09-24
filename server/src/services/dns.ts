@@ -1,7 +1,44 @@
 import dns from 'node:dns/promises';
 import { isPublicAddress, resolvePublicAddresses } from './publicResolution';
+import type { ScanRequestBudget } from './scanBudget';
 
-export async function runDns(domain: string): Promise<{ addresses: string[]; mx: string[]; ns: string[]; txt: string[]; cname: string[]; aaaa: string[]; spf: { present: boolean; policy?: string; }; dmarc: { present: boolean; policy?: string; }; dnssec: { observed: boolean; note: string; }; }> {
+export interface DnsOptions {
+  signal?: AbortSignal;
+  budget?: ScanRequestBudget;
+}
+
+export async function runDns(
+  domain: string,
+  options: DnsOptions = {},
+): Promise<{
+  addresses: string[];
+  mx: string[];
+  ns: string[];
+  txt: string[];
+  cname: string[];
+  aaaa: string[];
+  spf: { present: boolean; policy?: string };
+  dmarc: { present: boolean; policy?: string };
+  dnssec: { observed: boolean; note: string };
+}> {
+  if (options.signal?.aborted) {
+    return {
+      addresses: [],
+      aaaa: [],
+      mx: [],
+      ns: [],
+      txt: [],
+      cname: [],
+      spf: { present: false },
+      dmarc: { present: false },
+      dnssec: { observed: false, note: 'DNS scan aborted' },
+    };
+  }
+
+  if (options.budget) {
+    options.budget.consume(1, `DNS query: ${domain}`);
+  }
+
   const [addresses, aaaa, mx, ns, txt, cname, dmarcTxt] = await Promise.allSettled([
     resolvePublicAddresses(domain),
     dns.resolve6(domain).then((values) => values.filter(isPublicAddress)),
@@ -11,6 +48,20 @@ export async function runDns(domain: string): Promise<{ addresses: string[]; mx:
     dns.resolveCname(domain),
     dns.resolveTxt(`_dmarc.${domain}`),
   ]);
+
+  if (options.signal?.aborted) {
+    return {
+      addresses: [],
+      aaaa: [],
+      mx: [],
+      ns: [],
+      txt: [],
+      cname: [],
+      spf: { present: false },
+      dmarc: { present: false },
+      dnssec: { observed: false, note: 'DNS scan aborted' },
+    };
+  }
 
   return {
     addresses: addresses.status === 'fulfilled' ? addresses.value : [],

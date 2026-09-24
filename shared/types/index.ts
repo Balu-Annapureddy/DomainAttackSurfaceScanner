@@ -25,7 +25,7 @@ export interface Asset {
 export interface Relationship {
   fromAssetId: string;
   toAssetId: string;
-  type: 'resolves_to' | 'uses_nameserver' | 'delivers_mail_to' | 'issued_for' | 'belongs_to_asn' | 'operated_by' | 'observed_at';
+  type: 'resolves_to' | 'uses_nameserver' | 'delivers_mail_to' | 'issued_for' | 'belongs_to_asn' | 'operated_by' | 'observed_at' | 'located_approximately_at';
   evidence: Evidence;
 }
 

@@ -1,8 +1,26 @@
 import { config } from '../config';
+import type { ScanRequestBudget } from './scanBudget';
 
-async function fetchJsonWithTimeout(url: string): Promise<unknown> {
+export interface SubdomainsOptions {
+  signal?: AbortSignal;
+  budget?: ScanRequestBudget;
+}
+
+async function fetchJsonWithTimeout(url: string, externalSignal?: AbortSignal): Promise<unknown> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
+
+  const onAbort = () => {
+    controller.abort();
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      clearTimeout(timeout);
+      throw new Error('CT log request aborted before starting');
+    }
+    externalSignal.addEventListener('abort', onAbort, { once: true });
+  }
 
   try {
     const response = await fetch(url, {
@@ -21,12 +39,34 @@ async function fetchJsonWithTimeout(url: string): Promise<unknown> {
     return JSON.parse(body) as unknown;
   } finally {
     clearTimeout(timeout);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onAbort);
+    }
   }
 }
 
-export async function runSubdomains(domain: string): Promise<{ available: boolean; total: number; subdomains: string[]; reason?: string; }> {
+export async function runSubdomains(
+  domain: string,
+  options: SubdomainsOptions = {},
+): Promise<{ available: boolean; total: number; subdomains: string[]; reason?: string }> {
+  if (options.signal?.aborted) {
+    return {
+      available: false,
+      total: 0,
+      subdomains: [],
+      reason: 'Subdomains scan aborted',
+    };
+  }
+
+  if (options.budget) {
+    options.budget.consume(1, 'Certificate Transparency lookup');
+  }
+
   try {
-    const data = (await fetchJsonWithTimeout(`https://crt.sh/?q=%25.${encodeURIComponent(domain)}&output=json`)) as Array<Record<string, unknown>>;
+    const data = (await fetchJsonWithTimeout(
+      `https://crt.sh/?q=%25.${encodeURIComponent(domain)}&output=json`,
+      options.signal,
+    )) as Array<Record<string, unknown>>;
     const names = new Set<string>();
 
     if (Array.isArray(data)) {

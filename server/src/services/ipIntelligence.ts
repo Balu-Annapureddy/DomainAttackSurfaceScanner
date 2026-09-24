@@ -1,5 +1,6 @@
 import { config } from '../config';
-import { safeGet } from './safeHttp';
+import { fetchProviderJson } from './providerHttp';
+import type { ScanRequestBudget } from './scanBudget';
 
 export interface IpIntelligence {
   ip: string;
@@ -18,17 +19,39 @@ export interface IpIntelligence {
   reason?: string;
 }
 
-export async function runIpIntelligence(addresses: string[]): Promise<IpIntelligence[]> {
+export interface IpIntelligenceOptions {
+  signal?: AbortSignal;
+  budget?: ScanRequestBudget;
+}
+
+export async function runIpIntelligence(
+  addresses: string[],
+  options: IpIntelligenceOptions = {},
+): Promise<IpIntelligence[]> {
   if (!config.ipIntelligenceEnabled) {
     return [];
   }
 
   const results: IpIntelligence[] = [];
-  const maxProviderRequests = Math.max(0, config.maxExternalRequests - 10);
-  for (const ip of [...new Set(addresses)].slice(0, Math.min(20, maxProviderRequests))) {
+  const uniqueAddresses = [...new Set(addresses)];
+
+  for (const ip of uniqueAddresses) {
+    if (options.budget && options.budget.remaining() <= 0) {
+      results.push({
+        ip,
+        version: ip.includes(':') ? 6 : 4,
+        approximate: true,
+        available: false,
+        reason: 'Scan request budget exhausted',
+      });
+      break;
+    }
+
     try {
-      const response = await safeGet(config.ipIntelligenceUrl.replace('{ip}', encodeURIComponent(ip)));
-      const data = JSON.parse(response.body) as Record<string, unknown>;
+      const data = await fetchProviderJson<Record<string, unknown>>(
+        config.ipIntelligenceUrl.replace('{ip}', encodeURIComponent(ip)),
+        { signal: options.signal, budget: options.budget },
+      );
       results.push({
         ip,
         version: ip.includes(':') ? 6 : 4,
