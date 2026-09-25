@@ -25,7 +25,9 @@ import { compareScans } from '../services/diff';
 import { ScanRequestBudget } from '../services/scanBudget';
 import { createSampleScan } from '../services/sampleScan';
 import { logError, logEvent } from '../utils/logger';
-import type { ScanCategory } from '../../../shared/types';
+import { db } from '../db';
+import { consumeScanQuota } from '../services/quotaService';
+import type { DomainScan, ScanCategory } from '../../../shared/types';
 
 const router = Router();
 
@@ -180,6 +182,15 @@ async function runScan(scanId: string): Promise<void> {
     });
 
     markScanFinished(scanId);
+    const finishedScan = getScanRecord(scanId);
+    if (finishedScan && finishedScan.userId) {
+      try {
+        await db.saveScan(finishedScan, finishedScan.userId, true);
+      } catch (dbErr) {
+        logError('scan_db_persist_failed', dbErr, { scanId, userId: finishedScan.userId });
+      }
+    }
+
     logEvent('scan_completed', {
       scanId,
       domain: scan.domain,
@@ -200,9 +211,21 @@ async function runScan(scanId: string): Promise<void> {
   }
 }
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const domain = validateDomain(req.body?.domain);
+
+    // 1. Quota Enforcement (Anonymous vs Registered)
+    const quotaResult = await consumeScanQuota(req, req.user);
+    if (!quotaResult.allowed) {
+      res.status(429).json({
+        error: `Scan quota exceeded (${quotaResult.quota.used}/${quotaResult.quota.limit}). Registered accounts receive higher allowances. Resets in ${Math.ceil(quotaResult.quota.resetsInSeconds / 60)} minutes.`,
+        code: 'SCAN_QUOTA_EXCEEDED',
+        quota: quotaResult.quota,
+      });
+      return;
+    }
+
     if (activeScans >= config.maxConcurrentScans) {
       res.status(429).json({ error: 'The scanner is busy. Please retry shortly.', code: 'SCAN_CONCURRENCY_LIMIT' });
       return;
@@ -212,7 +235,10 @@ router.post('/', (req, res) => {
       res.status(429).json({ error: 'This domain was scanned recently. Please wait before retrying.', code: 'DOMAIN_COOLDOWN' });
       return;
     }
-    const scan = createScanRecord(domain);
+
+    const userId = req.user?.id ?? null;
+    const isSaved = Boolean(userId);
+    const scan = createScanRecord(domain, userId, isSaved);
     activeScans += 1;
     lastScanByDomain.set(domain, Date.now());
     void runScan(scan.scanId);
@@ -222,6 +248,7 @@ router.post('/', (req, res) => {
       domain: scan.domain,
       status: scan.status,
       createdAt: scan.createdAt,
+      quota: quotaResult.quota,
     });
   } catch (error) {
     res.status(400).json({
@@ -231,10 +258,57 @@ router.post('/', (req, res) => {
   }
 });
 
-router.get('/compare/:baselineId/:targetId', (req, res) => {
+/**
+ * Fetch persistent scan history for authenticated user
+ */
+router.get('/user/history', async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required for persistent scan history', code: 'UNAUTHORIZED' });
+    return;
+  }
+
+  try {
+    const scans = await db.getUserScans(req.user.id);
+    res.json({ scans });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve scan history', code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * Delete a saved scan record (Authenticated & Authorized Owner Only)
+ */
+router.delete('/:scanId', async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required', code: 'UNAUTHORIZED' });
+    return;
+  }
+
+  try {
+    const deleted = await db.deleteScan(req.params.scanId, req.user.id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Scan not found or access denied', code: 'NOT_FOUND_OR_FORBIDDEN' });
+      return;
+    }
+    res.json({ success: true, message: 'Scan deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to delete scan', code: 'SERVER_ERROR' });
+  }
+});
+
+router.get('/compare/:baselineId/:targetId', async (req, res) => {
   const { baselineId, targetId } = req.params;
-  const baseline = getScanRecord(baselineId);
-  const target = getScanRecord(targetId);
+  let baseline = getScanRecord(baselineId);
+  if (!baseline) {
+    const bRecord = await db.getScan(baselineId);
+    if (bRecord) baseline = bRecord.scan;
+  }
+
+  let target = getScanRecord(targetId);
+  if (!target) {
+    const tRecord = await db.getScan(targetId);
+    if (tRecord) target = tRecord.scan;
+  }
 
   if (!baseline) {
     res.status(404).json({ error: `Baseline scan ${baselineId} not found or expired`, code: 'BASELINE_NOT_FOUND' });
@@ -242,6 +316,16 @@ router.get('/compare/:baselineId/:targetId', (req, res) => {
   }
   if (!target) {
     res.status(404).json({ error: `Target scan ${targetId} not found or expired`, code: 'TARGET_NOT_FOUND' });
+    return;
+  }
+
+  // Authorization check: User A cannot compare User B's scans
+  if (baseline.userId && (!req.user || req.user.id !== baseline.userId)) {
+    res.status(403).json({ error: 'Access forbidden to baseline scan', code: 'FORBIDDEN' });
+    return;
+  }
+  if (target.userId && (!req.user || req.user.id !== target.userId)) {
+    res.status(403).json({ error: 'Access forbidden to target scan', code: 'FORBIDDEN' });
     return;
   }
 
@@ -264,16 +348,34 @@ router.get('/demo', (_req, res) => {
   res.json(createSampleScan());
 });
 
-router.get('/:scanId', (req, res) => {
+router.get('/:scanId', async (req, res) => {
   const { scanId } = req.params;
   if (scanId === 'sample' || scanId === 'demo' || scanId === 'sample-scan-demo-id') {
     res.json(createSampleScan());
     return;
   }
 
-  const scan = getScanRecord(scanId);
+  // Check in-memory store first
+  let scan: DomainScan | undefined = getScanRecord(scanId);
+  let scanUserId: string | null | undefined = scan?.userId;
+
+  // Check persistent database if not in memory
+  if (!scan) {
+    const dbRecord = await db.getScan(scanId);
+    if (dbRecord) {
+      scan = dbRecord.scan;
+      scanUserId = dbRecord.userId;
+    }
+  }
+
   if (!scan) {
     res.status(404).json({ error: 'Scan not found or expired', code: 'SCAN_NOT_FOUND' });
+    return;
+  }
+
+  // Authorization check: If scan belongs to a user, requester must be that user
+  if (scanUserId && (!req.user || req.user.id !== scanUserId)) {
+    res.status(403).json({ error: 'Access forbidden: You do not own this scan record', code: 'FORBIDDEN' });
     return;
   }
 

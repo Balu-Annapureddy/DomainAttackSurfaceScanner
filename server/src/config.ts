@@ -73,6 +73,11 @@ function validateConfig() {
     ipIntelligenceEnabled: process.env.IP_INTELLIGENCE_ENABLED !== 'false',
     ipIntelligenceUrl,
     ipIntelligenceTimeoutMs: optionalInteger('IP_INTELLIGENCE_TIMEOUT_MS', '5000', 100),
+    databaseUrl: process.env.DATABASE_URL?.trim(),
+    sessionSecret: process.env.SESSION_SECRET?.trim() || 'dass_production_ready_session_key_secret_2026',
+    anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '5', 1),
+    registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '50', 1),
+    scanLimitWindowMs: optionalInteger('SCAN_LIMIT_WINDOW_MS', '3600000', 1000), // 1 hour default
   };
 }
 

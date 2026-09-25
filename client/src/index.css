@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
-/* ─── Retro Network Intelligence Workstation Design System ─────────── */
-@theme {
-  --color-bg-base: #080b0f;
-  --color-bg-panel: #10151b;
-  --color-bg-panel-elevated: #151c23;
-  --color-bg-panel-hover: #19222c;
-  --color-bg-inset: #0c1015;
+/* ─── Retro Network Intelligence Workstation Theme Tokens ──────────── */
+:root {
+  /* LIGHT THEME (Default) */
+  --bg-canvas: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-panel-subtle: #f0f7ff;
+  --bg-panel-elevated: #f8fafc;
+  --bg-panel-inset: #f1f5f9;
   
-  --color-border-base: #1e2631;
-  --color-border-subtle: #171f28;
-  --color-border-focus: #58a6ff;
+  --border-technical: #bae6fd;
+  --border-muted: #e2e8f0;
   
-  --color-text-primary: #e6edf3;
-  --color-text-secondary: #8b9bb0;
-  --color-text-muted: #576575;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
   
-  --color-phosphor: #3fb950;
-  --color-amber: #d29922;
-  --color-coral: #f85149;
-  --color-console-cyan: #58a6ff;
-  --color-console-blue: #388bfd;
+  --accent-primary: #0ea5e9;
+  --accent-hover: #0284c7;
+  --accent-active-bg: #e0f2fe;
+
+  --sev-critical: #dc2626;
+  --sev-critical-bg: #fee2e2;
+  --sev-high: #ea580c;
+  --sev-high-bg: #ffedd5;
+  --sev-medium: #d97706;
+  --sev-medium-bg: #fef3c7;
+  --sev-low: #0284c7;
+  --sev-low-bg: #e0f2fe;
+
+  --map-tile-filter: none;
+}
+
+[data-theme='dark'] {
+  /* DARK THEME */
+  --bg-canvas: #0b0f10;
+  --bg-panel: #131b1e;
+  --bg-panel-subtle: #162425;
+  --bg-panel-elevated: #1a2528;
+  --bg-panel-inset: #0e1416;
+  
+  --border-technical: #1d332e;
+  --border-muted: #1e293b;
+  
+  --text-primary: #e2e8f0;
+  --text-secondary: #8ca39e;
+  --text-muted: #64748b;
+  
+  --accent-primary: #2ee59d;
+  --accent-hover: #22c55e;
+  --accent-active-bg: rgba(46, 229, 157, 0.12);
+
+  --sev-critical: #ef4444;
+  --sev-critical-bg: rgba(239, 68, 68, 0.12);
+  --sev-high: #f97316;
+  --sev-high-bg: rgba(249, 115, 22, 0.12);
+  --sev-medium: #eab308;
+  --sev-medium-bg: rgba(234, 179, 8, 0.12);
+  --sev-low: #06b6d4;
+  --sev-low-bg: rgba(6, 182, 212, 0.12);
+
+  --map-tile-filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%) grayscale(45%);
 }
 
 /* ─── Global Reset & Workstation Base ──────────────────────────────── */
@@ -31,14 +71,14 @@
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
-  background-color: #080b0f;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
 }
 
 body {
-  background-color: #080b0f;
-  color: #e6edf3;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
   min-height: 100vh;
@@ -54,35 +94,34 @@ code, kbd, samp, pre, .font-mono {
 /* ─── Subtle Technical Workstation Grid ────────────────────────────── */
 .workstation-grid-bg {
   background-image: 
-    linear-gradient(rgba(30, 38, 49, 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 38, 49, 0.4) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(var(--border-muted) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-muted) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 /* ─── Scrollbar ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #080b0f; }
-::-webkit-scrollbar-thumb { background: #1e2631; border-radius: 1px; }
-::-webkit-scrollbar-thumb:hover { background: #576575; }
+::-webkit-scrollbar-track { background: var(--bg-canvas); }
+::-webkit-scrollbar-thumb { background: var(--border-muted); border-radius: 1px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ─── Workstation Panels & Dossier Frames ──────────────────────────── */
-/* Replaces generic rounded cards with crisp, dense, structured panels */
 .console-panel {
-  background: #10151b;
-  border: 1px solid #1e2631;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-technical);
   border-radius: 2px;
   position: relative;
 }
 
 .console-panel-elevated {
-  background: #151c23;
-  border: 1px solid #232e3c;
+  background: var(--bg-panel-elevated);
+  border: 1px solid var(--border-muted);
   border-radius: 2px;
 }
 
 .console-panel-inset {
-  background: #0c1015;
-  border: 1px solid #171f28;
+  background: var(--bg-panel-inset);
+  border: 1px solid var(--border-technical);
   border-radius: 2px;
 }
 
@@ -92,18 +131,18 @@ code, kbd, samp, pre, .font-mono {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.875rem;
-  background: #151c23;
-  border-bottom: 1px solid #1e2631;
+  background: var(--bg-panel-subtle);
+  border-bottom: 1px solid var(--border-technical);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .dossier-header .dossier-num {
-  color: #58a6ff;
+  color: var(--accent-primary);
   margin-right: 0.5rem;
 }
 
@@ -112,13 +151,13 @@ code, kbd, samp, pre, .font-mono {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 1px;
-  background: #1e2631;
-  border: 1px solid #1e2631;
+  background: var(--border-muted);
+  border: 1px solid var(--border-technical);
   border-radius: 2px;
 }
 
 .telemetry-cell {
-  background: #10151b;
+  background: var(--bg-panel);
   padding: 0.625rem 0.875rem;
   display: flex;
   flex-direction: column;
@@ -129,7 +168,7 @@ code, kbd, samp, pre, .font-mono {
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8b9bb0;
+  color: var(--text-secondary);
   margin-bottom: 0.25rem;
 }
 
@@ -138,7 +177,7 @@ code, kbd, samp, pre, .font-mono {
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.2;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 /* ─── Workstation Controls & Buttons ───────────────────────────────── */
@@ -154,9 +193,9 @@ code, kbd, samp, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border: 1px solid #1e2631;
-  background: #151c23;
-  color: #e6edf3;
+  border: 1px solid var(--border-muted);
+  background: var(--bg-panel-elevated);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.1s ease;
   white-space: nowrap;
@@ -164,9 +203,9 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .console-btn:hover:not(:disabled) {
-  background: #1c2630;
-  border-color: #58a6ff;
-  color: #ffffff;
+  background: var(--accent-active-bg);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 .console-btn:disabled {
@@ -175,27 +214,25 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .console-btn-primary {
-  background: #15273b;
-  border-color: #388bfd;
-  color: #e6edf3;
+  background: var(--accent-active-bg);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 .console-btn-primary:hover:not(:disabled) {
-  background: #1c3654;
-  border-color: #58a6ff;
+  background: var(--accent-primary);
   color: #ffffff;
 }
 
 .console-btn-phosphor {
-  background: #0f2214;
-  border-color: #2ea043;
-  color: #3fb950;
+  background: var(--accent-active-bg);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .console-btn-phosphor:hover:not(:disabled) {
-  background: #15321d;
-  border-color: #3fb950;
-  color: #ffffff;
+  background: var(--accent-primary);
+  color: #0b0f10;
 }
 
 /* ─── Compact Status Tags & Pills ──────────────────────────────────── */
@@ -210,33 +247,33 @@ code, kbd, samp, pre, .font-mono {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border: 1px solid #1e2631;
-  background: #0c1015;
-  color: #8b9bb0;
+  border: 1px solid var(--border-muted);
+  background: var(--bg-panel-inset);
+  color: var(--text-secondary);
 }
 
 .console-tag-phosphor {
-  border-color: #2ea043;
-  background: rgba(63, 185, 80, 0.08);
-  color: #3fb950;
+  border-color: var(--accent-primary);
+  background: var(--accent-active-bg);
+  color: var(--accent-primary);
 }
 
 .console-tag-amber {
-  border-color: #bb8009;
-  background: rgba(210, 153, 34, 0.08);
-  color: #d29922;
+  border-color: var(--sev-medium);
+  background: var(--sev-medium-bg);
+  color: var(--sev-medium);
 }
 
 .console-tag-coral {
-  border-color: #da3633;
-  background: rgba(248, 81, 73, 0.08);
-  color: #f85149;
+  border-color: var(--sev-critical);
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical);
 }
 
 .console-tag-cyan {
-  border-color: #388bfd;
-  background: rgba(88, 166, 255, 0.08);
-  color: #58a6ff;
+  border-color: var(--accent-primary);
+  background: var(--accent-active-bg);
+  color: var(--accent-primary);
 }
 
 /* ─── High-Density Technical Table ─────────────────────────────────── */
@@ -254,30 +291,30 @@ code, kbd, samp, pre, .font-mono {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8b9bb0;
-  border-bottom: 1px solid #1e2631;
-  background: #0c1015;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-technical);
+  background: var(--bg-panel-inset);
   white-space: nowrap;
 }
 
 .console-table td {
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #171f28;
+  border-bottom: 1px solid var(--border-muted);
   vertical-align: middle;
 }
 
 .console-table tbody tr:hover td {
-  background: #141c24;
+  background: var(--accent-active-bg);
 }
 
 /* ─── Technical Inputs ─────────────────────────────────────────────── */
 .console-input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: #0c1015;
-  border: 1px solid #1e2631;
+  background: var(--bg-panel-inset);
+  border: 1px solid var(--border-muted);
   border-radius: 2px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8125rem;
   outline: none;
@@ -285,16 +322,16 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .console-input:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent-primary);
 }
 
 .console-input::placeholder {
-  color: #576575;
+  color: var(--text-muted);
 }
 
-/* Leaflet Map Inversion for Crisp Dark Mode */
+/* Leaflet Map Styling with CSS Theme Filter */
 .leaflet-dark-tiles .leaflet-tile {
-  filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%) grayscale(45%);
+  filter: var(--map-tile-filter);
 }
 
 /* ─── Printable Intelligence Dossier Mode ──────────────────────────── */

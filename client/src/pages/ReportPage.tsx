@@ -12,6 +12,7 @@ import {
 import type { DomainScan } from '../../../shared/types';
 import { getScan } from '../lib/api';
 import { exportScanJson, exportAssetsCsv, exportFindingsCsv } from '../lib/export';
+import WorkstationNav from '../components/WorkstationNav';
 
 export default function ReportPage() {
   const { scanId } = useParams<{ scanId: string }>();
@@ -112,13 +113,17 @@ export default function ReportPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] pb-16 print:bg-white print:text-slate-900 print:pb-0 font-sans">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] pb-16 print:bg-white print:text-slate-900 print:pb-0 font-sans transition-colors duration-150">
+      <div className="print:hidden">
+        <WorkstationNav />
+      </div>
+
       {/* ─── Top Console Action Bar (Hidden in Print) ───────────────── */}
-      <nav className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] print:hidden">
+      <nav className="border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
           <Link
-            to={`/scan/${scan.scanId}`}
-            className="flex items-center gap-1.5 text-xs font-mono font-semibold text-[#8b9bb0] hover:text-[#e6edf3] transition"
+            to={`/scan/${encodeURIComponent(scan.scanId)}`}
+            className="flex items-center gap-1.5 text-xs font-mono font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition"
           >
             <ArrowLeft size={13} />
             <span>[ RETURN TO INTERACTIVE WORKSTATION ]</span>
@@ -482,6 +487,6 @@ export default function ReportPage() {
           <span>COMPILED: {new Date().toUTCString()}</span>
         </footer>
       </article>
-    </main>
+    </div>
   );
 }

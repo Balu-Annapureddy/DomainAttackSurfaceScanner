@@ -9,7 +9,6 @@ import {
   Layers,
   AlertTriangle,
   FileText,
-  BookOpen,
   Network,
   Sparkles,
   SlidersHorizontal,
@@ -28,6 +27,7 @@ import CategoryInspectionTabs from '../components/CategoryInspectionTabs';
 import AssetDetailModal from '../components/AssetDetailModal';
 import AssetChainVisualizer from '../components/AssetChainVisualizer';
 import GlossaryModal from '../components/GlossaryModal';
+import WorkstationNav from '../components/WorkstationNav';
 
 type ActiveViewTab = 'graph' | 'map' | 'chains' | 'inventory' | 'findings' | 'raw' | 'all';
 
@@ -53,8 +53,8 @@ export default function ScanPage() {
     });
   };
 
-  const openGlossary = (termKey: string) => {
-    setGlossaryInitialTerm(termKey);
+  const openGlossary = (termKey?: string) => {
+    setGlossaryInitialTerm(termKey || 'passive_osint');
     setIsGlossaryOpen(true);
   };
 
@@ -167,31 +167,30 @@ export default function ScanPage() {
   if (!scan) return null;
 
   return (
-    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] pb-12 font-sans w-full">
-      {/* ─── Ultra-Compact Security Workstation Header ──────────────── */}
-      <header className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] px-3 sm:px-5 py-1.5">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] pb-12 font-sans w-full transition-colors duration-150 flex flex-col">
+      <WorkstationNav onOpenGlossary={openGlossary} />
+
+      {/* ─── Ultra-Compact Security Workstation Sub-Header ────────────── */}
+      <div className="border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] px-3 sm:px-5 py-1.5 font-mono text-xs">
         <div className="mx-auto flex max-w-[1720px] items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#58a6ff] hover:text-[#e6edf3] transition"
-            >
-              <span>DAS // WORKSTATION</span>
-            </Link>
-            <span className="text-[#1e2631] hidden sm:inline">|</span>
-            <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-[#8b9bb0]">
-              <span className="text-[#3fb950] font-semibold">PASSIVE-EXTERNAL</span>
+            <span className="font-bold text-[var(--accent-primary)] truncate max-w-[200px] sm:max-w-md">
+              TARGET: {scan.domain}
+            </span>
+            <span className="text-[var(--border-muted)] hidden sm:inline">|</span>
+            <div className="hidden sm:flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+              <span className="text-[var(--accent-primary)] font-semibold">PASSIVE-EXTERNAL</span>
               <span>•</span>
-              <span className="text-[#576575]">ONLINE</span>
+              <span className="text-[var(--text-muted)]">ID: {scan.scanId.slice(0, 8)}…</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 font-mono text-xs">
+          <div className="flex items-center gap-1.5 text-xs">
             <button
               type="button"
               onClick={toggleGuidedMode}
               className={`console-btn py-0.5 px-2 text-[10px] ${
-                isGuidedMode ? 'border-[#58a6ff] text-[#58a6ff]' : 'text-[#8b9bb0]'
+                isGuidedMode ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'
               }`}
               title="Toggle guided interpretation vs raw technical dossier"
             >
@@ -199,25 +198,15 @@ export default function ScanPage() {
               <span>{isGuidedMode ? 'GUIDED' : 'TECH'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => openGlossary('passive_osint')}
-              className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]"
-              title="Open cybersecurity field manual"
-            >
-              <BookOpen size={10} className="text-[#58a6ff]" />
-              <span className="hidden md:inline">FIELD MANUAL</span>
-            </button>
-
             <Link
-              to={`/report/${scan.scanId}`}
+              to={`/report/${encodeURIComponent(scan.scanId)}`}
               className="console-btn console-btn-primary py-0.5 px-2 text-[10px]"
             >
               <FileText size={10} />
               <span>DOSSIER</span>
             </Link>
 
-            <Link to="/history" className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]">
+            <Link to="/history" className="console-btn py-0.5 px-2 text-[10px] text-[var(--text-secondary)]">
               <Clock3 size={10} />
               <span className="hidden sm:inline">HISTORY</span>
             </Link>
@@ -228,7 +217,7 @@ export default function ScanPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* ─── Main Workstation Layout ─────────────────────────────────── */}
       <div className="mx-auto max-w-[1720px] px-3 sm:px-5 pt-3 space-y-2.5">
@@ -473,6 +462,6 @@ export default function ScanPage() {
           </div>
         </div>
       </footer>
-    </main>
+    </div>
   );
 }

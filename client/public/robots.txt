@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /security
+Allow: /login
+Allow: /register
+Disallow: /api/
+Disallow: /scan/
+Disallow: /report/
+Disallow: /history
+Disallow: /compare/
+
+Sitemap: https://domainattacksurface.io/sitemap.xml

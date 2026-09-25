@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   GitCompare,
   TrendingUp,
   TrendingDown,
@@ -11,10 +10,10 @@ import {
   Calendar,
   AlertTriangle,
   RefreshCw,
-  Terminal,
 } from 'lucide-react';
 import type { ScanComparison } from '../../../shared/types';
 import { getScanComparison } from '../lib/api';
+import WorkstationNav from '../components/WorkstationNav';
 
 export default function ComparisonPage() {
   const { baseId, targetId } = useParams<{ baseId: string; targetId: string }>();
@@ -55,35 +54,14 @@ export default function ComparisonPage() {
   }, [baseId, targetId]);
 
   return (
-    <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] font-mono pb-16">
-      {/* ─── Top Console Header ───────────────────────────────────── */}
-      <header className="border-b border-[#1f2735] bg-[#111620]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 font-mono text-sm font-bold tracking-tight text-[#e6edf3] hover:text-[#58a6ff] transition"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded border border-[#388bfd]/40 bg-[#162030] text-[#58a6ff]">
-              <Terminal size={15} />
-            </div>
-            <span>DOMAIN ATTACK SURFACE SCANNER</span>
-          </Link>
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-mono pb-16 transition-colors duration-150 flex flex-col">
+      <WorkstationNav />
 
-          <Link
-            to="/history"
-            className="console-btn py-1.5 px-3 text-xs text-[#9aa5b8]"
-          >
-            <ArrowLeft size={13} />
-            <span>RETURN TO HISTORY</span>
-          </Link>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-6 w-full flex-1">
         {loading && (
           <div className="console-panel p-16 text-center space-y-3">
-            <RefreshCw className="h-7 w-7 animate-spin text-[#58a6ff] mx-auto" />
-            <p className="text-xs text-[#9aa5b8]">CALCULATING PERIMETER DELTA & CERTIFICATE ROTATION…</p>
+            <RefreshCw className="h-7 w-7 animate-spin text-[var(--accent-primary)] mx-auto" />
+            <p className="text-xs text-[var(--text-secondary)]">CALCULATING PERIMETER DELTA & CERTIFICATE ROTATION…</p>
           </div>
         )}
 
@@ -372,7 +350,7 @@ export default function ComparisonPage() {
             </div>
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

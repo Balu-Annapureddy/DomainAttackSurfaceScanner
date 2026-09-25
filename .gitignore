@@ -12,10 +12,11 @@ server/node_modules/
 client/dist/
 server/dist/
 
-# Uploads (temporary, never commit)
+# Uploads & local data (temporary, never commit)
 uploads/
 tmp/
 server/uploads/
+.data/
 
 # Logs
 *.log

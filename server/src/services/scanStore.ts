@@ -28,7 +28,7 @@ function makeEmptyCategories(): ScanRecord['categories'] {
   };
 }
 
-export function createScanRecord(domain: string): ScanRecord {
+export function createScanRecord(domain: string, userId?: string | null, isSaved = false): ScanRecord {
   const now = Date.now();
   const record: ScanRecord = {
     scanId: randomUUID(),
@@ -42,6 +42,8 @@ export function createScanRecord(domain: string): ScanRecord {
     relationships: [],
     findings: [],
     warnings: [],
+    userId: userId ?? null,
+    isSaved,
   };
 
   scanStore.set(record.scanId, record);

@@ -1,16 +1,22 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import fs from 'node:fs';
 import { config } from './config';
 import { applySecurity } from './middleware/security';
+import { authMiddleware } from './middleware/auth';
 import scanRouter, { getActiveScansCount } from './routes/scan';
+import authRouter from './routes/auth';
 
 const app = express();
 
 applySecurity(app);
+app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(authMiddleware);
 
+app.use('/api/auth', authRouter);
 app.use('/api/scan', scanRouter);
 
 app.get('/api/health', (_req, res) => {
@@ -55,9 +61,13 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
 });
 
-const server = app.listen(config.port, () => {
-  console.log(`\n🔎 Domain Attack Surface Scanner running on http://localhost:${config.port}`);
-  console.log(`Environment: ${config.nodeEnv}`);
-});
+let server: import('node:http').Server | undefined;
+if (config.nodeEnv !== 'test') {
+  server = app.listen(config.port, () => {
+    console.log(`\n🔎 Domain Attack Surface Scanner running on http://localhost:${config.port}`);
+    console.log(`Environment: ${config.nodeEnv}`);
+  });
+}
 
 export { app, server };
+

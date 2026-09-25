@@ -73,6 +73,38 @@ export interface DomainScan {
   relationships: Relationship[];
   findings: Finding[];
   warnings: string[];
+  userId?: string | null;
+  isSaved?: boolean;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  message?: string;
+}
+
+export interface QuotaInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsInSeconds: number;
+  isRegistered: boolean;
+}
+
+export interface HistoryScanItem {
+  scanId: string;
+  domain: string;
+  createdAt: string;
+  status: ScanStatus;
+  score?: number;
+  assetCount: number;
+  findingCount: number;
+  isSaved?: boolean;
 }
 
 export interface CertificateDiff {

@@ -1,28 +1,72 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   GitCompare,
   CheckSquare,
   Square,
   AlertCircle,
-  Clock,
   Calendar,
+  Trash2,
+  Database,
+  User,
+  ArrowRight,
 } from 'lucide-react';
 import IntelligenceTimeline, { type HistoryItem } from '../components/IntelligenceTimeline';
+import WorkstationNav from '../components/WorkstationNav';
+import { useAuth } from '../context/AuthContext';
+import { getUserScanHistory, deleteSavedScan } from '../lib/api';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedScanIds, setSelectedScanIds] = useState<string[]>([]);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [timelineDomain, setTimelineDomain] = useState<string | null>(null);
+  const [serverScans, setServerScans] = useState<HistoryItem[]>([]);
+  const [loadingServerScans, setLoadingServerScans] = useState(false);
 
-  let items: HistoryItem[] = [];
+  // Load persistent history if user is authenticated
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadHistory() {
+      if (!user) return;
+      try {
+        setLoadingServerScans(true);
+        const data = await getUserScanHistory();
+        if (!isCancelled) {
+          setServerScans(
+            data.map((s) => ({
+              scanId: s.scanId,
+              domain: s.domain,
+              createdAt: s.createdAt,
+              status: s.status,
+              score: s.score,
+              assetCount: s.assetCount,
+              findingCount: s.findingCount,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load server history:', err);
+      } finally {
+        if (!isCancelled) setLoadingServerScans(false);
+      }
+    }
+    void loadHistory();
+    return () => {
+      isCancelled = true;
+    };
+  }, [user]);
+
+  // Fallback to local storage for guest / anonymous users
+  let localItems: HistoryItem[] = [];
   try {
-    items = JSON.parse(localStorage.getItem('domain_scanner_scans') || '[]') as HistoryItem[];
+    localItems = JSON.parse(localStorage.getItem('domain_scanner_scans') || '[]') as HistoryItem[];
   } catch {
     /* corrupted local history */
   }
+
+  const items = user ? serverScans : localItems;
 
   // Count scans by domain
   const scanCountsByDomain = items.reduce<Record<string, number>>((acc, item) => {
@@ -71,188 +115,207 @@ export default function HistoryPage() {
     navigate(`/compare/${encodeURIComponent(base.scanId)}/${encodeURIComponent(target.scanId)}`);
   };
 
+  const handleDelete = async (scanId: string) => {
+    if (!confirm('Are you sure you want to delete this scan record?')) return;
+    try {
+      if (user) {
+        await deleteSavedScan(scanId);
+        setServerScans((prev) => prev.filter((s) => s.scanId !== scanId));
+      } else {
+        const next = localItems.filter((s) => s.scanId !== scanId);
+        localStorage.setItem('domain_scanner_scans', JSON.stringify(next));
+        window.location.reload();
+      }
+      setSelectedScanIds((prev) => prev.filter((id) => id !== scanId));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Unable to delete scan');
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] font-mono pb-16">
-      {/* ─── Compact Workstation Header ─────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] px-4 py-2">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-xs font-bold text-[#58a6ff] hover:text-[#e6edf3] transition"
-            >
-              <span>DAS // WORKSTATION</span>
-            </Link>
-            <span className="text-[#1e2631]">|</span>
-            <div className="flex items-center gap-2 text-[11px] text-[#8b9bb0]">
-              <span className="text-[#3fb950] font-semibold">HISTORICAL_ARCHIVE</span>
-              <span>•</span>
-              <span className="text-[#576575]">{items.length} RECORDS</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-mono pb-16 flex flex-col transition-colors duration-150">
+      <WorkstationNav />
 
-          <Link
-            to="/"
-            className="console-btn console-btn-primary py-0.5 px-2.5 text-[11px]"
-          >
-            <ArrowLeft size={12} />
-            <span>NEW SCAN</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* ─── Main Content ─────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 space-y-4">
-        {/* Header & Diff Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#1e2631] pb-3">
+      <main className="flex-1 mx-auto max-w-7xl px-4 py-6 w-full space-y-5">
+        {/* Page Header Strip */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-technical)] pb-3">
           <div>
-            <h1 className="text-base font-bold tracking-tight text-[#e6edf3] sm:text-lg">
-              SCAN ARCHIVE & CHRONOLOGICAL HISTORY
+            <div className="flex items-center gap-2 text-xs text-[var(--accent-primary)] font-bold">
+              <Database size={13} />
+              <span>RECONNAISSANCE ARCHIVE</span>
+              <span>•</span>
+              <span className="text-[var(--text-secondary)]">{items.length} SAVED SCANS</span>
+            </div>
+            <h1 className="text-base sm:text-lg font-bold text-[var(--text-primary)] tracking-tight mt-0.5">
+              {user ? `PERSISTENT DOSSIER ARCHIVE (${user.email})` : 'LOCAL BROWSER SCAN HISTORY'}
             </h1>
-            <p className="mt-0.5 text-xs text-[#8b9bb0] font-sans">
-              Review stored perimeter scans, launch timeline drift visualizers, generate dossiers, or compare deltas.
-            </p>
           </div>
 
-          {selectedScanIds.length > 0 && (
-            <div className="flex items-center gap-2.5 bg-[#0c1015] p-2 text-xs border border-[#388bfd]">
-              <span className="text-[#58a6ff] font-bold">
-                [{selectedScanIds.length}/2 FOR DIFF]
-              </span>
-              {selectedScanIds.length === 2 && (
-                <button
-                  type="button"
-                  onClick={handleLaunchCompare}
-                  className="console-btn console-btn-primary py-0.5 px-2 text-[11px]"
-                >
-                  <GitCompare size={11} />
-                  <span>COMPARE</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedScanIds([])}
-                className="text-[#576575] hover:text-[#e6edf3] text-xs underline cursor-pointer"
-              >
-                CLEAR
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Link to="/" className="console-btn console-btn-primary py-1 px-3 text-xs">
+              + NEW RECON SCAN
+            </Link>
+          </div>
         </div>
 
-        {compareError && (
-          <div className="bg-[#0c1015] border-l-2 border-[#f85149] p-2.5 text-xs text-[#f85149] flex items-center gap-2">
-            <AlertCircle size={13} className="shrink-0" />
-            <span>[COMPARISON CONFLICT]: {compareError}</span>
+        {/* Guest Mode Informational Banner */}
+        {!user && (
+          <div className="console-panel p-3.5 bg-[var(--bg-panel-subtle)] border-l-2 border-l-[var(--accent-primary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
+                <User size={13} className="text-[var(--accent-primary)]" />
+                <span>GUEST SESSION ACTIVE</span>
+              </div>
+              <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                Scan records are stored locally in your browser and limited to 5 scans/hour. Register for free to persist scans in the database, compare chronologically across devices, and unlock 50 scans/hour.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link to="/register" className="console-btn console-btn-primary py-1 px-3 text-xs flex items-center gap-1">
+                <span>REGISTER FREE</span>
+                <ArrowRight size={11} />
+              </Link>
+            </div>
           </div>
         )}
 
-        {/* Empty State */}
-        {items.length === 0 ? (
-          <div className="console-panel p-10 text-center space-y-2">
-            <Clock size={24} className="mx-auto text-[#576575]" />
-            <p className="text-xs font-bold text-[#e6edf3]">NO PREVIOUS SCANS RECORDED</p>
-            <p className="text-xs text-[#8b9bb0] font-sans max-w-sm mx-auto">
-              Initiate a scan on any domain to start tracking public perimeter telemetry and drift over time.
+        {/* Comparison Action Bar */}
+        {selectedScanIds.length > 0 && (
+          <div className="console-panel p-3 flex flex-wrap items-center justify-between gap-3 bg-[var(--accent-active-bg)] border-[var(--accent-primary)]">
+            <div className="flex items-center gap-2 text-xs">
+              <GitCompare size={14} className="text-[var(--accent-primary)]" />
+              <span className="font-bold text-[var(--text-primary)]">
+                {selectedScanIds.length} OF 2 SCANS SELECTED FOR COMPARISON
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedScanIds([])}
+                className="console-btn py-1 px-2.5 text-xs text-[var(--text-secondary)]"
+              >
+                CLEAR SELECTION
+              </button>
+              <button
+                type="button"
+                disabled={selectedScanIds.length !== 2}
+                onClick={handleLaunchCompare}
+                className="console-btn console-btn-primary py-1 px-3 text-xs"
+              >
+                COMPARE SELECTED SCANS
+              </button>
+            </div>
+          </div>
+        )}
+
+        {compareError && (
+          <div className="p-2.5 border border-[#ef4444] bg-[#ef4444]/10 text-[#ef4444] flex items-center gap-2 text-xs">
+            <AlertCircle size={14} />
+            <span>{compareError}</span>
+          </div>
+        )}
+
+        {/* Scan Records Listing */}
+        {loadingServerScans ? (
+          <div className="console-panel p-8 text-center text-xs text-[var(--text-secondary)]">
+            RETRIEVING ENCRYPTED ARCHIVE RECORDS…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="console-panel p-10 text-center space-y-3">
+            <Database size={24} className="mx-auto text-[var(--text-muted)]" />
+            <h2 className="text-sm font-bold text-[var(--text-primary)]">NO RECONNAISSANCE DOSSIERS FOUND</h2>
+            <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto">
+              Initiate a passive reconnaissance assessment from the main console to begin building perimeter intelligence.
             </p>
-            <Link
-              to="/"
-              className="console-btn console-btn-primary inline-flex text-xs mt-2"
-            >
-              <span>START SCAN</span>
+            <Link to="/" className="console-btn console-btn-primary inline-flex text-xs py-1 px-3 mt-2">
+              LAUNCH FIRST SCAN
             </Link>
           </div>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.map((item) => {
               const isSelected = selectedScanIds.includes(item.scanId);
-              const domainKey = item.domain.toLowerCase();
-              const hasMultipleScans = (scanCountsByDomain[domainKey] || 0) > 1;
-
-              const score = item.score;
-              const hasScore = score !== undefined && score !== null;
+              const hasMultipleScans = (scanCountsByDomain[item.domain.toLowerCase()] || 0) > 1;
 
               return (
                 <div
                   key={item.scanId}
-                  className={`bg-[#10151b] border p-3 flex flex-col justify-between transition ${
-                    isSelected ? 'border-[#58a6ff] bg-[#15273b]' : 'border-[#1e2631] hover:border-[#58a6ff]'
+                  className={`console-panel p-3.5 transition-all flex flex-col justify-between ${
+                    isSelected
+                      ? 'border-[var(--accent-primary)] bg-[var(--accent-active-bg)] shadow-md'
+                      : 'hover:border-[var(--border-technical)]'
                   }`}
                 >
                   <div className="space-y-2">
-                    {/* Header Row */}
-                    <div className="flex items-start justify-between gap-2 border-b border-[#1e2631] pb-2">
-                      <div className="space-y-0.5 truncate">
-                        <span className="font-bold text-sm text-[#e6edf3] block truncate" title={item.domain}>
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelect(item)}
+                          className="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] cursor-pointer"
+                          title={isSelected ? 'Deselect for comparison' : 'Select for comparison'}
+                          aria-label={`Select ${item.domain} for comparison`}
+                        >
+                          {isSelected ? (
+                            <CheckSquare size={14} className="text-[var(--accent-primary)]" />
+                          ) : (
+                            <Square size={14} />
+                          )}
+                        </button>
+                        <h2 className="text-xs font-bold text-[var(--text-primary)] truncate" title={item.domain}>
                           {item.domain}
-                        </span>
-                        <div className="flex items-center gap-1 text-[10px] text-[#576575]">
-                          <Calendar size={10} />
-                          <span>{new Date(item.createdAt).toISOString().replace('T', ' ').slice(0, 19)} UTC</span>
-                        </div>
+                        </h2>
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => toggleSelect(item)}
-                        className="text-[#576575] hover:text-[#58a6ff] p-0.5 cursor-pointer"
-                        title={isSelected ? 'Deselect from comparison' : 'Select for comparison'}
+                        onClick={() => void handleDelete(item.scanId)}
+                        className="text-[var(--text-muted)] hover:text-[#ef4444] p-0.5 cursor-pointer transition-colors"
+                        title="Delete scan record"
+                        aria-label={`Delete scan record for ${item.domain}`}
                       >
-                        {isSelected ? (
-                          <CheckSquare size={15} className="text-[#58a6ff]" />
-                        ) : (
-                          <Square size={15} />
-                        )}
+                        <Trash2 size={12} />
                       </button>
                     </div>
 
-                    {/* Metadata & Score Tags */}
-                    <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
+                    {/* Metadata Strip */}
+                    <div className="text-[11px] text-[var(--text-secondary)] flex items-center gap-2">
+                      <Calendar size={11} className="text-[var(--text-muted)]" />
+                      <span>{new Date(item.createdAt).toLocaleString()}</span>
+                    </div>
+
+                    {/* Telemetry pill row */}
+                    <div className="flex items-center gap-2 pt-1 text-[11px]">
+                      {item.score !== undefined && (
+                        <span className="console-tag console-tag-phosphor">
+                          SCORE: {item.score}/100
+                        </span>
+                      )}
                       <span className="console-tag">
-                        STATUS: {item.status ? item.status.toUpperCase() : 'UNKNOWN'}
+                        {item.assetCount || 0} ASSETS
                       </span>
-                      {hasScore && (
-                        <span
-                          className={`console-tag ${
-                            score >= 80
-                              ? 'console-tag-phosphor'
-                              : score >= 60
-                              ? 'console-tag-cyan'
-                              : score >= 40
-                              ? 'console-tag-amber'
-                              : 'console-tag-coral'
-                          }`}
-                        >
-                          SCORE: {score}/100
-                        </span>
-                      )}
-                      {item.assetCount !== undefined && (
-                        <span className="console-tag">
-                          {item.assetCount} ASSETS
-                        </span>
-                      )}
-                      {item.findingCount !== undefined && (
-                        <span className="console-tag">
-                          {item.findingCount} FINDINGS
-                        </span>
-                      )}
+                      <span className="console-tag">
+                        {item.findingCount || 0} FINDINGS
+                      </span>
                     </div>
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="mt-3 pt-2 border-t border-[#1e2631] flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="mt-3 pt-2 border-t border-[var(--border-muted)] flex items-center justify-between gap-1.5">
                     <div className="flex items-center gap-1">
                       <Link
-                        to={`/scan/${item.scanId}`}
-                        className="console-btn py-0.5 px-2 text-[10px] text-[#58a6ff]"
+                        to={`/scan/${encodeURIComponent(item.scanId)}`}
+                        className="console-btn py-0.5 px-2 text-[10px] text-[var(--accent-primary)]"
                       >
-                        [OPEN]
+                        [OPEN CONSOLE]
                       </Link>
                       <Link
-                        to={`/report/${item.scanId}`}
-                        className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]"
+                        to={`/report/${encodeURIComponent(item.scanId)}`}
+                        className="console-btn py-0.5 px-2 text-[10px] text-[var(--text-secondary)]"
                       >
-                        [REPORT]
+                        [DOSSIER]
                       </Link>
                     </div>
 
@@ -272,17 +335,17 @@ export default function HistoryPage() {
             })}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Legal Footer */}
-      <footer className="mt-8 pt-4 border-t border-[#1e2631] text-center text-[11px] text-[#576575] flex flex-wrap justify-center items-center gap-4">
+      <footer className="mt-auto border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] py-3 px-4 text-center text-[11px] text-[var(--text-muted)] flex flex-wrap justify-center items-center gap-4">
         <span>DOMAIN ATTACK SURFACE SCANNER</span>
         <span>&middot;</span>
-        <Link to="/privacy" className="hover:text-[#58a6ff] transition-colors">Privacy Policy</Link>
+        <Link to="/privacy" className="hover:text-[var(--accent-primary)] transition-colors">Privacy Policy</Link>
         <span>&middot;</span>
-        <Link to="/terms" className="hover:text-[#58a6ff] transition-colors">Terms of Use</Link>
+        <Link to="/terms" className="hover:text-[var(--accent-primary)] transition-colors">Terms of Use</Link>
         <span>&middot;</span>
-        <Link to="/security" className="hover:text-[#58a6ff] transition-colors">Security &amp; Vulnerability Disclosure</Link>
+        <Link to="/security" className="hover:text-[var(--accent-primary)] transition-colors">Security &amp; Vulnerability Disclosure</Link>
       </footer>
 
       {/* Intelligence Timeline Modal */}
@@ -293,6 +356,6 @@ export default function HistoryPage() {
           onClose={() => setTimelineDomain(null)}
         />
       )}
-    </main>
+    </div>
   );
 }

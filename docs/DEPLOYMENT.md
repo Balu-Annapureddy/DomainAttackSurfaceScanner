@@ -1,80 +1,113 @@
 # Deployment Guide — Domain Attack Surface Scanner
 
-This guide details deployment practices, operational architecture, environment configuration, and security controls for deploying DomainAttackSurfaceScanner to production.
+This guide details deployment architectures, operational topology, environment configuration, and security practices for deploying DomainAttackSurfaceScanner to production.
 
 ---
 
-## 1. Build & Compilation
+## 1. Deployment Topology Options
 
-DomainAttackSurfaceScanner is structured as an npm workspaces monorepo:
-- `client/`: React 19, TypeScript, Vite, Tailwind CSS
-- `server/`: Node.js, Express, TypeScript
-- `shared/`: Shared TypeScript data contracts
+The application supports two primary production deployment architectures:
 
-Build all packages with:
+### Option A: Decoupled (Cloudflare Pages + Node Backend + Managed PostgreSQL) — *Recommended*
+- **Frontend**: Deployed to Cloudflare Pages (or Vercel / Netlify) serving pre-compiled static assets from `client/dist`. Fast global CDN distribution, edge caching, and DDoS defense.
+- **Backend API**: Deployed to a containerized Node.js host (e.g. Fly.io, Railway, Render, AWS ECS, or Ubuntu VPS) running `server/dist`.
+- **Database**: Managed PostgreSQL instance (e.g. Supabase, Neon, AWS RDS, DigitalOcean PostgreSQL).
+- **Communication**: Frontend sends API requests with `credentials: 'include'` over HTTPS.
+
+```text
+[Browser]
+    │ (Static Assets & HTML)
+    ├─────────────────────────────► [Cloudflare Pages CDN]
+    │ (API with Session Cookie)
+    └─────────────────────────────► [Cloudflare Edge WAF]
+                                           │ (Reverse Proxy)
+                                           ▼
+                                    [Node.js Express API]
+                                           │ (SSL Pool)
+                                           ▼
+                                    [PostgreSQL Database]
+```
+
+### Option B: Unified Fullstack Container (Single Origin)
+- A single Node.js container builds both `client` and `server`.
+- In `NODE_ENV=production`, Express serves the compiled static SPA from `client/dist` and handles `/api/*` routes directly on the same domain and port.
+- Simplifies cookie handling (`SameSite=Lax` without cross-site origin issues).
+
+---
+
+## 2. Build & Compilation Commands
+
+The repository is an npm workspaces monorepo:
 
 ```bash
-# Build both client and server production bundles
+# 1. Install all dependencies
+npm install
+
+# 2. Build both client and server production bundles
 npm run build
 ```
 
-The client outputs static assets to `client/dist/`. The server compiles TypeScript to `server/dist/`. In production mode (`NODE_ENV=production`), the Express server automatically serves the compiled client bundle from `client/dist/` for unified single-origin deployments.
+- Client static output: `client/dist/`
+- Server compiled JavaScript: `server/dist/`
 
 ---
 
-## 2. Start Command & Process Execution
+## 3. Database Initialization & Persistence
 
-Run the compiled production server:
+1. **PostgreSQL Setup**:
+   - Provision a PostgreSQL database (version 14+ recommended).
+   - Retrieve connection string: `postgres://user:password@hostname:5432/dbname?sslmode=require`.
+   - Set as `DATABASE_URL` environment variable.
+2. **Auto-Migration**:
+   - On server startup, if `DATABASE_URL` is configured, `server/src/db/index.ts` automatically executes `server/src/db/schema.sql` to establish tables:
+     - `users` (credentials hashed with Scrypt)
+     - `sessions` (cryptographically random tokens, expiration)
+     - `scans` (scan metadata, ownership, scores)
+     - `scan_results` (relational JSON results)
+     - `quotas` (sliding-window scan counts)
+3. **Zero-Setup Local / Standalone Mode**:
+   - If `DATABASE_URL` is omitted, the application uses an atomic in-memory/file-backed JSON store at `.data/dass_db.json`. No external database is needed for development or test runs.
 
-```bash
-NODE_ENV=production npm run start --workspace=server
+---
+
+## 4. Environment Variables Checklist
+
+Set these in your host dashboard (e.g. Fly secrets, Railway variables, Render environment):
+
+```env
+NODE_ENV=production
+PORT=3001
+CLIENT_ORIGIN=https://scanner.example.com
+DATABASE_URL=postgres://user:password@db.example.com:5432/dass?sslmode=require
+SESSION_SECRET=GENERATE_HIGH_ENTROPY_64_CHAR_HEX_KEY
+ANONYMOUS_SCAN_LIMIT=5
+REGISTERED_SCAN_LIMIT=50
+SCAN_LIMIT_WINDOW_MS=3600000
+SCAN_TIMEOUT_MS=120000
+MAX_CONCURRENT_SCANS=4
+IP_INTELLIGENCE_ENABLED=true
+IP_INTELLIGENCE_URL=https://ipapi.co/{ip}/json/
 ```
 
-Or execute directly with Node:
-
+Generate `SESSION_SECRET`:
 ```bash
-NODE_ENV=production node server/dist/server/src/index.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-For production process management, use a process supervisor such as `pm2`, `systemd`, or a container runner (Docker/Kubernetes).
-
 ---
 
-## 3. Environment Variables
+## 5. Reverse Proxy & SSL Configuration (Nginx / Caddy)
 
-All settings can be declared in a `.env` file or injected via container/cloud environment variables. Refer to `.env.example` for comprehensive documentation.
+When running behind Nginx or Caddy on a Linux server:
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PORT` | Yes | `3001` | TCP port for the backend server |
-| `NODE_ENV` | Yes | `development` | Set to `production` in live environments |
-| `CLIENT_ORIGIN` | Yes | `http://localhost:5173` | Allowed CORS origin (e.g., `https://scanner.example.com`) |
-| `SCAN_RATE_LIMIT_MAX` | No | `10` (prod) / `100` (dev) | Maximum scan submissions per IP window |
-| `SCAN_RATE_LIMIT_WINDOW_MS` | No | `3600000` (1h) / `900000` (15m) | Rate limiting window in milliseconds |
-| `SCAN_TIMEOUT_MS` | No | `120000` (2m) | Per-scan execution timeout |
-| `MAX_CONCURRENT_SCANS` | No | `2` | Maximum concurrent scan jobs handled simultaneously |
-| `MAX_EXTERNAL_REQUESTS` | No | `30` | Request budget cap per scan |
-| `MAX_RESPONSE_BYTES` | No | `524288` (512KB) | Maximum bytes read per outbound response |
-| `MAX_REDIRECTS` | No | `3` | Maximum HTTP redirect hops allowed |
-| `IP_INTELLIGENCE_ENABLED` | No | `true` | Enables approximate IP infrastructure geolocation |
-| `IP_INTELLIGENCE_URL` | No | `https://ipapi.co/{ip}/json/` | HTTPS IP provider template with `{ip}` |
-| `ALLOWED_IP_INTELLIGENCE_HOSTS` | No | *(default set)* | Comma-separated list of approved provider hostnames |
-
----
-
-## 4. Reverse Proxy & HTTPS Configuration
-
-The application must be placed behind a reverse proxy (such as Nginx, Caddy, AWS ALB, or Cloudflare) that terminates TLS.
-
-Example Nginx reverse proxy configuration:
-
+### Nginx Example
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name scanner.example.com;
+    server_name api.scanner.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/scanner.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/scanner.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.scanner.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.scanner.example.com/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -91,64 +124,44 @@ server {
 
 ---
 
-## 5. Cloudflare & Edge Security Topology
+## 6. Health & Readiness Verification
 
-Recommended production deployment topology:
+After deployment, test the health check endpoints:
 
-```text
-User Browser
-    ↓ (HTTPS)
-Cloudflare (Edge WAF, DDoS mitigation, Bot management, SSL/TLS termination)
-    ↓ (Authenticated Origin Pull / HTTPS)
-Reverse Proxy (Nginx / ALB)
-    ↓ (HTTP localhost / private subnet)
-Node.js Express Server (Port 3001)
-    ↓
-Target Scanning Engine (Strict public resolution, SSRF controls, Request budgets)
-    ↓
-Public Internet Records (DNS, RDAP, crt.sh, TLS handshakes)
+```bash
+# Basic liveness check
+curl -f https://api.scanner.example.com/api/health
+# Response: {"status":"ok","timestamp":"...","uptime":...,"version":"1.0.0"}
+
+# Readiness check (database & store initialized)
+curl -f https://api.scanner.example.com/api/health/ready
+# Response: {"status":"ready","timestamp":"...","activeScans":0}
 ```
 
-*Note: Cloudflare is a deployment infrastructure recommendation. It is not bundled inside the application repo.*
+---
+
+## 7. Cloudflare Pages Deployment Steps
+
+1. In Cloudflare Dashboard, go to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+2. Select repository `DomainAttackSurfaceScanner`.
+3. Build Settings:
+   - **Framework preset**: `Vite`
+   - **Build command**: `npm run build --workspace=client`
+   - **Build output directory**: `client/dist`
+   - **Root directory**: `/`
+4. Set Environment Variables:
+   - `VITE_API_URL`: `https://api.scanner.example.com` (or leave empty if using Cloudflare Pages proxy routes).
+5. Custom Domain: Configure your apex or subdomain (e.g. `scanner.example.com`).
 
 ---
 
-## 6. Health & Readiness Endpoints
+## 8. Post-Deployment Verification Checklist
 
-The server exposes dedicated health and liveness probes:
-
-- **`GET /api/health`**:
-  Returns `200 OK` with JSON `{ status: "ok", timestamp, uptime, version }`. Use this for basic liveness monitoring.
-- **`GET /api/health/ready`**:
-  Returns `200 OK` with JSON `{ status: "ready", timestamp, activeScans }` when configuration and in-memory stores are initialized. Returns `503 Service Unavailable` if unready.
-
----
-
-## 7. Storage Model & Ephemeral Persistence Limitations
-
-- **Current Implementation**: The scanner uses an in-memory `Map<string, ScanRecord>` with a 24-hour time-to-live (TTL). Scans expire automatically after 24 hours.
-- **Single-Process Constraint**: Scans stored in memory are local to the running Node.js process. In a horizontally scaled multi-instance deployment, requests must be routed with sticky sessions, or a shared database must be used.
-- **Future Migration Path**: The store interface in `server/src/services/scanStore.ts` cleanly isolates scan state operations (`createScanRecord`, `getScanRecord`, `updateCategoryStatus`, `setScanScore`, `markScanFinished`). Replacing the in-memory Map with PostgreSQL or Redis can be achieved without modifying route handlers or business logic.
-
----
-
-## 8. Rate Limiting & Concurrency Controls
-
-- Scan submission is bounded by `express-rate-limit` (defaulting to 10 scans per IP per hour in production).
-- The server tracks active concurrent scans with `config.maxConcurrentScans` (default: 2) and rejects excess traffic with `429 Too Many Requests (SCAN_CONCURRENCY_LIMIT)`.
-- A 60-second cooldown per target domain prevents redundant concurrent scanning of the same target.
-- Individual scans enforce a `ScanRequestBudget` (default: 30 outbound requests) and an execution timeout of 120 seconds.
-
----
-
-## 9. Production Security Checklist
-
-Before exposing the scanner to the public internet:
-1. [ ] Set `NODE_ENV=production`.
-2. [ ] Set `CLIENT_ORIGIN` to your canonical HTTPS domain.
-3. [ ] Confirm server is fronted by HTTPS termination.
-4. [ ] Verify `PORT` is bound to `127.0.0.1` or isolated within a container network.
-5. [ ] Verify `SCAN_RATE_LIMIT_MAX` and `SCAN_RATE_LIMIT_WINDOW_MS` match your expected traffic volume.
-6. [ ] Confirm no secrets or `.env` files are tracked in version control.
-7. [ ] Ensure provider URL uses HTTPS and matches `ALLOWED_IP_INTELLIGENCE_HOSTS`.
-8. [ ] Verify `/api/health` and `/api/health/ready` respond with 200 OK.
+1. [ ] Confirm `/api/health` returns `200 OK`.
+2. [ ] Submit test scan for a known public domain (e.g. `example.com`).
+3. [ ] Verify quota deduction (anonymous quota drops from 5 to 4).
+4. [ ] Register a new account (`/register`), verify cookie `dass_session` set with `HttpOnly; Secure; SameSite=Lax`.
+5. [ ] Verify registered quota displays `50 / 50 remaining`.
+6. [ ] Save/view scan history (`/history`) and verify cross-session persistence.
+7. [ ] Toggle dark / light theme and refresh page; confirm preference persists.
+8. [ ] Check `robots.txt` (`https://domain.com/robots.txt`) and `sitemap.xml` (`https://domain.com/sitemap.xml`).
