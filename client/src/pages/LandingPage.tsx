@@ -1,284 +1,259 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Terminal, Shield, ArrowRight, Sparkles, BookOpen, History, Globe2, Server, Lock } from 'lucide-react';
-import { createScan } from '../lib/api';
+import { useNavigate, Link } from 'react-router-dom';
+import { ShieldCheck, Search, BookOpen, Clock, AlertTriangle } from 'lucide-react';
 import GlossaryModal from '../components/GlossaryModal';
 
 export default function LandingPage() {
   const [domain, setDomain] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   const navigate = useNavigate();
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setError('');
+  const handleScan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanDomain = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!cleanDomain) {
+      setError('SPECIFY TARGET DOMAIN (E.G., EXAMPLE.COM)');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+
     try {
-      const scan = await createScan(domain);
-      const previous = JSON.parse(localStorage.getItem('domain_scanner_scans') || '[]') as Array<{
-        scanId: string;
-        domain: string;
-        createdAt: string;
-      }>;
-      localStorage.setItem(
-        'domain_scanner_scans',
-        JSON.stringify(
-          [{ scanId: scan.scanId, domain: scan.domain, createdAt: scan.createdAt }, ...previous.filter((item) => item.scanId !== scan.scanId)].slice(0, 30),
-        ),
-      );
-      navigate(`/scan/${scan.scanId}`);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to initiate perimeter scan');
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: cleanDomain }),
+      });
+      const data = await res.json() as { scanId?: string; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || 'UNABLE TO INITIALIZE PASSIVE RECONNAISSANCE');
+      }
+
+      navigate(`/scan/${encodeURIComponent(data.scanId!)}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'UNABLE TO COMMENCE SCAN');
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  const capabilities = [
+    { title: 'DNS / INFRASTRUCTURE', desc: 'Authoritative nameservers, MX routing, A/AAAA records, and multi-cloud perimeter footprint.' },
+    { title: 'CERTIFICATE TRANSPARENCY', desc: 'Passive discovery of subdomains and SANs via public append-only cryptographic CT logs.' },
+    { title: 'SECURITY HYGIENE', desc: 'Audit of HTTP headers (HSTS, CSP, X-Frame-Options) and observable security configurations.' },
+    { title: 'EMAIL POSTURE', desc: 'Verification of SPF policy, DMARC alignment, and mail gateway posture against spoofing.' },
+    { title: 'NETWORK RELATIONSHIPS', desc: 'Bidirectional graph mapping between root domains, hostnames, IPs, ASNs, and organizations.' },
+    { title: 'OBSERVABLE SERVICES', desc: 'Passive detection of transit CDNs, edge firewalls, and cloud hosting providers.' },
+  ];
+
+  const pipelineStages = [
+    { step: '01', name: 'RESOLVE', desc: 'Query authoritative DNS records' },
+    { step: '02', name: 'DISCOVER', desc: 'Parse public Certificate Transparency logs' },
+    { step: '03', name: 'CORRELATE', desc: 'Map IP addresses to ASNs and hosting orgs' },
+    { step: '04', name: 'OBSERVE', desc: 'Inspect perimeter HTTP response headers' },
+    { step: '05', name: 'ASSESS', desc: 'Evaluate configuration evidence & posture' },
+    { step: '06', name: 'REPORT', desc: 'Synthesize actionable intelligence dossier' },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] selection:bg-[#388bfd]/30 selection:text-[#e6edf3]">
-      {/* ─── Global Console Header ───────────────────────────────────── */}
-      <header className="border-b border-[#1f2735] bg-[#111620]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <div className="min-h-screen bg-[#080b0f] text-[#e6edf3] font-sans flex flex-col">
+      {/* ─── Workstation Shell Header ───────────────────────────────── */}
+      <header className="border-b border-[#1e2631] bg-[#10151b] px-4 py-2.5">
+        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-[#388bfd]/40 bg-[#162030] text-[#58a6ff]">
-              <Terminal size={17} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold tracking-tight text-[#e6edf3]">
-                  DOMAIN ATTACK SURFACE SCANNER
-                </span>
-                <span className="hidden font-mono text-[10px] text-[#626e82] sm:inline">
-                  v1.2.0 // PASSIVE_OSINT
-                </span>
-              </div>
-              <p className="hidden text-[11px] text-[#9aa5b8] sm:block">
-                External reconnaissance and configuration hygiene console
-              </p>
+            <span className="font-mono text-xs font-bold text-[#58a6ff] tracking-wider">DAS // WORKSTATION</span>
+            <span className="text-[#1e2631]">|</span>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[#8b9bb0]">
+              <span className="flex items-center gap-1 text-[#3fb950]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#3fb950] animate-pulse" />
+                SYSTEM // ONLINE
+              </span>
+              <span>•</span>
+              <span>MODE // PASSIVE-EXTERNAL</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setIsGlossaryOpen(true)}
-              className="console-btn text-xs py-1.5 px-3 text-[#9aa5b8] hover:text-[#e6edf3]"
-            >
-              <BookOpen size={13} className="text-[#58a6ff]" />
-              <span className="hidden sm:inline">Knowledge Guide</span>
-            </button>
-            <Link
-              to="/history"
-              className="console-btn text-xs py-1.5 px-3 text-[#9aa5b8] hover:text-[#e6edf3]"
-            >
-              <History size={13} />
-              <span>History</span>
+          <nav className="flex items-center gap-3 font-mono text-xs">
+            <Link to="/history" className="text-[#8b9bb0] hover:text-[#e6edf3] transition-colors flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              HISTORY
             </Link>
-          </div>
+            <button
+              onClick={() => setGlossaryOpen(true)}
+              className="text-[#8b9bb0] hover:text-[#e6edf3] transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              FIELD MANUAL
+            </button>
+            <Link to="/scan/sample" className="console-btn text-xs py-1 px-2.5">
+              EXPLORE SAMPLE
+            </Link>
+          </nav>
         </div>
       </header>
 
-      {/* ─── Content Container ──────────────────────────────────────── */}
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-8">
-        {/* ─── Section 1: System Title & Intro ───────────────────────── */}
-        <section className="border-b border-[#1f2735] pb-6">
-          <div className="flex flex-wrap items-center gap-2 mb-2 font-mono text-[11px]">
-            <span className="console-tag console-tag-phosphor">SYSTEM // ONLINE</span>
-            <span className="console-tag console-tag-cyan">MODE // STRICTLY_PASSIVE</span>
-            <span className="console-tag">EVIDENCE // PUBLIC_TELEMETRY</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#e6edf3] sm:text-3xl font-mono">
-            PASSIVE EXTERNAL PERIMETER INTELLIGENCE
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#9aa5b8]">
-            Discover domains, subdomains, IP endpoints, autonomous systems (ASNs), and defensive posture without sending intrusive traffic, probing private networks, or launching attacks.
-          </p>
-        </section>
+      {/* ─── Workstation Main Console ───────────────────────────────── */}
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 flex flex-col gap-6">
+        {/* ─── Console Identification ───────────────────────────────── */}
+        <section className="console-panel p-5 bg-[#10151b]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-[#1e2631]">
+            <div>
+              <div className="flex items-center gap-2 font-mono text-xs text-[#58a6ff] font-semibold mb-1">
+                <span>[TERMINAL // RECON-01]</span>
+                <span>•</span>
+                <span>NON-INTRUSIVE PUBLIC OSINT</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold font-mono text-[#e6edf3] tracking-tight">
+                DOMAIN ATTACK SURFACE SCANNER
+              </h1>
+              <p className="text-xs text-[#8b9bb0] font-mono mt-1">
+                Passive external intelligence platform. Observe public infrastructure perimeter and configuration hygiene.
+              </p>
+            </div>
 
-        {/* ─── Section 2: Scan Console ───────────────────────────────── */}
-        <section className="console-panel p-5 sm:p-6">
-          <div className="border-b border-[#1f2735] pb-3 mb-4 flex items-center justify-between">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[#9aa5b8]">
-              TARGET RECONNAISSANCE CONSOLE
-            </span>
-            <span className="font-mono text-[11px] text-[#626e82]">PORT // 80, 443, DNS_PASSIVE</span>
+            <div className="flex items-center gap-2">
+              <Link to="/scan/sample" className="console-btn console-btn-phosphor text-xs">
+                DEMO: PERIMETER-DEMO.IO
+              </Link>
+            </div>
           </div>
 
-          <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
+          {/* Scan Target Input Form */}
+          <form onSubmit={handleScan} className="mt-4 flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs text-[#626e82]">
-                DOMAIN:
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#576575]">
+                TARGET:
               </span>
               <input
-                id="domain-input"
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="example.com"
-                className="console-input pl-20"
-                required
+                className="console-input pl-18 py-2 text-sm"
+                disabled={loading}
+                autoFocus
               />
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className="console-btn console-btn-primary px-6"
+              disabled={loading || !domain.trim()}
+              className="console-btn console-btn-primary px-5 py-2 text-xs flex items-center justify-center gap-2"
             >
               {loading ? (
-                <>SCANNING PERIMETER…</>
+                <>INITIALIZING...</>
               ) : (
                 <>
-                  <span>START SCAN</span>
-                  <ArrowRight size={14} />
+                  <Search className="w-3.5 h-3.5" />
+                  START SCAN
                 </>
               )}
             </button>
           </form>
 
-          {/* Secondary Quick Demo Action */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#171e2b] text-xs font-mono text-[#9aa5b8]">
-            <div className="flex items-center gap-2">
-              <span className="text-[#626e82]">DEMO MODE:</span>
-              <span>Need to evaluate immediately without initiating third-party API queries?</span>
-            </div>
-            <Link
-              to="/scan/sample"
-              className="inline-flex items-center gap-1.5 text-[#58a6ff] hover:text-[#e6edf3] font-semibold transition"
-            >
-              <Sparkles size={13} />
-              <span>[ EXPLORE SAMPLE SCAN (perimeter-demo.io) ]</span>
-            </Link>
-          </div>
-
           {error && (
-            <div className="mt-4 console-tag console-tag-coral p-2.5 w-full text-xs font-mono">
-              [ERROR]: {error}
+            <div className="mt-3 p-2 bg-[#0c1015] border border-[#da3633] text-[#f85149] font-mono text-xs flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
         </section>
 
-        {/* ─── Section 3: What We Observe (3-Column Grid) ─────────────── */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 font-mono text-xs text-[#9aa5b8] uppercase tracking-wider">
-            <span className="text-[#58a6ff]">[01]</span>
-            <span>WHAT WE OBSERVE ACROSS THE PUBLIC PERIMETER</span>
+        {/* ─── System Capabilities Grid ─────────────────────────────── */}
+        <section className="console-panel">
+          <div className="dossier-header">
+            <div>
+              <span className="dossier-num">[01]</span>
+              <span>SYSTEM CAPABILITIES</span>
+            </div>
+            <span className="text-[10px] text-[#8b9bb0]">OBSERVABLE PERIMETER VECTORS</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="console-panel p-4 space-y-2">
-              <div className="flex items-center gap-2 text-[#58a6ff]">
-                <Globe2 size={16} />
-                <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                  DNS & INFRASTRUCTURE
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[#1e2631]">
+            {capabilities.map((cap, i) => (
+              <div key={i} className="bg-[#10151b] p-4 flex flex-col justify-between">
+                <div>
+                  <div className="font-mono text-xs font-bold text-[#e6edf3] mb-1.5 flex items-center gap-1.5">
+                    <span className="text-[#58a6ff]">▸</span>
+                    {cap.title}
+                  </div>
+                  <p className="text-xs text-[#8b9bb0] leading-relaxed">
+                    {cap.desc}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-[#9aa5b8] leading-relaxed">
-                A, AAAA, MX, NS, and authoritative delegations. Resolves IP endpoints, BGP Autonomous System Numbers (ASNs), and datacenter transit providers.
-              </p>
-            </div>
+            ))}
+          </div>
+        </section>
 
-            <div className="console-panel p-4 space-y-2">
-              <div className="flex items-center gap-2 text-[#3fb950]">
-                <Server size={16} />
-                <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                  CERTIFICATE TRANSPARENCY
-                </span>
-              </div>
-              <p className="text-xs text-[#9aa5b8] leading-relaxed">
-                Public append-only cryptographic CT logs harvest valid and historical subdomains without dictionary brute-forcing or active probes.
-              </p>
+        {/* ─── How the System Works: Pipeline Stages ─────────────────── */}
+        <section className="console-panel">
+          <div className="dossier-header">
+            <div>
+              <span className="dossier-num">[02]</span>
+              <span>HOW THE SYSTEM WORKS</span>
             </div>
+            <span className="text-[10px] text-[#8b9bb0]">METHODOLOGICAL PIPELINE</span>
+          </div>
 
-            <div className="console-panel p-4 space-y-2">
-              <div className="flex items-center gap-2 text-[#d29922]">
-                <Lock size={16} />
-                <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                  SECURITY HYGIENE
-                </span>
-              </div>
-              <p className="text-xs text-[#9aa5b8] leading-relaxed">
-                TLS encryption suites, certificate valid horizons, HTTPS enforcement redirects, SPF/DMARC anti-spoofing policies, and defense headers.
-              </p>
+          <div className="p-4 bg-[#10151b]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {pipelineStages.map((stage) => (
+                <div key={stage.step} className="bg-[#0c1015] border border-[#1e2631] p-3 flex flex-col">
+                  <div className="font-mono text-xs font-bold text-[#58a6ff] mb-1">
+                    {stage.step} // {stage.name}
+                  </div>
+                  <div className="text-[11px] text-[#8b9bb0] font-mono leading-tight">
+                    {stage.desc}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* ─── Section 4: How It Works Pipeline Flow ──────────────────── */}
-        <section className="console-panel p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between border-b border-[#1f2735] pb-2 font-mono text-xs text-[#9aa5b8]">
-            <div className="flex items-center gap-2">
-              <span className="text-[#58a6ff]">[02]</span>
-              <span>HOW IT WORKS // RECONNAISSANCE PIPELINE</span>
-            </div>
-            <span className="text-[10px] text-[#626e82]">NON-DESTRUCTIVE EXECUTION</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 pt-2 font-mono text-xs">
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 01</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">Domain</span>
-              <span className="text-[10px] text-[#9aa5b8] block">Input target</span>
-            </div>
-
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 02</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">DNS Records</span>
-              <span className="text-[10px] text-[#9aa5b8] block">A, MX, NS, TXT</span>
-            </div>
-
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 03</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">Certificates</span>
-              <span className="text-[10px] text-[#9aa5b8] block">Public CT logs</span>
-            </div>
-
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 04</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">Infrastructure</span>
-              <span className="text-[10px] text-[#9aa5b8] block">IP, ASN, GeoIP</span>
-            </div>
-
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 05</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">Observations</span>
-              <span className="text-[10px] text-[#9aa5b8] block">Headers & TLS</span>
-            </div>
-
-            <div className="console-panel-inset p-2.5 text-center">
-              <span className="text-[10px] text-[#626e82] block">STEP 06</span>
-              <span className="font-bold text-[#e6edf3] block mt-0.5">Findings</span>
-              <span className="text-[10px] text-[#9aa5b8] block">Evidence graph</span>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Section 5: Passive Reconnaissance Guarantee ────────────── */}
-        <section className="console-panel-inset border-l-2 border-l-[#388bfd] p-4 text-xs font-mono">
-          <div className="flex items-start gap-3">
-            <Shield size={18} className="mt-0.5 text-[#58a6ff] shrink-0" />
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-bold uppercase tracking-wider text-[#e6edf3]">
-                  THE PASSIVE RECONNAISSANCE GUARANTEE
-                </span>
-                <span className="text-[10px] text-[#3fb950]">[SAFE & LEGAL]</span>
+        {/* ─── Passive Reconnaissance Guarantee ───────────────────────── */}
+        <section className="console-panel p-4 bg-[#0c1015] border border-[#1e2631]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-[#3fb950] shrink-0 mt-0.5" />
+              <div>
+                <div className="font-mono text-xs font-bold text-[#3fb950] uppercase tracking-wider">
+                  PASSIVE RECONNAISSANCE GUARANTEE
+                </div>
+                <p className="text-xs text-[#8b9bb0] mt-0.5 max-w-4xl">
+                  This tool solely evaluates publicly observable DNS, append-only Certificate Transparency logs, WHOIS registry metadata, and standard public HTTP response headers. It performs no port scanning, brute-forcing, active fuzzing, or intrusive probing.
+                </p>
               </div>
-              <p className="text-[#9aa5b8] leading-relaxed">
-                <strong>“We did not observe X” ≠ “X does not exist.”</strong> DomainAttackSurfaceScanner queries authoritative public records, Certificate Transparency logs, and standard response headers. We never perform intrusive port scanning, exploit testing, or authentication brute-forcing.
-              </p>
+            </div>
+
+            <div className="shrink-0 font-mono text-[10px] text-[#576575] border border-[#1e2631] px-2 py-1 bg-[#10151b]">
+              SAFE FOR REGULATED TARGETS
             </div>
           </div>
         </section>
-      </div>
+      </main>
 
-      {/* ─── Knowledge Guide Modal ───────────────────────────────────── */}
-      <GlossaryModal
-        isOpen={isGlossaryOpen}
-        onClose={() => setIsGlossaryOpen(false)}
-      />
-    </main>
+      {/* ─── Footer ─────────────────────────────────────────────────── */}
+      <footer className="border-t border-[#1e2631] bg-[#0c1015] px-4 py-3 mt-auto">
+        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-2 font-mono text-[11px] text-[#576575]">
+          <div>
+            DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE WORKSTATION
+          </div>
+          <div className="flex items-center gap-4">
+            <Link to="/history" className="hover:text-[#8b9bb0]">SCAN HISTORY</Link>
+            <button onClick={() => setGlossaryOpen(true)} className="hover:text-[#8b9bb0] cursor-pointer">
+              SECURITY FIELD MANUAL
+            </button>
+            <Link to="/scan/sample" className="hover:text-[#8b9bb0]">SAMPLE DOSSIER</Link>
+          </div>
+        </div>
+      </footer>
+
+      {glossaryOpen && <GlossaryModal isOpen={glossaryOpen} onClose={() => setGlossaryOpen(false)} />}
+    </div>
   );
 }

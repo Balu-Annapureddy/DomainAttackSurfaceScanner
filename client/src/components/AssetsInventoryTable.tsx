@@ -5,13 +5,18 @@ import type { Asset } from '../../../shared/types';
 interface AssetsInventoryTableProps {
   assets: Asset[];
   onSelectAsset?: (asset: Asset) => void;
+  sectionNumber?: string;
 }
 
-export default function AssetsInventoryTable({ assets, onSelectAsset }: AssetsInventoryTableProps) {
+export default function AssetsInventoryTable({
+  assets,
+  onSelectAsset,
+  sectionNumber = '06',
+}: AssetsInventoryTableProps) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 15;
 
   const filteredAssets = useMemo(() => {
     return assets.filter((item) => {
@@ -33,47 +38,44 @@ export default function AssetsInventoryTable({ assets, onSelectAsset }: AssetsIn
   }, [assets]);
 
   return (
-    <div className="console-panel overflow-hidden space-y-0">
-      {/* ─── Header & Filters ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 border-b border-[#1f2735] p-3.5 sm:flex-row sm:items-center sm:justify-between bg-[#111620]">
-        <div>
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className="text-[#58a6ff] font-bold">[INVENTORY]</span>
-            <span className="font-bold text-[#e6edf3]">NORMALIZED ATTACK SURFACE ASSETS</span>
-          </div>
-          <p className="text-xs text-[#9aa5b8] mt-0.5">
-            {filteredAssets.length} normalized entity records matching criteria
-          </p>
+    <div className="console-panel">
+      {/* ─── Workstation Dossier Header ─────────────────────────────── */}
+      <div className="dossier-header flex-col sm:flex-row gap-2">
+        <div className="flex items-center gap-2">
+          <span className="dossier-num">[{sectionNumber}]</span>
+          <span>ASSET INVENTORY</span>
+          <span className="text-[11px] text-[#8b9bb0] ml-2">
+            {filteredAssets.length} NORMALIZED ENTITIES
+          </span>
         </div>
 
+        {/* Search & Filter Toolbar */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-          {/* Search Box */}
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626e82]" />
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
             <input
               type="text"
-              placeholder="Search assets..."
+              placeholder="SEARCH ASSET..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-8 w-36 sm:w-48 rounded border border-[#1f2735] bg-[#0d121a] pl-7 pr-3 text-xs text-[#e6edf3] placeholder-[#626e82] outline-none focus:border-[#388bfd]"
+              className="h-6 w-32 sm:w-44 border border-[#1e2631] bg-[#0c1015] pl-6 pr-2 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
             />
           </div>
 
-          {/* Type Filter */}
-          <div className="flex items-center gap-1.5 rounded border border-[#1f2735] bg-[#0d121a] px-2 py-1 text-xs">
-            <Filter size={11} className="text-[#626e82]" />
+          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] px-1.5 h-6 text-[11px]">
+            <Filter size={10} className="text-[#576575] mr-1" />
             <select
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer text-xs"
+              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer"
             >
-              <option value="ALL">All Types ({assets.length})</option>
+              <option value="ALL">ALL TYPES ({assets.length})</option>
               {assetTypes.map((t) => (
                 <option key={t} value={t}>
                   {t} ({assets.filter((a) => a.type === t).length})
@@ -84,56 +86,55 @@ export default function AssetsInventoryTable({ assets, onSelectAsset }: AssetsIn
         </div>
       </div>
 
-      {/* ─── Inventory Table ────────────────────────────────────────── */}
+      {/* ─── High-Density Technical Table ───────────────────────────── */}
       <div className="overflow-x-auto">
-        <table className="console-table">
+        <table className="console-table font-mono">
           <thead>
             <tr>
-              <th className="w-12">TYPE</th>
-              <th>IDENTIFIED ASSET VALUE</th>
-              <th>EVIDENCE SOURCES</th>
-              <th>CONFIDENCE</th>
-              <th className="text-right">ACTION</th>
+              <th className="w-24">TYPE</th>
+              <th>VALUE</th>
+              <th className="w-28">STATUS</th>
+              <th>OBSERVED EVIDENCE / SOURCE</th>
+              <th className="w-16 text-right">ACTION</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#171e2b] font-mono text-xs">
+          <tbody>
             {paginatedAssets.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[#626e82]">
-                  NO ASSETS MATCHING QUERY
+                <td colSpan={5} className="py-6 text-center text-[#576575]">
+                  NO ASSET RECORDS MATCHING FILTER
                 </td>
               </tr>
             ) : (
               paginatedAssets.map((asset) => {
-                const highConf = asset.evidence.some((e) => e.confidence === 'high');
+                const isGeo = asset.type === 'GEOLOCATION';
+                const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
+                const statusColor = isGeo ? 'text-[#d29922]' : 'text-[#3fb950]';
+                const sources = asset.evidence.map((e) => e.source).join(', ') || 'DNS / CT';
 
                 return (
                   <tr
                     key={asset.id}
                     onClick={() => onSelectAsset?.(asset)}
-                    className="cursor-pointer hover:bg-[#161c28] transition"
+                    className="cursor-pointer hover:bg-[#151c23] transition-colors"
                   >
                     <td>
-                      <span className="console-tag text-[10px]">
+                      <span className="text-[10px] text-[#58a6ff] font-bold">
                         {asset.type}
                       </span>
                     </td>
-                    <td className="font-bold text-[#e6edf3]">
-                      <span className="truncate block max-w-sm sm:max-w-md" title={asset.value}>
+                    <td className="text-[#e6edf3] font-semibold">
+                      <span className="truncate block max-w-xs sm:max-w-md" title={asset.value}>
                         {asset.value}
                       </span>
                     </td>
-                    <td className="text-[#9aa5b8] text-[11px]">
-                      {asset.evidence.map((e) => e.source).join(', ')}
-                    </td>
                     <td>
-                      <span
-                        className={`console-tag text-[9px] ${
-                          highConf ? 'console-tag-phosphor' : 'console-tag-cyan'
-                        }`}
-                      >
-                        {highConf ? 'HIGH' : 'MEDIUM'}
+                      <span className={`text-[10px] font-bold ${statusColor}`}>
+                        {statusLabel}
                       </span>
+                    </td>
+                    <td className="text-[#8b9bb0] text-[11px] truncate max-w-xs">
+                      {sources}
                     </td>
                     <td className="text-right">
                       <button
@@ -142,7 +143,7 @@ export default function AssetsInventoryTable({ assets, onSelectAsset }: AssetsIn
                           e.stopPropagation();
                           onSelectAsset?.(asset);
                         }}
-                        className="console-btn py-1 px-2 text-[10px] text-[#58a6ff]"
+                        className="text-[#58a6ff] hover:underline text-[10px] cursor-pointer"
                       >
                         [INSPECT]
                       </button>
@@ -156,24 +157,24 @@ export default function AssetsInventoryTable({ assets, onSelectAsset }: AssetsIn
       </div>
 
       {/* ─── Pagination Footer ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-[#1f2735] bg-[#0d121a] px-4 py-2.5 font-mono text-xs text-[#9aa5b8]">
+      <div className="flex items-center justify-between border-t border-[#1e2631] bg-[#0c1015] px-3 py-1.5 font-mono text-[10px] text-[#8b9bb0]">
         <span>
           PAGE {currentPage} OF {totalPages} ({filteredAssets.length} TOTAL)
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage <= 1}
-            className="console-btn py-1 px-2 text-xs"
+            className="border border-[#1e2631] bg-[#10151b] px-1.5 py-0.5 disabled:opacity-30 text-[#e6edf3] hover:border-[#58a6ff]"
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size={11} />
           </button>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage >= totalPages}
-            className="console-btn py-1 px-2 text-xs"
+            className="border border-[#1e2631] bg-[#10151b] px-1.5 py-0.5 disabled:opacity-30 text-[#e6edf3] hover:border-[#58a6ff]"
           >
-            <ChevronRight size={13} />
+            <ChevronRight size={11} />
           </button>
         </div>
       </div>

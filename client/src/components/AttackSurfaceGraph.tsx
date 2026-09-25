@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Filter, Search } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Filter, Search, X, Info } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AttackSurfaceGraphProps {
   assets: Asset[];
   relationships: Relationship[];
   onSelectAsset?: (asset: Asset) => void;
+  sectionNumber?: string;
 }
 
 const TYPE_COLORS: Record<Asset['type'], { bg: string; border: string; text: string }> = {
@@ -26,12 +27,13 @@ export default function AttackSurfaceGraph({
   assets,
   relationships,
   onSelectAsset,
+  sectionNumber = '03',
 }: AttackSurfaceGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [nodeLimit, setNodeLimit] = useState<number>(60);
   const [graphSearch, setGraphSearch] = useState<string>('');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
 
   const filteredAssets = useMemo(() => {
     let result = assets;
@@ -42,13 +44,13 @@ export default function AttackSurfaceGraph({
       const q = graphSearch.toLowerCase();
       result = result.filter((a) => a.value.toLowerCase().includes(q) || a.type.toLowerCase().includes(q));
     }
-    return nodeLimit === 0 ? result : result.slice(0, nodeLimit);
-  }, [assets, selectedType, graphSearch, nodeLimit]);
+    return result;
+  }, [assets, selectedType, graphSearch]);
 
   // Generate node coordinates using layered hierarchical grouping
   const layout = useMemo(() => {
     const width = 960;
-    const height = 540;
+    const height = 500;
     const centerX = width / 2;
     const centerY = height / 2;
 
@@ -96,7 +98,7 @@ export default function AttackSurfaceGraph({
     infra.forEach((item, i) => {
       const count = Math.max(1, infra.length);
       const angle = -Math.PI * 0.85 + (i / count) * (Math.PI * 0.7);
-      const radius = 245;
+      const radius = 230;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
         y: centerY + Math.sin(angle) * (radius * 0.9),
@@ -107,7 +109,7 @@ export default function AttackSurfaceGraph({
     intel.forEach((item, i) => {
       const count = Math.max(1, intel.length);
       const angle = -Math.PI * 0.2 + (i / count) * (Math.PI * 0.7);
-      const radius = 295;
+      const radius = 280;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
         y: centerY + Math.sin(angle) * (radius * 0.9),
@@ -124,220 +126,289 @@ export default function AttackSurfaceGraph({
     );
   }, [relationships, layout.nodeCoords]);
 
+  // Selected node relationships for detail drawer
+  const activeRelationships = useMemo(() => {
+    if (!activeAsset) return [];
+    return relationships.filter(
+      (r) => r.fromAssetId === activeAsset.id || r.toAssetId === activeAsset.id,
+    );
+  }, [activeAsset, relationships]);
+
+  const handleNodeClick = (asset: Asset) => {
+    setActiveAsset(asset);
+    onSelectAsset?.(asset);
+  };
+
   return (
     <div className="console-panel overflow-hidden">
-      {/* ─── Graph Header Bar ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 border-b border-[#1f2735] p-3.5 sm:flex-row sm:items-center sm:justify-between bg-[#111620]">
-        <div>
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className="text-[#58a6ff] font-bold">[GRAPH]</span>
-            <span className="font-bold text-[#e6edf3]">ATTACK SURFACE RELATIONSHIP TOPOLOGY</span>
-          </div>
-          <p className="text-[11px] text-[#9aa5b8] mt-0.5 font-mono">
-            {visibleRelationships.length} relationships active · {filteredAssets.length} nodes rendered
-          </p>
+      {/* ─── Workstation Dossier Header ─────────────────────────────── */}
+      <div className="dossier-header flex-col sm:flex-row gap-2">
+        <div className="flex items-center gap-2">
+          <span className="dossier-num">[{sectionNumber}]</span>
+          <span>ATTACK SURFACE RELATIONSHIPS</span>
+          <span className="text-[11px] text-[#8b9bb0] ml-2">
+            {visibleRelationships.length} RELATIONSHIPS / {filteredAssets.length} ASSETS
+          </span>
         </div>
 
+        {/* Controls Toolbar */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           {/* Quick Search */}
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626e82]" />
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
             <input
               type="text"
-              placeholder="Filter node..."
+              placeholder="SEARCH NODE..."
               value={graphSearch}
               onChange={(e) => setGraphSearch(e.target.value)}
-              className="h-7 w-28 sm:w-36 rounded border border-[#1f2735] bg-[#0d121a] pl-7 pr-2 text-xs text-[#e6edf3] placeholder-[#626e82] outline-none focus:border-[#388bfd]"
+              className="h-6 w-24 sm:w-32 border border-[#1e2631] bg-[#0c1015] pl-6 pr-1 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
             />
           </div>
 
           {/* Type Filter */}
-          <div className="flex items-center gap-1.5 rounded border border-[#1f2735] bg-[#0d121a] px-2 py-1 text-xs">
-            <Filter size={11} className="text-[#626e82]" />
+          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] px-1.5 h-6 text-[11px]">
+            <Filter size={10} className="text-[#576575] mr-1" />
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer text-xs"
+              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer"
             >
-              <option value="ALL">All Asset Types</option>
-              <option value="DOMAIN">Domains</option>
-              <option value="SUBDOMAIN">Subdomains</option>
-              <option value="IP">IP Endpoints</option>
-              <option value="CERTIFICATE">Certificates</option>
-              <option value="ASN">BGP ASNs</option>
-              <option value="ORGANIZATION">Organizations</option>
-              <option value="GEOLOCATION">Geolocations</option>
+              <option value="ALL">ALL TYPES</option>
+              <option value="DOMAIN">DOMAINS</option>
+              <option value="SUBDOMAIN">SUBDOMAINS</option>
+              <option value="IP">IP HOSTS</option>
+              <option value="CERTIFICATE">CERTIFICATES</option>
+              <option value="ASN">BGP ASNS</option>
+              <option value="ORGANIZATION">ORGANIZATIONS</option>
+              <option value="GEOLOCATION">GEOLOCATIONS</option>
             </select>
           </div>
 
-          {/* Node Limit */}
-          <div className="flex items-center rounded border border-[#1f2735] bg-[#0d121a] px-2 py-1 text-xs">
-            <select
-              value={nodeLimit}
-              onChange={(e) => setNodeLimit(Number(e.target.value))}
-              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer text-xs"
-            >
-              <option value={30}>30 nodes</option>
-              <option value={60}>60 nodes</option>
-              <option value={100}>100 nodes</option>
-              <option value={0}>All nodes</option>
-            </select>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="flex items-center rounded border border-[#1f2735] bg-[#0d121a] p-0.5">
+          {/* Zoom */}
+          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] h-6 px-1 gap-1">
             <button
               onClick={() => setZoom((z) => Math.max(0.6, z - 0.15))}
-              className="rounded p-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
+              className="text-[#8b9bb0] hover:text-[#e6edf3]"
               title="Zoom out"
             >
-              <ZoomOut size={13} />
+              <ZoomOut size={11} />
             </button>
-            <span className="px-1.5 text-[10px] font-mono text-[#626e82]">{Math.round(zoom * 100)}%</span>
+            <span className="text-[10px] text-[#576575]">{Math.round(zoom * 100)}%</span>
             <button
               onClick={() => setZoom((z) => Math.min(1.6, z + 0.15))}
-              className="rounded p-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
+              className="text-[#8b9bb0] hover:text-[#e6edf3]"
               title="Zoom in"
             >
-              <ZoomIn size={13} />
+              <ZoomIn size={11} />
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="border-l border-[#1f2735] ml-0.5 pl-1 pr-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
-              title="Reset view"
+              className="text-[#8b9bb0] hover:text-[#e6edf3] ml-1 pl-1 border-l border-[#1e2631]"
+              title="Reset zoom"
             >
-              <RotateCcw size={12} />
+              <RotateCcw size={10} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* ─── SVG Canvas with Console Grid ───────────────────────────── */}
-      <div className="relative overflow-hidden bg-[#0a0d13] p-4 console-grid-bg">
-        <svg
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          className="h-[500px] w-full select-none transition-transform duration-150"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
-        >
-          <defs>
-            <marker
-              id="arrowhead-retro"
-              markerWidth="7"
-              markerHeight="5"
-              refX="13"
-              refY="2.5"
-              orient="auto"
-            >
-              <polygon points="0 0, 7 2.5, 0 5" fill="#303c50" />
-            </marker>
-          </defs>
-
-          {/* Relationships / Edges */}
-          {visibleRelationships.map((rel, idx) => {
-            const from = layout.nodeCoords.get(rel.fromAssetId);
-            const to = layout.nodeCoords.get(rel.toAssetId);
-            if (!from || !to) return null;
-
-            const isHighlighted =
-              hoveredNodeId === rel.fromAssetId || hoveredNodeId === rel.toAssetId;
-
-            return (
-              <g key={`rel-${idx}`}>
-                <line
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke={isHighlighted ? '#388bfd' : '#1f2937'}
-                  strokeWidth={isHighlighted ? 2 : 1}
-                  strokeDasharray={rel.type === 'located_approximately_at' ? '4 3' : undefined}
-                  markerEnd="url(#arrowhead-retro)"
-                  opacity={isHighlighted ? 0.95 : 0.65}
-                />
-              </g>
-            );
-          })}
-
-          {/* Nodes */}
-          {filteredAssets.map((asset) => {
-            const coords = layout.nodeCoords.get(asset.id);
-            if (!coords) return null;
-
-            const style = TYPE_COLORS[asset.type] || TYPE_COLORS.DOMAIN;
-            const isHovered = hoveredNodeId === asset.id;
-            const isTargetDomain = asset.type === 'DOMAIN';
-            const radius = isTargetDomain ? 24 : 16;
-            const label = asset.value.length > 22 ? `${asset.value.slice(0, 20)}…` : asset.value;
-
-            return (
-              <g
-                key={asset.id}
-                transform={`translate(${coords.x}, ${coords.y})`}
-                className="cursor-pointer transition-transform"
-                onClick={() => onSelectAsset?.(asset)}
-                onMouseEnter={() => setHoveredNodeId(asset.id)}
-                onMouseLeave={() => setHoveredNodeId(null)}
+      {/* ─── Graph Canvas & Side Inspector ─────────────────────────── */}
+      <div className="relative flex flex-col lg:flex-row bg-[#080b0f] workstation-grid-bg">
+        {/* SVG Canvas */}
+        <div className="flex-1 relative overflow-hidden p-2">
+          <svg
+            viewBox={`0 0 ${layout.width} ${layout.height}`}
+            className="h-[460px] w-full select-none transition-transform duration-150"
+            style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+          >
+            <defs>
+              <marker
+                id="arrowhead-retro"
+                markerWidth="6"
+                markerHeight="4"
+                refX="11"
+                refY="2"
+                orient="auto"
               >
-                {/* Node Box */}
-                <circle
-                  r={radius}
-                  fill={style.bg}
-                  stroke={isHovered ? '#ffffff' : style.border}
-                  strokeWidth={isHovered ? 2 : 1.2}
-                />
+                <polygon points="0 0, 6 2, 0 4" fill="#2a3749" />
+              </marker>
+            </defs>
 
-                {/* Node Label */}
-                <text
-                  textAnchor="middle"
-                  dy={isTargetDomain ? -28 : -20}
-                  fill={isHovered ? '#ffffff' : style.text}
-                  fontSize={isTargetDomain ? 11 : 9.5}
-                  fontWeight={isTargetDomain ? 700 : 500}
-                  className="pointer-events-none font-mono"
+            {/* Relationships / Edges */}
+            {visibleRelationships.map((rel, idx) => {
+              const from = layout.nodeCoords.get(rel.fromAssetId);
+              const to = layout.nodeCoords.get(rel.toAssetId);
+              if (!from || !to) return null;
+
+              const isHighlighted =
+                hoveredNodeId === rel.fromAssetId ||
+                hoveredNodeId === rel.toAssetId ||
+                activeAsset?.id === rel.fromAssetId ||
+                activeAsset?.id === rel.toAssetId;
+
+              return (
+                <g key={`rel-${idx}`}>
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke={isHighlighted ? '#58a6ff' : '#1e2631'}
+                    strokeWidth={isHighlighted ? 1.8 : 1}
+                    strokeDasharray={rel.type === 'located_approximately_at' ? '3 3' : undefined}
+                    markerEnd="url(#arrowhead-retro)"
+                    opacity={isHighlighted ? 0.95 : 0.6}
+                  />
+                </g>
+              );
+            })}
+
+            {/* Nodes */}
+            {filteredAssets.map((asset) => {
+              const coords = layout.nodeCoords.get(asset.id);
+              if (!coords) return null;
+
+              const style = TYPE_COLORS[asset.type] || TYPE_COLORS.DOMAIN;
+              const isHovered = hoveredNodeId === asset.id;
+              const isSelected = activeAsset?.id === asset.id;
+              const isTargetDomain = asset.type === 'DOMAIN';
+              const radius = isTargetDomain ? 20 : 13;
+              const label = asset.value.length > 20 ? `${asset.value.slice(0, 18)}…` : asset.value;
+
+              return (
+                <g
+                  key={asset.id}
+                  transform={`translate(${coords.x}, ${coords.y})`}
+                  className="cursor-pointer"
+                  onClick={() => handleNodeClick(asset)}
+                  onMouseEnter={() => setHoveredNodeId(asset.id)}
+                  onMouseLeave={() => setHoveredNodeId(null)}
                 >
-                  {label}
-                </text>
+                  <circle
+                    r={radius}
+                    fill={style.bg}
+                    stroke={isSelected ? '#58a6ff' : isHovered ? '#ffffff' : style.border}
+                    strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
+                  />
 
-                {/* Type Code */}
-                <text
-                  textAnchor="middle"
-                  dy={3.5}
-                  fill="#ffffff"
-                  fontSize={isTargetDomain ? 9.5 : 7.5}
-                  fontWeight={600}
-                  className="pointer-events-none font-mono tracking-wider uppercase opacity-90"
+                  {/* Node Label */}
+                  <text
+                    textAnchor="middle"
+                    dy={isTargetDomain ? -25 : -17}
+                    fill={isSelected ? '#58a6ff' : isHovered ? '#ffffff' : style.text}
+                    fontSize={isTargetDomain ? 10.5 : 8.5}
+                    fontWeight={isTargetDomain ? 700 : 500}
+                    className="pointer-events-none font-mono"
+                  >
+                    {label}
+                  </text>
+
+                  {/* Type Code inside node */}
+                  <text
+                    textAnchor="middle"
+                    dy={3}
+                    fill="#ffffff"
+                    fontSize={isTargetDomain ? 8.5 : 7}
+                    fontWeight={700}
+                    className="pointer-events-none font-mono tracking-wider uppercase opacity-90"
+                  >
+                    {asset.type.slice(0, 3)}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+
+          {filteredAssets.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center font-mono text-[#576575] text-xs">
+              NO ASSETS MATCH CURRENT SEARCH
+            </div>
+          )}
+        </div>
+
+        {/* ─── Selected Node Intelligence Panel ───────────────────────── */}
+        {activeAsset ? (
+          <div className="w-full lg:w-72 bg-[#0c1015] border-t lg:border-t-0 lg:border-l border-[#1e2631] p-3 font-mono text-xs flex flex-col justify-between shrink-0">
+            <div>
+              <div className="flex items-center justify-between pb-2 border-b border-[#1e2631]">
+                <div className="flex items-center gap-1.5 font-bold text-[#e6edf3]">
+                  <Info size={12} className="text-[#58a6ff]" />
+                  <span>ASSET DOSSIER</span>
+                </div>
+                <button
+                  onClick={() => setActiveAsset(null)}
+                  className="text-[#576575] hover:text-[#e6edf3]"
                 >
-                  {asset.type.slice(0, 3)}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+                  <X size={13} />
+                </button>
+              </div>
 
-        {filteredAssets.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center font-mono text-[#626e82] text-xs">
-            NO ASSETS MATCH CURRENT FILTER
+              <div className="mt-2.5 space-y-2">
+                <div>
+                  <div className="text-[10px] text-[#576575] uppercase">TYPE:</div>
+                  <div className="text-[#58a6ff] font-bold">{activeAsset.type}</div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] text-[#576575] uppercase">VALUE:</div>
+                  <div className="text-[#e6edf3] font-semibold break-all bg-[#10151b] border border-[#1e2631] p-1.5 mt-0.5">
+                    {activeAsset.value}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] text-[#576575] uppercase">CONNECTED EDGES:</div>
+                  <div className="text-[#3fb950] font-bold">{activeRelationships.length} relationships</div>
+                </div>
+
+                {activeRelationships.length > 0 && (
+                  <div>
+                    <div className="text-[10px] text-[#576575] uppercase mb-1">RELATIONSHIPS:</div>
+                    <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                      {activeRelationships.map((r, i) => {
+                        const targetId = r.fromAssetId === activeAsset.id ? r.toAssetId : r.fromAssetId;
+                        const targetAsset = assets.find((a) => a.id === targetId);
+                        return (
+                          <div key={i} className="text-[10px] p-1 bg-[#10151b] border border-[#1e2631] truncate">
+                            <span className="text-[#8b9bb0]">{r.type.replace(/_/g, ' ')}: </span>
+                            <span className="text-[#e6edf3] font-semibold">{targetAsset?.value || targetId}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#1e2631] text-[10px] text-[#576575]">
+              [CLICK ASSET IN INVENTORY FOR FULL METADATA]
+            </div>
+          </div>
+        ) : (
+          <div className="hidden lg:flex w-72 bg-[#0c1015] border-l border-[#1e2631] p-4 font-mono text-xs items-center justify-center text-center text-[#576575] shrink-0">
+            CLICK ANY NODE IN GRAPH TO INSPECT RELATIONSHIPS & ATTRIBUTES
           </div>
         )}
       </div>
 
       {/* ─── Legend Bar ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1f2735] bg-[#0d121a] px-4 py-2.5 font-mono text-[11px]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1e2631] bg-[#0c1015] px-3 py-1.5 font-mono text-[10px]">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[#626e82]">NODE TYPES:</span>
+          <span className="text-[#576575]">NODE TYPES:</span>
           {Object.entries(TYPE_COLORS)
             .slice(0, 7)
             .map(([type, style]) => (
-              <div key={type} className="flex items-center gap-1.5">
+              <div key={type} className="flex items-center gap-1">
                 <span
-                  className="h-2 w-2 rounded-full"
+                  className="h-1.5 w-1.5"
                   style={{ backgroundColor: style.border }}
                 />
-                <span className="text-[#9aa5b8]">{type}</span>
+                <span className="text-[#8b9bb0]">{type}</span>
               </div>
             ))}
         </div>
-        <span className="text-[#626e82]">[CLICK NODE FOR RAW EVIDENCE DRAWER]</span>
+        <span className="text-[#576575] hidden sm:inline">[ANALYST WORKSTATION TOPOLOGY]</span>
       </div>
     </div>
   );

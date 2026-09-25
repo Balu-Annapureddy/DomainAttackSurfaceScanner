@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { ArrowRight, Search, Globe, Server, MapPin } from 'lucide-react';
+import { Search, Globe, Server, MapPin } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AssetChainVisualizerProps {
   assets: Asset[];
   relationships: Relationship[];
   onSelectAsset?: (asset: Asset) => void;
+  sectionNumber?: string;
 }
 
 interface ChainPath {
@@ -20,6 +21,7 @@ export default function AssetChainVisualizer({
   assets,
   relationships,
   onSelectAsset,
+  sectionNumber = '04',
 }: AssetChainVisualizerProps) {
   const [filterSearch, setFilterSearch] = useState('');
 
@@ -29,7 +31,6 @@ export default function AssetChainVisualizer({
     const result: ChainPath[] = [];
 
     for (const host of domainAndSubdomains) {
-      // Find resolves_to relationship
       const ipRels = relationships.filter(
         (r) => r.type === 'resolves_to' && (r.fromAssetId === host.id || r.toAssetId === host.id),
       );
@@ -44,7 +45,6 @@ export default function AssetChainVisualizer({
       }
 
       for (const ip of targetIpAssets) {
-        // Find ASN
         const asnRel = relationships.find(
           (r) => r.type === 'belongs_to_asn' && (r.fromAssetId === ip.id || r.toAssetId === ip.id),
         );
@@ -52,7 +52,6 @@ export default function AssetChainVisualizer({
           ? assets.find((a) => a.id === (asnRel.fromAssetId === ip.id ? asnRel.toAssetId : asnRel.fromAssetId))
           : undefined;
 
-        // Find Organization
         const orgRel = relationships.find(
           (r) => r.type === 'operated_by' && (r.fromAssetId === ip.id || r.toAssetId === ip.id),
         );
@@ -60,7 +59,6 @@ export default function AssetChainVisualizer({
           ? assets.find((a) => a.id === (orgRel.fromAssetId === ip.id ? orgRel.toAssetId : orgRel.fromAssetId))
           : undefined;
 
-        // Find Geolocation
         const geoRel = relationships.find(
           (r) => r.type === 'located_approximately_at' && (r.fromAssetId === ip.id || r.toAssetId === ip.id),
         );
@@ -95,121 +93,133 @@ export default function AssetChainVisualizer({
   }, [chains, filterSearch]);
 
   return (
-    <div className="console-panel p-5 space-y-4">
-      {/* ─── Header ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#1f2735] pb-3">
-        <div>
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className="text-[#3fb950] font-bold">[TRACE ROUTE]</span>
-            <span className="font-bold text-[#e6edf3]">ASSET RESOLUTION & INFRASTRUCTURE CHAINS</span>
-          </div>
-          <p className="text-xs text-[#9aa5b8] mt-0.5">
-            End-to-end telemetry paths: <strong className="text-[#e6edf3]">Domain → IP Address → BGP ASN → Organization → Geolocation</strong>
-          </p>
+    <div className="console-panel">
+      {/* ─── Workstation Dossier Header ─────────────────────────────── */}
+      <div className="dossier-header flex-col sm:flex-row gap-2">
+        <div className="flex items-center gap-2">
+          <span className="dossier-num">[{sectionNumber}]</span>
+          <span>ASSET ROUTING CHAINS</span>
+          <span className="text-[11px] text-[#8b9bb0] ml-2">
+            TRACE: DOMAIN → IP → ASN → ORG → LOCATION
+          </span>
         </div>
 
         {/* Filter Search */}
         <div className="relative font-mono text-xs">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626e82]" />
+          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
           <input
             type="text"
-            placeholder="Search chains..."
+            placeholder="FILTER TRACE..."
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
-            className="h-8 w-44 sm:w-56 rounded border border-[#1f2735] bg-[#0d121a] pl-7 pr-3 text-xs text-[#e6edf3] placeholder-[#626e82] outline-none focus:border-[#388bfd]"
+            className="h-6 w-36 sm:w-48 border border-[#1e2631] bg-[#0c1015] pl-6 pr-2 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
           />
         </div>
       </div>
 
-      {/* ─── Chain Trace Records ────────────────────────────────────── */}
-      <div className="space-y-2.5">
+      {/* ─── Trace Rows (Network Tracing Console) ───────────────────── */}
+      <div className="p-3 bg-[#080b0f] space-y-2">
         {filteredChains.length === 0 ? (
-          <div className="p-8 text-center font-mono text-xs text-[#626e82]">
+          <div className="p-6 text-center font-mono text-xs text-[#576575]">
             NO RESOLUTION CHAINS MATCH QUERY
           </div>
         ) : (
           filteredChains.map((chain, idx) => (
             <div
               key={idx}
-              className="console-panel-inset p-3 border border-[#1f2735] hover:border-[#388bfd]/50 transition"
+              className="bg-[#10151b] border border-[#1e2631] p-2.5 font-mono text-xs"
             >
-              {/* Chain Steps Horizontal Flow */}
-              <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-                {/* Step 1: Host */}
-                <button
-                  type="button"
-                  onClick={() => onSelectAsset?.(chain.domainAsset)}
-                  className="console-tag console-tag-cyan hover:brightness-125 cursor-pointer max-w-[200px] truncate"
-                  title="Target Domain / Subdomain - Click to inspect"
-                >
-                  <Globe size={11} className="shrink-0" />
-                  <span className="truncate">{chain.domainAsset.value}</span>
-                </button>
-
-                <ArrowRight size={12} className="text-[#626e82] shrink-0" />
-
-                {/* Step 2: IP Address */}
-                {chain.ipAsset ? (
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {/* 01: Host */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-[#576575] font-bold">01</span>
                   <button
                     type="button"
-                    onClick={() => onSelectAsset?.(chain.ipAsset!)}
-                    className="console-tag hover:border-[#58a6ff] cursor-pointer"
-                    title="Resolved IP Endpoint - Click to inspect"
+                    onClick={() => onSelectAsset?.(chain.domainAsset)}
+                    className="border border-[#388bfd]/40 bg-[#15273b] text-[#58a6ff] px-2 py-0.5 text-xs font-semibold hover:border-[#58a6ff] cursor-pointer max-w-[210px] truncate flex items-center gap-1"
+                    title="Target Host / Subdomain"
                   >
-                    <Server size={11} className="text-[#8a63d2] shrink-0" />
-                    <span>{chain.ipAsset.value}</span>
+                    <Globe size={10} className="shrink-0" />
+                    <span className="truncate">{chain.domainAsset.value}</span>
                   </button>
-                ) : (
-                  <span className="console-tag text-[#626e82]">
-                    [UNRESOLVED]
-                  </span>
-                )}
+                </div>
 
-                {/* Step 3: ASN */}
+                <span className="text-[#576575] text-xs font-bold">→</span>
+
+                {/* 02: IP Address */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-[#576575] font-bold">02</span>
+                  {chain.ipAsset ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectAsset?.(chain.ipAsset!)}
+                      className="border border-[#1e2631] bg-[#0c1015] text-[#e6edf3] px-2 py-0.5 text-xs font-medium hover:border-[#58a6ff] cursor-pointer flex items-center gap-1"
+                      title="Resolved IP"
+                    >
+                      <Server size={10} className="text-[#8a63d2] shrink-0" />
+                      <span>{chain.ipAsset.value}</span>
+                    </button>
+                  ) : (
+                    <span className="border border-[#1e2631] bg-[#0c1015] text-[#576575] px-2 py-0.5 text-xs">
+                      UNRESOLVED
+                    </span>
+                  )}
+                </div>
+
+                {/* 03: ASN */}
                 {chain.asnAsset && (
                   <>
-                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
-                    <button
-                      type="button"
-                      onClick={() => onSelectAsset?.(chain.asnAsset!)}
-                      className="console-tag console-tag-phosphor hover:brightness-125 cursor-pointer"
-                      title="BGP Autonomous System Number"
-                    >
-                      <span>{chain.asnAsset.value}</span>
-                    </button>
+                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-[#576575] font-bold">03</span>
+                      <button
+                        type="button"
+                        onClick={() => onSelectAsset?.(chain.asnAsset!)}
+                        className="border border-[#2ea043]/40 bg-[#0f2214] text-[#3fb950] px-2 py-0.5 text-xs font-semibold hover:border-[#3fb950] cursor-pointer"
+                        title="BGP ASN"
+                      >
+                        <span>{chain.asnAsset.value}</span>
+                      </button>
+                    </div>
                   </>
                 )}
 
-                {/* Step 4: Hosting Organization */}
+                {/* 04: Organization */}
                 {chain.orgAsset && (
                   <>
-                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
-                    <button
-                      type="button"
-                      onClick={() => onSelectAsset?.(chain.orgAsset!)}
-                      className="console-tag hover:border-[#3fb950] cursor-pointer max-w-[180px] truncate text-[#9aa5b8]"
-                      title="Operating Network / Cloud Provider"
-                    >
-                      <span className="truncate">{chain.orgAsset.value}</span>
-                    </button>
+                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-[#576575] font-bold">04</span>
+                      <button
+                        type="button"
+                        onClick={() => onSelectAsset?.(chain.orgAsset!)}
+                        className="border border-[#1e2631] bg-[#0c1015] text-[#8b9bb0] px-2 py-0.5 text-xs hover:border-[#e6edf3] cursor-pointer max-w-[180px] truncate"
+                        title="Operating Network / Cloud Provider"
+                      >
+                        <span className="truncate">{chain.orgAsset.value}</span>
+                      </button>
+                    </div>
                   </>
                 )}
 
-                {/* Step 5: Approximate Geolocation */}
+                {/* 05: Location */}
                 {chain.geoAsset && (
                   <>
-                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
-                    <button
-                      type="button"
-                      onClick={() => onSelectAsset?.(chain.geoAsset!)}
-                      className="console-tag console-tag-amber hover:brightness-125 cursor-pointer"
-                      title="Approximate Datacenter Geolocation"
-                    >
-                      <MapPin size={10} className="shrink-0" />
-                      <span>
-                        {String(chain.geoAsset.metadata?.city || chain.geoAsset.metadata?.country || chain.geoAsset.value)}
-                      </span>
-                    </button>
+                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-[#576575] font-bold">05</span>
+                      <button
+                        type="button"
+                        onClick={() => onSelectAsset?.(chain.geoAsset!)}
+                        className="border border-[#bb8009]/40 bg-[#251a08] text-[#d29922] px-2 py-0.5 text-xs hover:border-[#d29922] cursor-pointer flex items-center gap-1"
+                        title="Approximate Datacenter"
+                      >
+                        <MapPin size={9} className="shrink-0" />
+                        <span>
+                          {String(chain.geoAsset.metadata?.city || chain.geoAsset.metadata?.country || chain.geoAsset.value)}
+                        </span>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -218,9 +228,10 @@ export default function AssetChainVisualizer({
         )}
       </div>
 
-      <div className="pt-2 border-t border-[#1f2735] flex items-center justify-between text-[11px] font-mono text-[#626e82]">
-        <span>Showing {filteredChains.length} of {chains.length} infrastructure resolution paths</span>
-        <span>[CLICK ASSET PILL FOR RAW METADATA]</span>
+      {/* ─── Footer ─────────────────────────────────────────────────── */}
+      <div className="border-t border-[#1e2631] bg-[#0c1015] px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#576575]">
+        <span>{filteredChains.length} of {chains.length} resolution traces</span>
+        <span>[CLICK ASSET IN TRACE TO INSPECT RAW DETAILS]</span>
       </div>
     </div>
   );

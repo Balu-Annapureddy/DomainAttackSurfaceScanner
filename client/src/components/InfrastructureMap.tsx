@@ -6,6 +6,7 @@ interface InfrastructureMapProps {
   assets: Asset[];
   relationships: Relationship[];
   onSelectAsset?: (asset: Asset) => void;
+  sectionNumber?: string;
 }
 
 interface GeoPoint {
@@ -23,6 +24,7 @@ export default function InfrastructureMap({
   assets,
   relationships,
   onSelectAsset,
+  sectionNumber = '05',
 }: InfrastructureMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -39,7 +41,6 @@ export default function InfrastructureMap({
       const lng = typeof geo.metadata?.longitude === 'number' ? geo.metadata.longitude : null;
 
       if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-        // Find associated IP via relationship
         const rel = relationships.find(
           (r) => r.type === 'located_approximately_at' && r.toAssetId === geo.id,
         );
@@ -97,17 +98,23 @@ export default function InfrastructureMap({
         center: initialCenter,
         zoom: initialZoom,
         minZoom: 1,
-        maxZoom: 14,
+        maxZoom: 16,
         zoomControl: false,
         attributionControl: false,
       });
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Dark CartoDB tile layer with error handling
-      const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
+      // Support OpenStreetMap standard tiles with inverted dark theme,
+      // or custom CARTO if API key is provided via environment
+      const cartoKey = (import.meta as unknown as { env?: { VITE_CARTO_API_KEY?: string } }).env?.VITE_CARTO_API_KEY;
+      const tileUrl = cartoKey
+        ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${encodeURIComponent(cartoKey)}`
+        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      const tileLayer = L.tileLayer(tileUrl, {
         maxZoom: 19,
+        className: cartoKey ? '' : 'leaflet-dark-tiles',
       });
 
       tileLayer.on('tileerror', () => {
@@ -135,26 +142,25 @@ export default function InfrastructureMap({
       bounds.extend([point.lat, point.lng]);
 
       const marker = L.circleMarker([point.lat, point.lng], {
-        radius: 7,
+        radius: 6,
         fillColor: '#388bfd',
         color: '#58a6ff',
         weight: 1.5,
-        opacity: 0.9,
-        fillOpacity: 0.75,
+        opacity: 0.95,
+        fillOpacity: 0.8,
       });
 
-      // Escape popup content to prevent injection
-      const locText = [point.city, point.country].filter(Boolean).join(', ') || 'Regional datacenter';
+      const locText = [point.city, point.country].filter(Boolean).join(', ') || 'Approximate Datacenter';
       const asnText = point.asn ? `ASN: ${point.asn}` : '';
       const orgText = point.organization ? `Org: ${point.organization}` : '';
 
       marker.bindPopup(`
-        <div style="font-family: monospace; font-size: 11px; color: #e6edf3; background: #111620; padding: 6px; border: 1px solid #1f2735; border-radius: 4px;">
+        <div style="font-family: monospace; font-size: 11px; color: #e6edf3; background: #0c1015; padding: 6px; border: 1px solid #1e2631; border-radius: 2px;">
           <div style="color: #58a6ff; font-weight: bold; margin-bottom: 2px;">IP: ${point.ip}</div>
-          <div style="color: #9aa5b8;">${locText}</div>
+          <div style="color: #8b9bb0;">${locText}</div>
           ${asnText ? `<div style="color: #3fb950; font-size: 10px;">${asnText}</div>` : ''}
-          ${orgText ? `<div style="color: #9aa5b8; font-size: 10px;">${orgText}</div>` : ''}
-          <div style="margin-top: 4px; font-size: 9px; color: #626e82;">[CLICK MARKER FOR ASSET DETAILS]</div>
+          ${orgText ? `<div style="color: #8b9bb0; font-size: 10px;">${orgText}</div>` : ''}
+          <div style="margin-top: 4px; font-size: 9px; color: #576575;">[CLICK MARKER FOR ASSET DETAILS]</div>
         </div>
       `);
 
@@ -166,51 +172,76 @@ export default function InfrastructureMap({
     });
 
     if (geoPoints.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
     }
   }, [geoPoints, onSelectAsset]);
 
   return (
-    <div className="console-panel overflow-hidden">
-      {/* ─── Map Header ─────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2 border-b border-[#1f2735] p-3.5 sm:flex-row sm:items-center sm:justify-between bg-[#111620]">
+    <div className="console-panel">
+      {/* ─── Workstation Dossier Header ─────────────────────────────── */}
+      <div className="dossier-header">
         <div>
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className="text-[#58a6ff] font-bold">[GEOIP]</span>
-            <span className="font-bold text-[#e6edf3]">APPROXIMATE INFRASTRUCTURE GEOLOCATION</span>
-          </div>
-          <p className="text-[11px] text-[#9aa5b8] mt-0.5 font-mono">
-            {geoPoints.length} network points of presence mapped
-          </p>
+          <span className="dossier-num">[{sectionNumber}]</span>
+          <span>INFRASTRUCTURE DISTRIBUTION</span>
         </div>
-
-        <div className="flex items-center gap-2 font-mono text-[11px] text-[#9aa5b8]">
-          <span className="console-tag">ESTIMATED_DATACENTERS</span>
+        <div className="flex items-center gap-2 text-[11px] text-[#8b9bb0]">
+          <span>{geoPoints.length} GEOLOCATED ENDPOINT{geoPoints.length !== 1 ? 'S' : ''}</span>
+          <span className="console-tag">REGISTRY_GEOIP</span>
         </div>
       </div>
 
       {/* ─── Map Canvas ─────────────────────────────────────────────── */}
       <div className="relative">
-        <div ref={mapContainerRef} className="h-72 sm:h-80 w-full bg-[#0b0e14]" />
+        <div ref={mapContainerRef} className="h-64 sm:h-72 w-full bg-[#080b0f]" />
 
-        {/* Graceful Tile Error or Empty State */}
-        {geoPoints.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0b0e14]/90 p-6 text-center font-mono text-xs text-[#626e82]">
+        {/* Graceful Fallback Overlay if no IPs discovered */}
+        {geoPoints.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#080b0f]/90 p-4 text-center font-mono text-xs text-[#576575]">
             NO PUBLIC IP ADDRESSES WITH REGISTRY GEOLOCATION DISCOVERED
           </div>
-        ) : tileError ? (
+        )}
+
+        {tileError && (
           <div className="absolute bottom-2 left-2 console-tag console-tag-amber text-[10px]">
-            MAP TILES OFFLINE // MARKERS RENDERED ON INTERNAL GRID
+            MAP TILES OFFLINE // COORDINATE OVERLAY ACTIVE
           </div>
-        ) : null}
+        )}
+      </div>
+
+      {/* ─── Target Infrastructure Dossier ──────────────────────────── */}
+      <div className="border-t border-[#1e2631] bg-[#0c1015] p-3">
+        <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#8b9bb0] mb-2">
+          TARGET INFRASTRUCTURE SUMMARY
+        </div>
+
+        {geoPoints.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 font-mono text-xs">
+            {geoPoints.slice(0, 4).map((pt, idx) => (
+              <div key={idx} className="bg-[#10151b] border border-[#1e2631] p-2 rounded-none">
+                <div className="text-[10px] text-[#576575] uppercase">ENDPOINT // {pt.ip}</div>
+                <div className="text-[#e6edf3] font-semibold truncate mt-0.5">
+                  {[pt.city, pt.country].filter(Boolean).join(', ') || 'Regional Datacenter'}
+                </div>
+                <div className="text-[11px] text-[#3fb950] truncate">{pt.asn || 'ASN Unassigned'}</div>
+                <div className="text-[10px] text-[#8b9bb0] truncate">{pt.organization || 'Hosting Provider'}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="font-mono text-xs text-[#576575]">
+            No public endpoints available for regional network routing analysis.
+          </div>
+        )}
       </div>
 
       {/* ─── Disclaimer Footer ──────────────────────────────────────── */}
-      <div className="border-t border-[#1f2735] bg-[#0d121a] px-4 py-2 font-mono text-[11px] text-[#626e82] flex items-center justify-between">
+      <div className="border-t border-[#1e2631] bg-[#080b0f] px-3 py-1.5 font-mono text-[10px] text-[#576575] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <span>
-          <strong className="text-[#9aa5b8]">DISCLAIMER:</strong> Coordinates indicate regional network datacenters or ISP routers derived from registry records, <em>NEVER physical buildings or individuals</em>.
+          <strong className="text-[#8b9bb0]">DISCLAIMER:</strong> Coordinates designate approximate network/datacenter infrastructure from registry records, <em>not an individual or physical building location</em>.
         </span>
-        <span className="hidden sm:inline">[MAP LEAFLET // CARTO DARK]</span>
+        <span className="text-[#8b9bb0]">
+          &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-[#e6edf3]">OpenStreetMap</a> contributors
+        </span>
       </div>
     </div>
   );

@@ -136,5 +136,33 @@ Quality & Verification:
 - Build: Backend (`tsc`) and Frontend (`tsc -b && vite build`) compile cleanly.
 - Sample Scan: `perimeter-demo.io` verified end-to-end with presentation-ready status.
 
+---
+
+## Sprint [Visual Redesign Correction]: Retro Network Intelligence Workstation
+
+Date: 2026-09-25
+Status: COMPLETED
+
+Overview:
+Addressed all visual design critique points to transform the application into an authentic Retro Network Intelligence Workstation inspired by Grafana density, React95/retro system panels, and professional security console architecture. Eliminated the "everything is a card" pattern, removed oversized typography, removed excessive cyan glows, resolved map tile key errors, and implemented structured intelligence dossier sections.
+
+Key Changes & Hardening:
+- **Design System & Palette**: Near-black charcoal background (`#080b0f`), structured panels (`#10151b`, `#151c23`, `#0c1015`), subtle muted gray/green borders (`#1e2631`), warm off-white primary text (`#e6edf3`), muted gray-green secondary text (`#8b9bb0`), phosphor green (`#3fb950`), amber (`#d29922`), and coral (`#f85149`). Muted cyan is reserved as a functional accent, not a global outline.
+- **Removed "Everything is a Card"**: Replaced bubbly cards with structured workstation panels (`border-radius: 2px`), high-density telemetry grids, compact status strips, and numbered dossier headers (`[01] EXECUTIVE SUMMARY`, `[02] SECURITY POSTURE`, `[03] ATTACK SURFACE RELATIONSHIPS`, `[04] ASSET ROUTING CHAINS`, `[05] INFRASTRUCTURE DISTRIBUTION`, `[06] ASSET INVENTORY`, `[07] FINDINGS & ANOMALIES`).
+- **Map Tile Resolution & Fallback**: Replaced broken CartoDB tiles with legitimate OpenStreetMap standard tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`) using a crisp dark filter and full attribution. Added an environment variable option (`VITE_CARTO_API_KEY`) and a graceful coordinate overlay fallback. Added a structured Target Infrastructure summary dossier below the map.
+- **Landing Page Workstation Console**: Replaced marketing hero with compact intelligence console (`DAS // WORKSTATION`), target input bar, 6 system capabilities, 6-stage pipeline (`01 RESOLVE` → `06 REPORT`), and Passive Reconnaissance Guarantee.
+- **Scan Dashboard Layout**: 12-column desktop workstation layout with a compact top bar, compact pipeline stepper, 6-cell executive telemetry grid (`ASSETS`, `RELATIONS`, `OBSERVATIONS`, `FINDINGS`, `COMPLETENESS`, `SCORE`), and explicit posture checks (`HTTP`, `TLS`, `SPF`, `DMARC`) alongside the evidentiary breakdown.
+- **High-Density Tables**: Assets presented as a monospace technical table with exact columns: `TYPE`, `VALUE`, `STATUS`, `OBSERVED EVIDENCE / SOURCE`, and `ACTION`.
+- **Analyst Graph & Asset Chain**: Relationship graph features an embedded asset intelligence inspector panel on node click; asset chain features a numbered trace route console (`01 HOST → 02 IP → 03 ASN → 04 ORG → 05 LOCATION`).
+- **Printed Dossier Report**: Replaced narrow layout with a 1200–1400px full desktop width 2-column security dossier with 9 numbered sections.
+- **Security Field Manual**: Upgraded Knowledge Guide into a structured cybersecurity field manual with 3 distinct pillars (`WHAT IS THIS?`, `WHY DOES IT MATTER?`, `WHAT DID THIS SCAN OBSERVE?`).
+
+Verification & Quality Gate:
+- Automated tests: **34/34 passed** across Jest test suites.
+- Lint: **0 errors, 0 warnings** across all 24 client files and all server files.
+- Build: Both backend (`tsc`) and frontend (`tsc -b && vite build`) compile with exit code 0.
+- Sample & Real scan workflows fully functional.
+
+
 
 

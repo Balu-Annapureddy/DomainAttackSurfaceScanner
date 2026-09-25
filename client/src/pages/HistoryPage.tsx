@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Clock,
   Calendar,
-  Terminal,
 } from 'lucide-react';
 import IntelligenceTimeline, { type HistoryItem } from '../components/IntelligenceTimeline';
 
@@ -56,7 +55,6 @@ export default function HistoryPage() {
       return;
     }
 
-    // If 2 already selected, replace selection with newly clicked one
     setSelectedScanIds([item.scanId]);
   };
 
@@ -66,7 +64,6 @@ export default function HistoryPage() {
     const item2 = items.find((i) => i.scanId === selectedScanIds[1]);
     if (!item1 || !item2) return;
 
-    // Sort chronologically: older scan is baseline, newer is target
     const time1 = new Date(item1.createdAt).getTime();
     const time2 = new Date(item2.createdAt).getTime();
     const [base, target] = time1 <= time2 ? [item1, item2] : [item2, item1];
@@ -75,85 +72,87 @@ export default function HistoryPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] font-mono">
-      {/* ─── Top Console Header ───────────────────────────────────── */}
-      <header className="border-b border-[#1f2735] bg-[#111620]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 font-mono text-sm font-bold tracking-tight text-[#e6edf3] hover:text-[#58a6ff] transition"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded border border-[#388bfd]/40 bg-[#162030] text-[#58a6ff]">
-              <Terminal size={15} />
+    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] font-mono pb-16">
+      {/* ─── Compact Workstation Header ─────────────────────────────── */}
+      <header className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] px-4 py-2">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-xs font-bold text-[#58a6ff] hover:text-[#e6edf3] transition"
+            >
+              <span>DAS // WORKSTATION</span>
+            </Link>
+            <span className="text-[#1e2631]">|</span>
+            <div className="flex items-center gap-2 text-[11px] text-[#8b9bb0]">
+              <span className="text-[#3fb950] font-semibold">HISTORICAL_ARCHIVE</span>
+              <span>•</span>
+              <span className="text-[#576575]">{items.length} RECORDS</span>
             </div>
-            <span>DOMAIN ATTACK SURFACE SCANNER</span>
-          </Link>
+          </div>
 
           <Link
             to="/"
-            className="console-btn console-btn-primary py-1.5 px-3 text-xs"
+            className="console-btn console-btn-primary py-0.5 px-2.5 text-[11px]"
           >
-            <ArrowLeft size={13} />
+            <ArrowLeft size={12} />
             <span>NEW SCAN</span>
           </Link>
         </div>
       </header>
 
       {/* ─── Main Content ─────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-6">
-        {/* Header & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#1f2735] pb-4">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 space-y-4">
+        {/* Header & Diff Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#1e2631] pb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="console-tag console-tag-cyan">LOGS // HISTORICAL_ARCHIVE</span>
-            </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[#e6edf3] sm:text-2xl">
-              SCAN HISTORY & INTELLIGENCE ARCHIVE
+            <h1 className="text-base font-bold tracking-tight text-[#e6edf3] sm:text-lg">
+              SCAN ARCHIVE & CHRONOLOGICAL HISTORY
             </h1>
-            <p className="mt-0.5 text-xs text-[#9aa5b8] font-sans">
-              Review stored perimeter scans, launch timeline drift visualizers, generate dossiers, or compare delta.
+            <p className="mt-0.5 text-xs text-[#8b9bb0] font-sans">
+              Review stored perimeter scans, launch timeline drift visualizers, generate dossiers, or compare deltas.
             </p>
           </div>
 
           {selectedScanIds.length > 0 && (
-            <div className="flex items-center gap-3 console-panel-inset p-2.5 text-xs border border-[#388bfd]/40">
-              <span className="text-[#58a6ff]">
-                [{selectedScanIds.length}/2 SELECTED FOR DIFF]
+            <div className="flex items-center gap-2.5 bg-[#0c1015] p-2 text-xs border border-[#388bfd]">
+              <span className="text-[#58a6ff] font-bold">
+                [{selectedScanIds.length}/2 FOR DIFF]
               </span>
               {selectedScanIds.length === 2 && (
                 <button
                   type="button"
                   onClick={handleLaunchCompare}
-                  className="console-btn console-btn-primary py-1 px-2.5 text-xs"
+                  className="console-btn console-btn-primary py-0.5 px-2 text-[11px]"
                 >
-                  <GitCompare size={12} />
-                  <span>COMPARE SCANS</span>
+                  <GitCompare size={11} />
+                  <span>COMPARE</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setSelectedScanIds([])}
-                className="text-[#626e82] hover:text-[#e6edf3] text-xs underline"
+                className="text-[#576575] hover:text-[#e6edf3] text-xs underline cursor-pointer"
               >
-                Clear
+                CLEAR
               </button>
             </div>
           )}
         </div>
 
         {compareError && (
-          <div className="console-panel-inset border-l-2 border-l-[#f85149] p-3 text-xs text-[#f85149] flex items-center gap-2">
-            <AlertCircle size={14} className="shrink-0" />
+          <div className="bg-[#0c1015] border-l-2 border-[#f85149] p-2.5 text-xs text-[#f85149] flex items-center gap-2">
+            <AlertCircle size={13} className="shrink-0" />
             <span>[COMPARISON CONFLICT]: {compareError}</span>
           </div>
         )}
 
         {/* Empty State */}
         {items.length === 0 ? (
-          <div className="console-panel p-12 text-center space-y-3">
-            <Clock size={28} className="mx-auto text-[#626e82]" />
-            <p className="text-sm font-bold text-[#e6edf3]">NO PREVIOUS SCANS RECORDED</p>
-            <p className="text-xs text-[#9aa5b8] font-sans max-w-sm mx-auto">
+          <div className="console-panel p-10 text-center space-y-2">
+            <Clock size={24} className="mx-auto text-[#576575]" />
+            <p className="text-xs font-bold text-[#e6edf3]">NO PREVIOUS SCANS RECORDED</p>
+            <p className="text-xs text-[#8b9bb0] font-sans max-w-sm mx-auto">
               Initiate a scan on any domain to start tracking public perimeter telemetry and drift over time.
             </p>
             <Link
@@ -164,7 +163,7 @@ export default function HistoryPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-xs">
             {items.map((item) => {
               const isSelected = selectedScanIds.includes(item.scanId);
               const domainKey = item.domain.toLowerCase();
@@ -176,42 +175,41 @@ export default function HistoryPage() {
               return (
                 <div
                   key={item.scanId}
-                  className={`console-panel p-4 flex flex-col justify-between transition ${
-                    isSelected ? 'border-[#388bfd] bg-[#162030]' : 'hover:border-[#388bfd]/50'
+                  className={`bg-[#10151b] border p-3 flex flex-col justify-between transition ${
+                    isSelected ? 'border-[#58a6ff] bg-[#15273b]' : 'border-[#1e2631] hover:border-[#58a6ff]'
                   }`}
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {/* Header Row */}
-                    <div className="flex items-start justify-between gap-2 border-b border-[#1f2735] pb-2.5">
+                    <div className="flex items-start justify-between gap-2 border-b border-[#1e2631] pb-2">
                       <div className="space-y-0.5 truncate">
                         <span className="font-bold text-sm text-[#e6edf3] block truncate" title={item.domain}>
                           {item.domain}
                         </span>
-                        <div className="flex items-center gap-1 text-[10px] text-[#626e82]">
+                        <div className="flex items-center gap-1 text-[10px] text-[#576575]">
                           <Calendar size={10} />
                           <span>{new Date(item.createdAt).toISOString().replace('T', ' ').slice(0, 19)} UTC</span>
                         </div>
                       </div>
 
-                      {/* Select Checkbox for Comparison */}
                       <button
                         type="button"
                         onClick={() => toggleSelect(item)}
-                        className="text-[#626e82] hover:text-[#58a6ff] p-1 transition"
+                        className="text-[#576575] hover:text-[#58a6ff] p-0.5 cursor-pointer"
                         title={isSelected ? 'Deselect from comparison' : 'Select for comparison'}
                       >
                         {isSelected ? (
-                          <CheckSquare size={16} className="text-[#58a6ff]" />
+                          <CheckSquare size={15} className="text-[#58a6ff]" />
                         ) : (
-                          <Square size={16} />
+                          <Square size={15} />
                         )}
                       </button>
                     </div>
 
-                    {/* Metadata & Score Pills */}
-                    <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
+                    {/* Metadata & Score Tags */}
+                    <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
                       <span className="console-tag">
-                        STATUS // {item.status ? item.status.toUpperCase() : 'UNKNOWN'}
+                        STATUS: {item.status ? item.status.toUpperCase() : 'UNKNOWN'}
                       </span>
                       {hasScore && (
                         <span
@@ -225,7 +223,7 @@ export default function HistoryPage() {
                               : 'console-tag-coral'
                           }`}
                         >
-                          SCORE // {score}/100
+                          SCORE: {score}/100
                         </span>
                       )}
                       {item.assetCount !== undefined && (
@@ -241,18 +239,18 @@ export default function HistoryPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="mt-4 pt-3 border-t border-[#1f2735] flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                  {/* Actions Bar */}
+                  <div className="mt-3 pt-2 border-t border-[#1e2631] flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1">
                       <Link
                         to={`/scan/${item.scanId}`}
-                        className="console-btn py-1 px-2 text-[10px] text-[#58a6ff]"
+                        className="console-btn py-0.5 px-2 text-[10px] text-[#58a6ff]"
                       >
                         [OPEN]
                       </Link>
                       <Link
                         to={`/report/${item.scanId}`}
-                        className="console-btn py-1 px-2 text-[10px] text-[#9aa5b8]"
+                        className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]"
                       >
                         [REPORT]
                       </Link>
@@ -262,8 +260,8 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => setTimelineDomain(item.domain)}
-                        className="console-btn console-btn-phosphor py-1 px-2 text-[10px]"
-                        title="View chronological drift timeline across multiple scans of this domain"
+                        className="console-btn console-btn-phosphor py-0.5 px-2 text-[10px]"
+                        title="View chronological drift timeline"
                       >
                         [TIMELINE]
                       </button>

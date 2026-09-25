@@ -26,38 +26,33 @@ export default function ScanProgressStepper({
   onSelectCategory,
 }: ScanProgressStepperProps) {
   return (
-    <div className="console-panel p-2.5 sm:p-3 overflow-x-auto">
-      <div className="flex items-center justify-between min-w-[700px] gap-2">
-        <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#626e82] uppercase pr-2 border-r border-[#1f2735] shrink-0">
-          <span>PIPELINE:</span>
+    <div className="bg-[#10151b] border border-[#1e2631] p-2 overflow-x-auto">
+      <div className="flex items-center min-w-[680px] gap-2">
+        <div className="font-mono text-[10px] font-bold text-[#8b9bb0] uppercase pr-2 border-r border-[#1e2631] shrink-0">
+          SYS // PIPELINE
         </div>
 
-        <div className="flex items-center justify-between flex-1 gap-1.5 font-mono text-xs">
+        <div className="grid grid-cols-7 gap-1.5 flex-1 font-mono text-xs">
           {PIPELINE_ITEMS.map((item) => {
             const status = categories[item.key]?.status ?? 'pending';
             const isSelected = activeCategory === item.key;
 
-            // Status symbols and color classes
             let symbol = '·';
-            let statusColor = 'text-[#626e82]';
-            let borderClass = 'border-[#1f2735]';
+            let symbolColor = 'text-[#576575]';
+            let bgClass = 'bg-[#0c1015] border-[#1e2631]';
 
             if (status === 'completed') {
               symbol = '✓';
-              statusColor = 'text-[#3fb950]';
-              borderClass = 'border-[#3fb950]/30 bg-[#3fb950]/5';
+              symbolColor = 'text-[#3fb950]';
+              bgClass = 'bg-[#0c1015] border-[#2ea043]/40';
             } else if (status === 'running') {
               symbol = '►';
-              statusColor = 'text-[#58a6ff] animate-pulse';
-              borderClass = 'border-[#58a6ff]/40 bg-[#58a6ff]/10';
+              symbolColor = 'text-[#58a6ff] animate-pulse';
+              bgClass = 'bg-[#15273b] border-[#388bfd]';
             } else if (status === 'failed') {
               symbol = '!';
-              statusColor = 'text-[#d29922]';
-              borderClass = 'border-[#d29922]/30 bg-[#d29922]/5';
-            } else if (status === 'pending') {
-              symbol = '…';
-              statusColor = 'text-[#626e82]';
-              borderClass = 'border-[#171e2b] bg-[#0d121a]';
+              symbolColor = 'text-[#d29922]';
+              bgClass = 'bg-[#0c1015] border-[#bb8009]/40';
             }
 
             return (
@@ -65,16 +60,16 @@ export default function ScanProgressStepper({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectCategory?.(item.key)}
-                className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-left transition ${borderClass} ${
-                  isSelected ? 'ring-1 ring-[#58a6ff] bg-[#161c28]' : 'hover:bg-[#161c28]'
+                className={`flex items-center justify-between px-2 py-1 border text-left cursor-pointer transition ${bgClass} ${
+                  isSelected ? 'border-[#58a6ff] bg-[#151c23]' : 'hover:bg-[#151c23]'
                 }`}
-                title={`Category: ${item.name} (${status}) - click to inspect`}
+                title={`Pipeline Stage: ${item.name} (${status})`}
               >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#626e82]">[{item.id}]</span>
-                  <span className="font-semibold text-[#e6edf3] text-[11px]">{item.name}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-[#576575]">[{item.id}]</span>
+                  <span className="font-medium text-[#e6edf3] text-[11px] truncate">{item.name}</span>
                 </div>
-                <span className={`font-bold ${statusColor} text-xs`}>{symbol}</span>
+                <span className={`font-bold ${symbolColor} text-xs ml-1`}>{symbol}</span>
               </button>
             );
           })}

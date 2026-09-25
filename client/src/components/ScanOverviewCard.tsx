@@ -31,23 +31,47 @@ export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }:
     https?: { headers?: Record<string, string> };
   } | undefined;
 
+  const dnsData = scan.categories.dns?.data as {
+    records?: {
+      TXT?: Array<{ value: string }>;
+    };
+  } | undefined;
+
+  // Extract quick checks for HTTP, TLS, SPF, DMARC
+  const checks = useMemo(() => {
+    const hasHttps = Boolean(httpData?.httpsEnforced || httpData?.httpRedirectsToHttps);
+    const hasTls = scan.categories.tls?.status === 'completed' && Boolean(scan.categories.tls?.data);
+    
+    // Check SPF & DMARC in DNS or findings
+    const txts = dnsData?.records?.TXT?.map((t) => t.value) ?? [];
+    const hasSpf = txts.some((t) => t.toLowerCase().includes('v=spf1'));
+    const hasDmarc = scan.assets?.some((a) => a.value.includes('_dmarc')) || txts.some((t) => t.toLowerCase().includes('v=dmarc1'));
+
+    return [
+      { name: 'HTTP', ok: hasHttps, label: hasHttps ? 'ENFORCED' : 'UNENFORCED' },
+      { name: 'TLS', ok: hasTls, label: hasTls ? 'OBSERVED' : 'UNAVAILABLE' },
+      { name: 'SPF', ok: hasSpf, label: hasSpf ? 'OBSERVED' : 'MISSING' },
+      { name: 'DMARC', ok: hasDmarc, label: hasDmarc ? 'OBSERVED' : 'MISSING' },
+    ];
+  }, [httpData, scan.categories.tls, dnsData, scan.assets]);
+
   // Detect edge/CDN provider
   const detectedEdge = useMemo(() => {
     const orgAsset = scan.assets?.find((a) => a.type === 'ORGANIZATION');
     const serverHeader = httpData?.https?.headers?.server?.toLowerCase();
     if (orgAsset?.value?.toLowerCase().includes('cloudflare') || serverHeader?.includes('cloudflare')) {
-      return 'Cloudflare Edge CDN';
+      return 'Cloudflare Edge';
     }
     if (orgAsset?.value?.toLowerCase().includes('amazon') || orgAsset?.value?.toLowerCase().includes('aws')) {
-      return 'AWS Cloud Infrastructure';
+      return 'AWS Cloud';
     }
     if (orgAsset?.value?.toLowerCase().includes('google')) {
-      return 'Google Cloud Edge';
+      return 'Google Cloud';
     }
     if (orgAsset?.value?.toLowerCase().includes('fastly')) {
       return 'Fastly CDN';
     }
-    return orgAsset?.value ?? 'Direct Public Origin';
+    return orgAsset?.value ?? 'Direct Origin';
   }, [scan.assets, httpData]);
 
   // Completeness breakdown
@@ -80,15 +104,26 @@ export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }:
   }, [httpData?.finalObservedUrl]);
 
   return (
-    <div className="space-y-4">
-      {/* ─── Top Telemetry Console Panel ───────────────────────────── */}
-      <div className="console-panel p-5 space-y-4">
-        {/* System & Target Metadata Line */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#1f2735] pb-3">
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            <span className="console-tag console-tag-cyan">TARGET // DOMAIN</span>
-            <span className="font-mono text-base font-bold text-[#e6edf3]">{scan.domain}</span>
+    <div className="space-y-3 font-mono">
+      {/* ─── Workstation Top Telemetry Strip ────────────────────────── */}
+      <div className="bg-[#10151b] border border-[#1e2631] p-3 text-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 pb-2.5 border-b border-[#1e2631]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] text-[#576575] font-bold">TARGET:</span>
+            <span className="text-sm font-bold text-[#e6edf3]">{scan.domain}</span>
             <span className="console-tag">{detectedEdge}</span>
+            <span className="text-[10px] text-[#576575]">ID:</span>
+            <span className="text-[#8b9bb0] text-[11px] truncate max-w-[130px]">{scan.scanId}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#8b9bb0]">
+            <span className="flex items-center gap-1">
+              <Calendar size={11} className="text-[#576575]" />
+              {new Date(scan.createdAt).toISOString().replace('T', ' ').slice(0, 19)} UTC
+            </span>
+            <span className="console-tag">
+              STATUS // {scan.status.replace(/_/g, ' ').toUpperCase()}
+            </span>
             <span
               className={`console-tag ${
                 completeness === 'complete'
@@ -98,18 +133,7 @@ export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }:
                   : 'console-tag-coral'
               }`}
             >
-              {completeness === 'complete'
-                ? `✓ COMPLETE (${completenessDetails.completed}/${completenessDetails.total})`
-                : completeness === 'partial'
-                ? `! PARTIAL (${completenessDetails.completed}/${completenessDetails.total})`
-                : '✕ INCONCLUSIVE'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 font-mono text-xs text-[#9aa5b8]">
-            <span className="flex items-center gap-1">
-              <Calendar size={12} className="text-[#626e82]" />
-              {new Date(scan.createdAt).toISOString().replace('T', ' ').slice(0, 19)} UTC
+              {completenessDetails.completed}/{completenessDetails.total} CHECKS
             </span>
             {safeFinalUrl && (
               <a
@@ -125,271 +149,264 @@ export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }:
           </div>
         </div>
 
-        {/* ─── Executive Metric Grid (6 metrics) ───────────────────── */}
-        <div>
-          <div className="font-mono text-[10px] text-[#626e82] uppercase tracking-wider mb-2">
-            TELEMETRY // EXECUTIVE SUMMARY METRICS
+        {/* ─── Executive Telemetry Readouts (Dense 6-Cell Grid) ─────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#1e2631] mt-2.5">
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">ASSETS</div>
+            <div className="text-lg font-bold text-[#e6edf3] mt-0.5">{scan.assets?.length ?? 0}</div>
+            <div className="text-[10px] text-[#8b9bb0]">Observed Nodes</div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 font-mono text-xs">
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">ASSETS</span>
-              <span className="text-xl font-bold text-[#e6edf3] block mt-0.5">
-                {scan.assets?.length ?? 0}
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Normalized nodes</span>
-            </div>
 
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">RELATIONSHIPS</span>
-              <span className="text-xl font-bold text-[#58a6ff] block mt-0.5">
-                {scan.relationships?.length ?? 0}
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Network graph edges</span>
-            </div>
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">RELATIONS</div>
+            <div className="text-lg font-bold text-[#58a6ff] mt-0.5">{scan.relationships?.length ?? 0}</div>
+            <div className="text-[10px] text-[#8b9bb0]">Graph Edges</div>
+          </div>
 
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">OBSERVATIONS</span>
-              <span className="text-xl font-bold text-[#3fb950] block mt-0.5">
-                {observedCount}
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Verified signals</span>
-            </div>
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">OBSERVATIONS</div>
+            <div className="text-lg font-bold text-[#3fb950] mt-0.5">{observedCount}</div>
+            <div className="text-[10px] text-[#8b9bb0]">Verified Signals</div>
+          </div>
 
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">FINDINGS</span>
-              <span className="text-xl font-bold text-[#d29922] block mt-0.5">
-                {findings.length}
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Hygiene considerations</span>
-            </div>
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">FINDINGS</div>
+            <div className="text-lg font-bold text-[#d29922] mt-0.5">{findings.length}</div>
+            <div className="text-[10px] text-[#8b9bb0]">Hygiene Checks</div>
+          </div>
 
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">COMPLETENESS</span>
-              <span className="text-xl font-bold text-[#e6edf3] block mt-0.5">
-                {completenessDetails.completed}/{completenessDetails.total}
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Categories checked</span>
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">COMPLETENESS</div>
+            <div className="text-lg font-bold text-[#e6edf3] mt-0.5">
+              {Math.round((completenessDetails.completed / Math.max(1, completenessDetails.total)) * 100)}%
             </div>
+            <div className="text-[10px] text-[#8b9bb0]">{completenessDetails.completed}/{completenessDetails.total} Categories</div>
+          </div>
 
-            <div className="console-panel-inset p-3">
-              <span className="text-[10px] text-[#9aa5b8] block uppercase">HYGIENE SCORE</span>
-              <span
-                className={`text-xl font-bold block mt-0.5 ${
-                  !hasScore
-                    ? 'text-[#626e82]'
-                    : score >= 80
-                    ? 'text-[#3fb950]'
-                    : score >= 60
-                    ? 'text-[#58a6ff]'
-                    : score >= 40
-                    ? 'text-[#d29922]'
-                    : 'text-[#f85149]'
-                }`}
-              >
-                {hasScore ? `${score}` : '—'} <span className="text-xs text-[#626e82]">/ 100</span>
-              </span>
-              <span className="text-[10px] text-[#626e82] block truncate">Defensive rating</span>
+          <div className="bg-[#0c1015] p-2.5">
+            <div className="text-[10px] text-[#576575] font-bold uppercase tracking-wider">SCORE</div>
+            <div
+              className={`text-lg font-bold mt-0.5 ${
+                !hasScore
+                  ? 'text-[#576575]'
+                  : score >= 80
+                  ? 'text-[#3fb950]'
+                  : score >= 60
+                  ? 'text-[#58a6ff]'
+                  : score >= 40
+                  ? 'text-[#d29922]'
+                  : 'text-[#f85149]'
+              }`}
+            >
+              {hasScore ? `${score}` : '—'} <span className="text-xs text-[#576575]">/ 100</span>
             </div>
+            <div className="text-[10px] text-[#8b9bb0]">Hygiene Rating</div>
           </div>
         </div>
 
-        {/* ─── Security Posture & Epistemology ─────────────────────── */}
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 pt-2">
-          {/* Posture Score & Assessment (Left 2 cols) */}
-          <div className="console-panel-inset p-4 lg:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-mono text-xs">
-                <span className="text-[#58a6ff] font-bold">HYGIENE SCORE:</span>
-                <span
-                  className={`font-bold ${
-                    !hasScore
-                      ? 'text-[#626e82]'
-                      : score >= 80
-                      ? 'text-[#3fb950]'
-                      : score >= 60
-                      ? 'text-[#58a6ff]'
-                      : score >= 40
-                      ? 'text-[#d29922]'
-                      : 'text-[#f85149]'
-                  }`}
-                >
-                  {hasScore ? `${score} / 100` : 'CALCULATING'}
+        {/* ─── Security Posture Dossier & Epistemology ──────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-2.5">
+          {/* Posture Bar & Checks (7 cols) */}
+          <div className="lg:col-span-7 bg-[#0c1015] border border-[#1e2631] p-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-[#e6edf3]">
+                  OBSERVABLE CONFIGURATION HYGIENE: <span className="text-[#58a6ff]">{hasScore ? `${score} / 100` : 'PENDING'}</span>
                 </span>
-                <span className="text-[10px] text-[#626e82]">Observable configuration hygiene</span>
+                <span className="text-[10px] text-[#576575]">PASSIVE OSINT</span>
               </div>
-              <span className="console-tag font-mono text-[10px]">PASSIVE EVALUATION</span>
+              <p className="text-[11px] text-[#8b9bb0] font-sans leading-relaxed">
+                {scoreAssessment}
+              </p>
             </div>
 
-            <p className="text-xs text-[#9aa5b8] leading-relaxed">
-              {scoreAssessment}
-            </p>
+            {/* Structured Posture Bar */}
+            <div className="mt-2.5">
+              <div className="h-2 w-full bg-[#151c23] border border-[#1e2631] overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    score >= 80
+                      ? 'bg-[#3fb950]'
+                      : score >= 60
+                      ? 'bg-[#58a6ff]'
+                      : score >= 40
+                      ? 'bg-[#d29922]'
+                      : 'bg-[#f85149]'
+                  }`}
+                  style={{ width: `${hasScore ? Math.min(100, Math.max(5, score)) : 0}%` }}
+                />
+              </div>
 
-            <div className="h-1.5 w-full rounded bg-[#1f2735] overflow-hidden">
-              <div
-                className={`h-full transition-all duration-700 ${
-                  score >= 80
-                    ? 'bg-[#3fb950]'
-                    : score >= 60
-                    ? 'bg-[#58a6ff]'
-                    : score >= 40
-                    ? 'bg-[#d29922]'
-                    : 'bg-[#f85149]'
-                }`}
-                style={{ width: `${hasScore ? Math.min(100, Math.max(5, score)) : 0}%` }}
-              />
+              {/* Individual Core Defensive Checks */}
+              <div className="grid grid-cols-4 gap-1.5 mt-2 text-center text-[10px]">
+                {checks.map((chk) => (
+                  <div
+                    key={chk.name}
+                    className={`p-1 border ${
+                      chk.ok
+                        ? 'border-[#2ea043]/30 bg-[#2ea043]/5 text-[#3fb950]'
+                        : 'border-[#bb8009]/30 bg-[#bb8009]/5 text-[#d29922]'
+                    }`}
+                  >
+                    <span className="font-bold">{chk.name}: </span>
+                    <span>{chk.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Explicit Epistemology: Observed vs Not Observed vs Unverified */}
-          <div className="console-panel-inset p-3.5 space-y-1.5 font-mono text-xs">
-            <div className="text-[10px] font-bold text-[#626e82] uppercase tracking-wider pb-1 border-b border-[#1f2735]">
+          {/* Epistemology Breakdown (5 cols) */}
+          <div className="lg:col-span-5 bg-[#0c1015] border border-[#1e2631] p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold text-[#576575] uppercase tracking-wider border-b border-[#1e2631] pb-1">
               EVIDENTIARY STATUS BREAKDOWN
             </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#9aa5b8] flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#3fb950]" /> WHAT WAS OBSERVED:
-              </span>
-              <span className="font-bold text-[#3fb950]">{observedCount} items</span>
+
+            <div className="space-y-1.5 my-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-[#8b9bb0] flex items-center gap-1.5">
+                  <span className="text-[#3fb950]">✓</span> WHAT WAS OBSERVED:
+                </span>
+                <span className="font-bold text-[#3fb950]">{observedCount} items</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#8b9bb0] flex items-center gap-1.5">
+                  <span className="text-[#d29922]">!</span> WHAT WAS NOT OBSERVED:
+                </span>
+                <span className="font-bold text-[#d29922]">{notObservedCount} items</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#8b9bb0] flex items-center gap-1.5">
+                  <span className="text-[#576575]">?</span> COULD NOT BE VERIFIED:
+                </span>
+                <span className="font-bold text-[#576575]">{checkFailedCount} items</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#9aa5b8] flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#d29922]" /> WHAT WAS NOT OBSERVED:
-              </span>
-              <span className="font-bold text-[#d29922]">{notObservedCount} items</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#9aa5b8] flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#626e82]" /> COULD NOT BE VERIFIED:
-              </span>
-              <span className="font-bold text-[#626e82]">{checkFailedCount} items</span>
+
+            <div className="text-[10px] text-[#576575] font-sans border-t border-[#1e2631] pt-1">
+              Scanner distinguishes missing evidence from failed network queries.
             </div>
           </div>
         </div>
 
-        {/* ─── Action & Export Buttons Bar ─────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#1f2735] text-xs font-mono">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* ─── Control Bar ─────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 mt-2.5 border-t border-[#1e2631] text-xs">
+          <div className="flex items-center gap-2">
             <Link
               to={`/report/${scan.scanId}`}
-              className="console-btn console-btn-primary py-1.5 px-3 text-xs"
+              className="console-btn console-btn-primary py-1 px-2.5 text-xs"
             >
-              <FileText size={12} />
-              <span>PRINTABLE REPORT</span>
+              <FileText size={11} />
+              <span>DOSSIER REPORT</span>
             </Link>
             {onOpenGlossary && (
               <button
                 type="button"
                 onClick={() => onOpenGlossary('attack_surface')}
-                className="console-btn py-1.5 px-3 text-xs text-[#9aa5b8]"
+                className="console-btn py-1 px-2.5 text-xs text-[#8b9bb0]"
               >
-                <BookOpen size={12} className="text-[#58a6ff]" />
-                <span>KNOWLEDGE GUIDE</span>
+                <BookOpen size={11} className="text-[#58a6ff]" />
+                <span>FIELD MANUAL</span>
               </button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => exportScanJson(scan)}
-              className="console-btn py-1 px-2.5 text-xs text-[#9aa5b8]"
+              className="console-btn py-1 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>JSON</span>
             </button>
             <button
               type="button"
               onClick={() => exportAssetsCsv(scan)}
-              className="console-btn py-1 px-2.5 text-xs text-[#9aa5b8]"
+              className="console-btn py-1 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>ASSETS CSV</span>
             </button>
             <button
               type="button"
               onClick={() => exportFindingsCsv(scan)}
-              className="console-btn py-1 px-2.5 text-xs text-[#9aa5b8]"
+              className="console-btn py-1 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>FINDINGS CSV</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* ─── Guided Beginner Cards (if guided mode) ──────────────────── */}
+      {/* ─── Guided Beginner Explanations (if guided mode) ─────────── */}
       {isGuidedMode && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="console-panel p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                Certificate Transparency
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="bg-[#10151b] border border-[#1e2631] p-3 text-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-[#e6edf3]">Certificate Logs (CT)</span>
               {onOpenGlossary && (
                 <button
                   type="button"
                   onClick={() => onOpenGlossary('certificate_transparency')}
-                  className="font-mono text-[10px] text-[#58a6ff] hover:underline"
+                  className="text-[10px] text-[#58a6ff] hover:underline"
                 >
-                  [?] EXPLAIN
+                  [?] GUIDE
                 </button>
               )}
             </div>
-            <p className="text-xs text-[#9aa5b8] leading-relaxed">
-              Public append-only logs showing all digital certificates issued for this domain, discovering subdomains passively.
+            <p className="text-[#8b9bb0] font-sans text-[11px] leading-relaxed">
+              Public append-only registries of certificates. Allows passive discovery of subdomains without querying the target.
             </p>
           </div>
 
-          <div className="console-panel p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                BGP Autonomous System (ASN)
-              </span>
+          <div className="bg-[#10151b] border border-[#1e2631] p-3 text-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-[#e6edf3]">BGP Autonomous Systems</span>
               {onOpenGlossary && (
                 <button
                   type="button"
                   onClick={() => onOpenGlossary('asn')}
-                  className="font-mono text-[10px] text-[#58a6ff] hover:underline"
+                  className="text-[10px] text-[#58a6ff] hover:underline"
                 >
-                  [?] EXPLAIN
+                  [?] GUIDE
                 </button>
               )}
             </div>
-            <p className="text-xs text-[#9aa5b8] leading-relaxed">
-              Identifies which cloud provider or telecom carrier operates the network prefix announcing the target's IP endpoints.
+            <p className="text-[#8b9bb0] font-sans text-[11px] leading-relaxed">
+              Identifies the ISP, cloud provider, or telecom network that routes IP traffic for the target domain.
             </p>
           </div>
 
-          <div className="console-panel p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#e6edf3]">
-                DNS MX & SPF/DMARC
-              </span>
+          <div className="bg-[#10151b] border border-[#1e2631] p-3 text-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-[#e6edf3]">Email Security (SPF/DMARC)</span>
               {onOpenGlossary && (
                 <button
                   type="button"
                   onClick={() => onOpenGlossary('dmarc')}
-                  className="font-mono text-[10px] text-[#58a6ff] hover:underline"
+                  className="text-[10px] text-[#58a6ff] hover:underline"
                 >
-                  [?] EXPLAIN
+                  [?] GUIDE
                 </button>
               )}
             </div>
-            <p className="text-xs text-[#9aa5b8] leading-relaxed">
-              Verifies if the domain routes email and whether published policies prevent malicious spoofing and phishing impersonation.
+            <p className="text-[#8b9bb0] font-sans text-[11px] leading-relaxed">
+              DNS-published policies specifying which mail servers are legitimate senders, mitigating phishing and impersonation.
             </p>
           </div>
         </div>
       )}
 
-      {/* ─── Diagnostic Warnings Banner if present ───────────────────── */}
+      {/* ─── Diagnostic Warnings ───────────────────────────────────── */}
       {scan.warnings && scan.warnings.length > 0 && (
-        <div className="console-panel-inset border-l-2 border-l-[#d29922] p-3 text-xs font-mono text-[#d29922] space-y-1">
-          <div className="flex items-center gap-1.5 font-bold">
-            <AlertTriangle size={13} />
-            <span>DIAGNOSTIC WARNINGS & RATE LIMIT OBSERVATIONS ({scan.warnings.length}):</span>
+        <div className="bg-[#0c1015] border-l-2 border-[#d29922] p-2.5 text-xs text-[#d29922]">
+          <div className="flex items-center gap-1.5 font-bold mb-1">
+            <AlertTriangle size={12} />
+            <span>DIAGNOSTIC WARNINGS ({scan.warnings.length}):</span>
           </div>
-          <ul className="list-inside list-disc space-y-0.5 text-[#9aa5b8] text-[11px]">
+          <ul className="list-inside list-disc text-[#8b9bb0] text-[11px] font-mono space-y-0.5">
             {scan.warnings.map((w, idx) => (
               <li key={idx}>{w}</li>
             ))}

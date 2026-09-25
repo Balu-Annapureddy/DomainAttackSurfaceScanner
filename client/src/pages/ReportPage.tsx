@@ -5,17 +5,13 @@ import {
   Printer,
   Download,
   Shield,
-  Lock,
-  Mail,
   Calendar,
   AlertTriangle,
   RefreshCw,
-  Globe2,
 } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
 import { getScan } from '../lib/api';
 import { exportScanJson, exportAssetsCsv, exportFindingsCsv } from '../lib/export';
-import ExecutiveSummary from '../components/ExecutiveSummary';
 
 export default function ReportPage() {
   const { scanId } = useParams<{ scanId: string }>();
@@ -52,10 +48,10 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] flex items-center justify-center font-mono">
-        <div className="console-panel p-8 text-center space-y-3">
-          <RefreshCw className="h-7 w-7 animate-spin text-[#58a6ff] mx-auto" />
-          <p className="text-xs text-[#9aa5b8]">COMPILING SECURITY INTELLIGENCE DOSSIER…</p>
+      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center font-mono">
+        <div className="console-panel p-6 text-center space-y-2">
+          <RefreshCw className="h-6 w-6 animate-spin text-[#58a6ff] mx-auto" />
+          <p className="text-xs text-[#8b9bb0]">COMPILING INTELLIGENCE DOSSIER…</p>
         </div>
       </main>
     );
@@ -63,16 +59,16 @@ export default function ReportPage() {
 
   if (error || !scan) {
     return (
-      <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] flex items-center justify-center p-6 font-mono">
-        <div className="max-w-md console-panel p-8 text-center space-y-4">
-          <AlertTriangle className="mx-auto h-8 w-8 text-[#f85149]" />
-          <h1 className="text-base font-bold">DOSSIER UNAVAILABLE</h1>
-          <p className="text-xs text-[#9aa5b8]">{error || 'Scan not found or expired.'}</p>
+      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center p-4 font-mono">
+        <div className="max-w-md console-panel p-6 text-center space-y-3">
+          <AlertTriangle className="mx-auto h-7 w-7 text-[#f85149]" />
+          <h1 className="text-sm font-bold">DOSSIER UNAVAILABLE</h1>
+          <p className="text-xs text-[#8b9bb0]">{error || 'Scan record expired or not found.'}</p>
           <Link
             to="/history"
             className="console-btn console-btn-primary inline-flex text-xs"
           >
-            <ArrowLeft size={13} />
+            <ArrowLeft size={12} />
             <span>RETURN TO HISTORY</span>
           </Link>
         </div>
@@ -116,310 +112,367 @@ export default function ReportPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0b0e14] text-[#e6edf3] pb-16 print:bg-white print:text-slate-900 print:pb-0">
+    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] pb-16 print:bg-white print:text-slate-900 print:pb-0 font-sans">
       {/* ─── Top Console Action Bar (Hidden in Print) ───────────────── */}
-      <nav className="sticky top-0 z-40 border-b border-[#1f2735] bg-[#111620] print:hidden">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+      <nav className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] print:hidden">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
           <Link
             to={`/scan/${scan.scanId}`}
-            className="flex items-center gap-2 text-xs font-mono font-semibold text-[#9aa5b8] hover:text-[#e6edf3] transition"
+            className="flex items-center gap-1.5 text-xs font-mono font-semibold text-[#8b9bb0] hover:text-[#e6edf3] transition"
           >
-            <ArrowLeft size={14} />
-            <span>[ RETURN TO INTERACTIVE CONSOLE ]</span>
+            <ArrowLeft size={13} />
+            <span>[ RETURN TO INTERACTIVE WORKSTATION ]</span>
           </Link>
 
-          <div className="flex items-center gap-2 font-mono text-xs">
+          <div className="flex items-center gap-1.5 font-mono text-xs">
             <button
               type="button"
               onClick={handlePrint}
-              className="console-btn console-btn-primary py-1.5 px-3"
+              className="console-btn console-btn-primary py-0.5 px-2.5 text-[11px]"
               title="Print document or Save as PDF"
             >
-              <Printer size={13} />
-              <span>PRINT / SAVE PDF</span>
+              <Printer size={12} />
+              <span>PRINT / PDF</span>
             </button>
             <button
               type="button"
               onClick={() => exportScanJson(scan)}
-              className="console-btn py-1.5 px-2.5 text-[#9aa5b8]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>JSON</span>
             </button>
             <button
               type="button"
               onClick={() => exportAssetsCsv(scan)}
-              className="console-btn py-1.5 px-2.5 text-[#9aa5b8]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>ASSETS CSV</span>
             </button>
             <button
               type="button"
               onClick={() => exportFindingsCsv(scan)}
-              className="console-btn py-1.5 px-2.5 text-[#9aa5b8]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
             >
-              <Download size={11} />
+              <Download size={10} />
               <span>FINDINGS CSV</span>
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ─── Printable Dossier Container (Full Desktop Width) ────────── */}
-      <article className="mx-auto max-w-7xl px-4 pt-6 space-y-6 sm:px-6 print:p-0 print:space-y-4">
-        {/* ─── Dossier Header ────────────────────────────────────────── */}
-        <header className="console-panel p-5 print:border-b print:border-slate-300 print:rounded-none">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 font-mono">
+      {/* ─── Printable Intelligence Dossier (1200-1400px Desktop Width) ── */}
+      <article className="mx-auto max-w-7xl px-4 pt-4 space-y-4 print:p-0 print:space-y-3">
+        {/* ─── Dossier Masthead ───────────────────────────────────────── */}
+        <header className="console-panel p-4 print:border-b print:border-slate-300">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 font-mono">
             <div>
-              <div className="flex items-center gap-2 text-[#58a6ff] print:text-cyan-800 text-xs font-bold uppercase tracking-wider">
-                <Shield size={15} />
+              <div className="flex items-center gap-1.5 text-[#58a6ff] text-xs font-bold uppercase tracking-wider">
+                <Shield size={13} />
                 <span>EXTERNAL ATTACK SURFACE INTELLIGENCE DOSSIER</span>
               </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#e6edf3] print:text-slate-900 sm:text-3xl">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#e6edf3] print:text-slate-900">
                 {scan.domain}
               </h1>
-              <p className="mt-0.5 text-xs text-[#9aa5b8] print:text-slate-600 font-sans">
-                Non-intrusive public perimeter reconnaissance and defensive configuration assessment.
+              <p className="mt-0.5 text-xs text-[#8b9bb0] print:text-slate-600 font-sans">
+                Passive external intelligence assessment. Authoritative DNS, CT logs, TLS transport, and HTTP security posture.
               </p>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end gap-1 text-xs text-[#9aa5b8] print:text-slate-600">
-              <span className="flex items-center gap-1 font-mono">
-                <Calendar size={12} /> {new Date(scan.createdAt).toUTCString()}
+            <div className="flex flex-col items-start sm:items-end gap-1 text-[11px] text-[#8b9bb0] print:text-slate-600">
+              <span className="flex items-center gap-1">
+                <Calendar size={11} /> {new Date(scan.createdAt).toUTCString()}
               </span>
-              <span className="font-mono text-[10px] text-[#626e82]">
+              <span className="text-[10px] text-[#576575]">
                 SCAN ID: {scan.scanId}
               </span>
               <span className="console-tag console-tag-cyan text-[10px]">
-                STATUS // {scan.status.toUpperCase()}
+                STATUS // {scan.status.replace(/_/g, ' ').toUpperCase()}
               </span>
             </div>
           </div>
         </header>
 
-        {/* ─── Executive Summary Block ───────────────────────────────── */}
-        <section>
-          <ExecutiveSummary scan={scan} />
+        {/* ─── [01] Executive Intelligence Telemetry ─────────────────── */}
+        <section className="console-panel">
+          <div className="dossier-header">
+            <div>
+              <span className="dossier-num">[01]</span>
+              <span>EXECUTIVE INTELLIGENCE</span>
+            </div>
+            <span className="text-[10px] text-[#8b9bb0]">KEY DEFENSIVE METRICS</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#1e2631]">
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">ASSETS</div>
+              <div className="text-xl font-bold text-[#e6edf3] mt-0.5">{scan.assets?.length ?? 0}</div>
+              <div className="text-[10px] text-[#8b9bb0]">Discovered nodes</div>
+            </div>
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">RELATIONS</div>
+              <div className="text-xl font-bold text-[#58a6ff] mt-0.5">{scan.relationships?.length ?? 0}</div>
+              <div className="text-[10px] text-[#8b9bb0]">Graph edges</div>
+            </div>
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">FINDINGS</div>
+              <div className="text-xl font-bold text-[#d29922] mt-0.5">{findings.length}</div>
+              <div className="text-[10px] text-[#8b9bb0]">Hygiene items</div>
+            </div>
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">COMPLETENESS</div>
+              <div className="text-xl font-bold text-[#e6edf3] mt-0.5">
+                {scan.completeness === 'complete' ? '100%' : 'PARTIAL'}
+              </div>
+              <div className="text-[10px] text-[#8b9bb0]">Probe categories</div>
+            </div>
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">SCORE</div>
+              <div className="text-xl font-bold text-[#3fb950] mt-0.5">{hasScore ? `${score}` : '—'} / 100</div>
+              <div className="text-[10px] text-[#8b9bb0]">Configuration rating</div>
+            </div>
+            <div className="bg-[#10151b] p-3 font-mono">
+              <div className="text-[10px] text-[#576575] uppercase">RECON SCOPE</div>
+              <div className="text-xs font-bold text-[#e6edf3] mt-1">PASSIVE OSINT</div>
+              <div className="text-[10px] text-[#8b9bb0]">Zero intrusive packets</div>
+            </div>
+          </div>
         </section>
 
-        {/* ─── 2-Column Intelligence Dossier Grid ────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ─── 2-Column Dossier Structure ────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* ─── LEFT COLUMN ─── */}
-          <div className="space-y-6">
-            {/* Posture Score Breakdown */}
-            <section className="console-panel p-5 space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="text-xs font-bold text-[#e6edf3]">
-                  [01] DEFENSIVE POSTURE ASSESSMENT
-                </span>
-                <span className="text-xs text-[#58a6ff] font-bold">
-                  {hasScore ? `${score} / 100` : '—'}
-                </span>
+          <div className="space-y-4">
+            {/* [02] Surface Footprint */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[02]</span>
+                  <span>SURFACE FOOTPRINT</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">NETWORK ASSETS</span>
               </div>
-              <p className="text-xs text-[#9aa5b8] font-sans leading-relaxed">
-                Rating reflects publicly observable defensive records (HSTS, CSP, valid TLS certificate, SPF/DMARC email policies, and non-sensitive well-known directories). Probes that could not be verified incur 0 penalties.
-              </p>
-              <div className="h-1.5 w-full rounded bg-[#1f2735] overflow-hidden">
-                <div
-                  className={`h-full ${
-                    score >= 80 ? 'bg-[#3fb950]' : score >= 60 ? 'bg-[#58a6ff]' : score >= 40 ? 'bg-[#d29922]' : 'bg-[#f85149]'
-                  }`}
-                  style={{ width: `${hasScore ? Math.min(100, Math.max(5, score)) : 0}%` }}
-                />
+              <div className="p-3 bg-[#10151b] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">ROOT DOMAIN:</span>
+                  <span className="text-[#e6edf3] font-bold">{scan.domain}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">SUBDOMAINS DISCOVERED:</span>
+                  <span className="text-[#58a6ff] font-bold">
+                    {scan.assets?.filter((a) => a.type === 'SUBDOMAIN').length ?? 0} hostnames
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">ROUTED IP ENDPOINTS:</span>
+                  <span className="text-[#e6edf3] font-bold">
+                    {scan.assets?.filter((a) => a.type === 'IP').length ?? 0} public IPs
+                  </span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-[#576575]">AUTONOMOUS SYSTEMS (ASN):</span>
+                  <span className="text-[#3fb950] font-bold">
+                    {scan.assets?.filter((a) => a.type === 'ASN').map((a) => a.value).join(', ') || 'Direct routing'}
+                  </span>
+                </div>
               </div>
             </section>
 
-            {/* Transport Security & Cryptographic Dossier */}
-            <section className="console-panel p-5 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="font-bold text-[#e6edf3] flex items-center gap-1.5">
-                  <Lock size={13} className="text-[#8a63d2]" />
-                  <span>[02] TRANSPORT SECURITY & TLS DOSSIER</span>
-                </span>
-                <span className="console-tag">PORT_443</span>
+            {/* [03] Transport Security */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[03]</span>
+                  <span>TRANSPORT SECURITY</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">ENCRYPTION POSTURE</span>
               </div>
-
-              <div className="space-y-1.5 font-mono">
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">TLS HANDSHAKE:</span>
-                  <span className={tlsData?.available ? 'text-[#3fb950] font-bold' : 'text-[#f85149] font-bold'}>
-                    {tlsData?.available ? 'ESTABLISHED' : 'UNAVAILABLE'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">PROTOCOL SUITE:</span>
-                  <span className="text-[#e6edf3]">{tlsData?.protocol || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">ISSUER AUTHORITY:</span>
-                  <span className="text-[#e6edf3] truncate max-w-[280px]" title={tlsData?.issuer}>
-                    {tlsData?.issuer || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">EXPIRATION HORIZON:</span>
-                  <span className="text-[#e6edf3]">{tlsData?.validTo || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-[#626e82]">HTTPS ENFORCEMENT:</span>
+              <div className="p-3 bg-[#10151b] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">HTTPS ENFORCEMENT:</span>
                   <span className={httpData?.httpsEnforced ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
                     {httpData?.httpsEnforced ? 'ENFORCED (HTTP→HTTPS)' : 'NOT ENFORCED'}
                   </span>
                 </div>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">TLS NEGOTIATION:</span>
+                  <span className={tlsData?.available ? 'text-[#3fb950] font-bold' : 'text-[#f85149] font-bold'}>
+                    {tlsData?.available ? `ACTIVE (${tlsData.protocol || 'TLS'})` : 'UNAVAILABLE'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-[#576575]">HSTS POLICY:</span>
+                  <span className={httpData?.https?.headers?.['strict-transport-security'] ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                    {httpData?.https?.headers?.['strict-transport-security'] ? 'OBSERVED' : 'NOT OBSERVED'}
+                  </span>
+                </div>
               </div>
             </section>
 
-            {/* Email & Mail Security Policies */}
-            <section className="console-panel p-5 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="font-bold text-[#e6edf3] flex items-center gap-1.5">
-                  <Mail size={13} className="text-[#58a6ff]" />
-                  <span>[03] MAIL & ANTI-SPOOFING HYGIENE</span>
-                </span>
-                <span className="console-tag">DNS_TXT_MX</span>
+            {/* [04] Mail & Perimeter */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[04]</span>
+                  <span>MAIL & PERIMETER</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">SPOOFING CONTROLS</span>
               </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">MX EXCHANGERS:</span>
+              <div className="p-3 bg-[#10151b] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">MX RECORD ROUTING:</span>
                   <span className="text-[#e6edf3]">
-                    {dnsData?.mx && dnsData.mx.length > 0 ? `${dnsData.mx.length} records configured` : 'None observed'}
+                    {dnsData?.mx && dnsData.mx.length > 0 ? `${dnsData.mx.length} mail servers` : 'None observed'}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#171e2b]">
-                  <span className="text-[#626e82]">SPF RECORD:</span>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">SPF SENDER POLICY:</span>
                   <span className={dnsData?.spf?.record ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
                     {dnsData?.spf?.record ? 'OBSERVED' : 'NOT OBSERVED'}
                   </span>
                 </div>
-                {dnsData?.spf?.record && (
-                  <div className="console-panel-inset p-2 text-[10px] break-all text-[#9aa5b8]">
-                    {dnsData.spf.record}
-                  </div>
-                )}
                 <div className="flex justify-between py-1">
-                  <span className="text-[#626e82]">DMARC RECORD:</span>
+                  <span className="text-[#576575]">DMARC ENFORCEMENT:</span>
                   <span className={dnsData?.dmarc?.record ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
                     {dnsData?.dmarc?.record ? 'OBSERVED' : 'NOT OBSERVED'}
                   </span>
                 </div>
-                {dnsData?.dmarc?.record && (
-                  <div className="console-panel-inset p-2 text-[10px] break-all text-[#9aa5b8]">
-                    {dnsData.dmarc.record}
+              </div>
+            </section>
+
+            {/* [05] Hygiene Observations */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[05]</span>
+                  <span>HYGIENE OBSERVATIONS</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">DEFENSIVE SIGNALS</span>
+              </div>
+              <div className="p-3 bg-[#10151b] space-y-2 font-sans text-[11px] text-[#8b9bb0]">
+                <p>
+                  Perimeter evaluation assessed transport layers, certificate provenance, and defensive response headers.
+                </p>
+                <div className="space-y-1 font-mono text-xs pt-1">
+                  <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                    <span className="text-[#576575]">CSP (CONTENT-SECURITY-POLICY):</span>
+                    <span className={httpData?.https?.headers?.['content-security-policy'] ? 'text-[#3fb950]' : 'text-[#d29922]'}>
+                      {httpData?.https?.headers?.['content-security-policy'] ? 'OBSERVED' : 'NOT OBSERVED'}
+                    </span>
                   </div>
-                )}
+                  <div className="flex justify-between py-1">
+                    <span className="text-[#576575]">X-FRAME-OPTIONS:</span>
+                    <span className={httpData?.https?.headers?.['x-frame-options'] ? 'text-[#3fb950]' : 'text-[#d29922]'}>
+                      {httpData?.https?.headers?.['x-frame-options'] ? 'OBSERVED' : 'NOT OBSERVED'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
 
           {/* ─── RIGHT COLUMN ─── */}
-          <div className="space-y-6">
-            {/* Security Findings & Takeaways */}
-            <section className="console-panel p-5 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="font-bold text-[#e6edf3] flex items-center gap-1.5">
-                  <AlertTriangle size={13} className="text-[#d29922]" />
-                  <span>[04] RECORDED HYGIENE CONSIDERATIONS ({findings.length})</span>
-                </span>
-                <span className="console-tag">ACTIONABLE</span>
+          <div className="space-y-4">
+            {/* [06] Key Observations */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[06]</span>
+                  <span>KEY OBSERVATIONS</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">SYNTHESIS</span>
               </div>
-
-              {findings.length === 0 ? (
-                <p className="text-[#3fb950] py-4 text-center">
-                  NO DEFENSIVE CONFIGURATION WEAKNESSES OBSERVED
+              <div className="p-3 bg-[#10151b] font-sans text-xs text-[#8b9bb0] space-y-2 leading-relaxed">
+                <p>
+                  Target <strong className="text-[#e6edf3] font-mono">{scan.domain}</strong> completed an external passive inspection across 6 probe categories.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {findings.map((f) => (
-                    <div
-                      key={f.id}
-                      className="console-panel-inset p-3 border border-[#1f2735] space-y-1"
-                    >
+                <p>
+                  Security hygiene calculated at <strong className="text-[#58a6ff] font-mono">{hasScore ? `${score}/100` : '—'}</strong> based on observable public defensive controls.
+                </p>
+              </div>
+            </section>
+
+            {/* [07] Findings Dossier */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
+                <div>
+                  <span className="dossier-num">[07]</span>
+                  <span>FINDINGS & ANOMALIES</span>
+                </div>
+                <span className="text-[10px] text-[#8b9bb0]">{findings.length} RECORDS</span>
+              </div>
+              <div className="divide-y divide-[#1e2631] bg-[#0c1015] max-h-72 overflow-y-auto">
+                {findings.length === 0 ? (
+                  <div className="p-4 text-center text-[#3fb950]">
+                    NO HYGIENE ANOMALIES OBSERVED
+                  </div>
+                ) : (
+                  findings.map((f) => (
+                    <div key={f.id} className="p-2.5 bg-[#10151b] space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-[#e6edf3]">{f.title}</span>
-                        <span
-                          className={`console-tag text-[9px] ${
-                            f.severity === 'high'
-                              ? 'console-tag-coral'
-                              : f.severity === 'medium'
-                              ? 'console-tag-amber'
-                              : 'console-tag-cyan'
-                          }`}
-                        >
-                          {f.severity.toUpperCase()}
-                        </span>
+                        <span className="text-[10px] text-[#d29922] uppercase">[{f.severity}]</span>
                       </div>
-                      <p className="text-[11px] text-[#9aa5b8] font-sans leading-relaxed">
+                      <p className="text-[11px] text-[#8b9bb0] font-sans">
                         {f.description}
                       </p>
                       {f.recommendation && (
-                        <div className="pt-1 text-[10px] text-[#3fb950]">
-                          REC: {f.recommendation}
+                        <div className="text-[10px] text-[#3fb950] font-mono">
+                          ACTION: {f.recommendation}
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </section>
 
-            {/* DNS Infrastructure & Public Records */}
-            <section className="console-panel p-5 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="font-bold text-[#e6edf3] flex items-center gap-1.5">
-                  <Globe2 size={13} className="text-[#58a6ff]" />
-                  <span>[05] DNS & AUTHORITATIVE INFRASTRUCTURE</span>
-                </span>
-                <span className="console-tag">PUBLIC_RESOLVERS</span>
-              </div>
-
-              <div className="space-y-2">
+            {/* [08] TLS Dossier */}
+            <section className="console-panel font-mono text-xs">
+              <div className="dossier-header">
                 <div>
-                  <span className="text-[#626e82] block mb-1">A / AAAA RESOLVED IP ADDRESSES:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {dnsData?.addresses?.map((ip) => (
-                      <span key={ip} className="console-tag console-tag-cyan text-[11px]">
-                        {ip}
-                      </span>
-                    )) || <span className="text-[#626e82]">None</span>}
-                    {dnsData?.aaaa?.map((ip) => (
-                      <span key={ip} className="console-tag text-[11px]">
-                        {ip}
-                      </span>
-                    ))}
-                  </div>
+                  <span className="dossier-num">[08]</span>
+                  <span>TLS DOSSIER</span>
                 </div>
-
-                <div className="border-t border-[#171e2b] pt-2">
-                  <span className="text-[#626e82] block mb-1">AUTHORITATIVE NAMESERVERS:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {dnsData?.ns?.map((ns) => (
-                      <span key={ns} className="console-tag text-[11px]">
-                        {ns}
-                      </span>
-                    )) || <span className="text-[#626e82]">None</span>}
-                  </div>
+                <span className="text-[10px] text-[#8b9bb0]">CERTIFICATE METADATA</span>
+              </div>
+              <div className="p-3 bg-[#10151b] space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">ISSUER:</span>
+                  <span className="text-[#e6edf3] truncate max-w-xs">{tlsData?.issuer || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">SUBJECT:</span>
+                  <span className="text-[#e6edf3] truncate max-w-xs">{tlsData?.subject || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1e2631]">
+                  <span className="text-[#576575]">VALID UNTIL:</span>
+                  <span className="text-[#e6edf3]">{tlsData?.validTo || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-[#576575]">SAN DOMAINS:</span>
+                  <span className="text-[#58a6ff]">{tlsData?.subjectAltNames?.length ?? 0} alternate names</span>
                 </div>
               </div>
             </section>
 
-            {/* Epistemology & Reconnaissance Scope */}
-            <section className="console-panel-inset p-4 space-y-2 font-mono text-xs border border-[#1f2735]">
-              <div className="text-[10px] font-bold text-[#626e82] uppercase tracking-wider">
-                [06] PASSIVE OSINT METHODOLOGY & SCOPE
+            {/* [09] Methodology */}
+            <section className="console-panel-inset p-3 font-mono text-xs border border-[#1e2631]">
+              <div className="text-[10px] font-bold text-[#576575] uppercase tracking-wider mb-1">
+                [09] RECONNAISSANCE METHODOLOGY & SCOPE
               </div>
-              <p className="text-[11px] text-[#9aa5b8] font-sans leading-relaxed">
-                This intelligence dossier was assembled entirely using passive open-source reconnaissance (OSINT). Inquiries were bounded by public DNS queries, Certificate Transparency logs (`crt.sh`), standard TLS handshakes, and public HTTP response headers. No port scans, vulnerability probes, or intrusive packets were transmitted.
+              <p className="text-[11px] text-[#8b9bb0] font-sans leading-relaxed">
+                This intelligence dossier was assembled entirely using passive open-source reconnaissance (OSINT). Inquiries were bounded by public DNS queries, Certificate Transparency logs, standard TLS handshakes, and public HTTP response headers. No port scans, vulnerability probes, or intrusive packets were transmitted.
               </p>
             </section>
           </div>
         </div>
 
         {/* ─── Footer ────────────────────────────────────────────────── */}
-        <footer className="border-t border-[#1f2735] pt-4 font-mono text-xs text-[#626e82] flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>DOMAIN ATTACK SURFACE SCANNER // RELEASE BUILD</span>
-          <span>GENERATED: {new Date().toUTCString()}</span>
+        <footer className="border-t border-[#1e2631] pt-3 font-mono text-[11px] text-[#576575] flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE DOSSIER</span>
+          <span>COMPILED: {new Date().toUTCString()}</span>
         </footer>
       </article>
     </main>
