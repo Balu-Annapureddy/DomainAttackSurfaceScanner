@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
@@ -16,6 +17,17 @@ export default function AssetDetailModal({
   onClose,
   onSelectRelatedAsset,
 }: AssetDetailModalProps) {
+  useEffect(() => {
+    if (!asset) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [asset, onClose]);
+
   if (!asset) return null;
 
   // Find incoming & outgoing relationships
@@ -34,7 +46,12 @@ export default function AssetDetailModal({
     }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b0e14]/85 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="asset-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b0e14]/85 backdrop-blur-sm"
+    >
       <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col console-panel shadow-2xl overflow-hidden font-mono">
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-[#1f2735] p-4 bg-[#111620]">
@@ -45,10 +62,12 @@ export default function AssetDetailModal({
               </span>
               <span className="text-[11px] text-[#626e82]">ID: {asset.id.slice(0, 8)}…</span>
             </div>
-            <h2 className="text-sm font-bold text-[#e6edf3] break-all">{asset.value}</h2>
+            <h2 id="asset-modal-title" className="text-sm font-bold text-[#e6edf3] break-all">{asset.value}</h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close asset details"
             className="console-btn py-1 px-2 text-[#9aa5b8] hover:text-[#e6edf3]"
           >
             <X size={15} />

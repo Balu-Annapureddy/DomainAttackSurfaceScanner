@@ -180,24 +180,30 @@ export default function AttackSurfaceGraph({
 
           <div className="flex items-center border border-[#1e2631] bg-[#0c1015] h-6 px-1 gap-1">
             <button
+              type="button"
               onClick={() => setZoom((z) => Math.max(0.6, z - 0.15))}
               className="text-[#8b9bb0] hover:text-[#e6edf3]"
               title="Zoom out"
+              aria-label="Zoom out graph"
             >
               <ZoomOut size={11} />
             </button>
             <span className="text-[10px] text-[#576575]">{Math.round(zoom * 100)}%</span>
             <button
+              type="button"
               onClick={() => setZoom((z) => Math.min(1.6, z + 0.15))}
               className="text-[#8b9bb0] hover:text-[#e6edf3]"
               title="Zoom in"
+              aria-label="Zoom in graph"
             >
               <ZoomIn size={11} />
             </button>
             <button
+              type="button"
               onClick={() => setZoom(1)}
               className="text-[#8b9bb0] hover:text-[#e6edf3] ml-1 pl-1 border-l border-[#1e2631]"
               title="Reset zoom"
+              aria-label="Reset graph zoom"
             >
               <RotateCcw size={10} />
             </button>
@@ -325,7 +331,9 @@ export default function AttackSurfaceGraph({
                 <span>INSPECT: {activeAsset.type}</span>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveAsset(null)}
+                aria-label="Close asset preview"
                 className="text-[#8b9bb0] hover:text-[#e6edf3] p-0.5 cursor-pointer"
               >
                 <X size={14} />

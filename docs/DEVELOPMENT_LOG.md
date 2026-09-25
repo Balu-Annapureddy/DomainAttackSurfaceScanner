@@ -163,6 +163,47 @@ Verification & Quality Gate:
 - Build: Both backend (`tsc`) and frontend (`tsc -b && vite build`) compile with exit code 0.
 - Sample & Real scan workflows fully functional.
 
+---
+
+## 2026-09-25 — Sprint: Production Readiness — Legal, Privacy, Consent, Accessibility & Trust Audit
+
+Date: 2026-09-25  
+Status: COMPLETED  
+
+Overview:
+Hardened the application for production deployment with real, audit-backed legal policies, zero fabricated claims, strict data minimization, privacy disclosures, accessibility compliance (WCAG 2.2), and security reporting mechanisms. Maintained existing workstation UI design intact without out-of-scope visual redesigns.
+
+Key Audits & Implementations:
+1. **Full Data-Collection & Tracking Audit**:
+   - Zero tracking scripts or analytics SDKs present (no Google Analytics, Meta Pixel, PostHog, Hotjar, Sentry, or Clarity).
+   - Zero HTTP cookies set or accepted by backend or frontend.
+   - Client storage strictly bounded to 2 `localStorage` keys: `'dass_guided_mode'` (UI preference) and `'domain_scanner_scans'` (client-side scan history cache).
+   - Backend persistence strictly bounded to in-memory `Map` with an automatic 24-hour TTL (`TTL_MS = 86,400,000`). No database or permanent disk persistence of target data.
+   - No PII, passwords, emails, or personal identifiers collected.
+2. **Authorized-Use Warning & Legal Notice**:
+   - Added prominent authorization notice above scan console: *"NOTICE: Only scan domains and infrastructure that you own or are explicitly authorized to assess."*
+   - Explicitly framed the tool as an informational passive reconnaissance utility; prohibited intrusive probing, credential attacks, exploitation, and DDoS.
+3. **Dedicated Legal & Disclosure Pages**:
+   - Added `/privacy` (`PrivacyPage.tsx`): Discloses target domain inputs, RAM-only retention, zero cookie policy, third-party resolver flows, and DPDP readiness principles (data minimization, purpose limitation, storage limitation).
+   - Added `/terms` (`TermsPage.tsx`): Sets acceptable use, user authorization obligations, OSINT discovery limits, MIT license disclaimers, and free-tier/no-charge clarification.
+   - Added `/security` (`SecurityPage.tsx`): Documents responsible vulnerability reporting via GitHub Security Advisories, SSRF protections (RFC 1918 / RFC 4193 / RFC 3927 blocking), rate limiting, and passive boundary guarantees.
+4. **Third-Party Resource Inventory**:
+   - Verified OpenStreetMap standard tile attribution and dark filter styling.
+   - Verified Google Fonts (JetBrains Mono & Inter) public CDN inclusion.
+   - Verified backend DNS and OSINT providers (`crt.sh`, `rdap.org`, `ipapi.co`).
+5. **Accessibility (WCAG 2.2) Hardening**:
+   - Added `<label htmlFor="target-domain-input" className="sr-only">` to search forms.
+   - Added `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` to all modals (`GlossaryModal`, `AssetDetailModal`, `IntelligenceTimeline`).
+   - Implemented `Escape` key event listeners on all modals to prevent keyboard focus traps.
+   - Added descriptive `aria-label` attributes to icon-only controls (zoom, modal close buttons).
+6. **Unified Legal Footer Navigation**:
+   - Added consistent legal footer links (`Privacy Policy`, `Terms of Use`, `Security & Vulnerability Disclosure`) to `LandingPage`, `ScanPage`, `HistoryPage`, and `ReportPage`.
+
+Quality & Verification:
+- Tests: **34/34 passing** across all Jest test suites.
+- Lint: **0 errors, 0 warnings** across client (oxlint) and server (eslint).
+- Build: Backend (`tsc`) and Frontend (`tsc -b && vite build`) compile with exit code 0.
+
 
 
 

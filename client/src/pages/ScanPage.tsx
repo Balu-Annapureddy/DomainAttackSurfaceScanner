@@ -453,6 +453,26 @@ export default function ScanPage() {
         isOpen={isGlossaryOpen}
         onClose={() => setIsGlossaryOpen(false)}
       />
+
+      {/* ─── Compact Legal Footer ─────────────────────────────────── */}
+      <footer className="mt-8 border-t border-[#1e2631] bg-[#0c1015] px-4 py-2.5 font-mono text-[11px] text-[#576575]">
+        <div className="mx-auto max-w-[1720px] flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>DOMAIN ATTACK SURFACE SCANNER // RECONNAISSANCE CONSOLE</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/privacy" className="hover:text-[#8b9bb0] transition-colors">PRIVACY POLICY</Link>
+            <Link to="/terms" className="hover:text-[#8b9bb0] transition-colors">TERMS OF USE</Link>
+            <Link to="/security" className="hover:text-[#8b9bb0] transition-colors">SECURITY & AUTHORIZED USE</Link>
+            <a
+              href="https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[#8b9bb0] transition-colors"
+            >
+              GITHUB
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, X, Info } from 'lucide-react';
 import { GLOSSARY, type GlossaryEntry } from '../lib/glossary';
 
@@ -11,6 +11,17 @@ interface GlossaryModalProps {
 export default function GlossaryModal({ initialTermKey, isOpen, onClose }: GlossaryModalProps) {
   const [selectedKey, setSelectedKey] = useState<string>(initialTermKey || 'passive_osint');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -32,17 +43,24 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
   const activeEntry: GlossaryEntry = GLOSSARY[selectedKey] ?? fallbackEntry;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#080b0f]/85 p-3 backdrop-blur-xs font-mono">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="glossary-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#080b0f]/85 p-3 backdrop-blur-xs font-mono"
+    >
       <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col bg-[#10151b] border border-[#1e2631] shadow-2xl overflow-hidden">
         {/* ─── Workstation Dossier Header ─────────────────────────────── */}
         <div className="dossier-header">
           <div className="flex items-center gap-2">
             <BookOpen size={13} className="text-[#58a6ff]" />
-            <span>SECURITY FIELD MANUAL</span>
+            <span id="glossary-modal-title">SECURITY FIELD MANUAL</span>
             <span className="text-[11px] text-[#8b9bb0] ml-2">TECHNICAL LEXICON & OSINT EPISTEMOLOGY</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close glossary modal"
             className="text-[#8b9bb0] hover:text-[#e6edf3] cursor-pointer"
           >
             <X size={14} />

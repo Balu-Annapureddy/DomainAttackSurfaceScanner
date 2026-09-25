@@ -8,6 +8,9 @@ import ScanPage from './pages/ScanPage'
 import HistoryPage from './pages/HistoryPage'
 import ComparisonPage from './pages/ComparisonPage'
 import ReportPage from './pages/ReportPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
+import SecurityPage from './pages/SecurityPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -18,6 +21,9 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/report/:scanId" element={<ReportPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/compare/:baseId/:targetId" element={<ComparisonPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/security" element={<SecurityPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

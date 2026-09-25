@@ -86,8 +86,23 @@ export default function IntelligenceTimeline({ domain, scans, onClose }: Intelli
     };
   }, [sortedScans]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e14]/85 p-4 backdrop-blur-sm font-mono">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="timeline-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e14]/85 p-4 backdrop-blur-sm font-mono"
+    >
       <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col console-panel shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#1f2735] px-5 py-3.5 bg-[#111620]">
@@ -97,11 +112,12 @@ export default function IntelligenceTimeline({ domain, scans, onClose }: Intelli
                 <GitCompare size={12} /> DRIFT TIMELINE
               </span>
             </div>
-            <h2 className="text-base font-bold text-[#e6edf3] mt-1">{domain}</h2>
+            <h2 id="timeline-modal-title" className="text-base font-bold text-[#e6edf3] mt-1">{domain}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close drift timeline"
             className="console-btn py-1 px-2 text-[#9aa5b8] hover:text-[#e6edf3]"
           >
             <X size={15} />

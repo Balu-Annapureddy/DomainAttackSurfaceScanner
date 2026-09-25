@@ -274,6 +274,17 @@ export default function HistoryPage() {
         )}
       </div>
 
+      {/* Legal Footer */}
+      <footer className="mt-8 pt-4 border-t border-[#1e2631] text-center text-[11px] text-[#576575] flex flex-wrap justify-center items-center gap-4">
+        <span>DOMAIN ATTACK SURFACE SCANNER</span>
+        <span>&middot;</span>
+        <Link to="/privacy" className="hover:text-[#58a6ff] transition-colors">Privacy Policy</Link>
+        <span>&middot;</span>
+        <Link to="/terms" className="hover:text-[#58a6ff] transition-colors">Terms of Use</Link>
+        <span>&middot;</span>
+        <Link to="/security" className="hover:text-[#58a6ff] transition-colors">Security &amp; Vulnerability Disclosure</Link>
+      </footer>
+
       {/* Intelligence Timeline Modal */}
       {timelineDomain && (
         <IntelligenceTimeline

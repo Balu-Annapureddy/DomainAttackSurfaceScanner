@@ -123,35 +123,53 @@ export default function LandingPage() {
           </div>
 
           {/* Scan Target Input Form */}
-          <form onSubmit={handleScan} className="mt-4 flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#576575]">
-                TARGET:
-              </span>
-              <input
-                type="text"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                placeholder="example.com"
-                className="console-input pl-18 py-2 text-sm"
-                disabled={loading}
-                autoFocus
-              />
+          <form onSubmit={handleScan} className="mt-4 flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <label htmlFor="target-domain-input" className="sr-only">
+                  Target Domain Name (e.g. example.com)
+                </label>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#576575]">
+                  TARGET:
+                </span>
+                <input
+                  id="target-domain-input"
+                  type="text"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  placeholder="example.com"
+                  className="console-input pl-18 py-2 text-sm"
+                  disabled={loading}
+                  autoFocus
+                  aria-describedby="auth-notice"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !domain.trim()}
+                className="console-btn console-btn-primary px-5 py-2 text-xs flex items-center justify-center gap-2"
+                aria-label="Start Passive Attack Surface Scan"
+              >
+                {loading ? (
+                  <>INITIALIZING...</>
+                ) : (
+                  <>
+                    <Search className="w-3.5 h-3.5" />
+                    START SCAN
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={loading || !domain.trim()}
-              className="console-btn console-btn-primary px-5 py-2 text-xs flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>INITIALIZING...</>
-              ) : (
-                <>
-                  <Search className="w-3.5 h-3.5" />
-                  START SCAN
-                </>
-              )}
-            </button>
+
+            {/* Concise Authorized Use Notice */}
+            <div id="auth-notice" className="font-mono text-[11px] text-[#8b9bb0] flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[#d29922] font-semibold">⚠ NOTICE:</span>
+              <span>Only scan domains and infrastructure that you own or are explicitly authorized to assess.</span>
+              <span className="text-[#576575]">|</span>
+              <Link to="/terms" className="text-[#58a6ff] hover:underline">
+                Acceptable Use Policy
+              </Link>
+            </div>
           </form>
 
           {error && (
@@ -237,18 +255,27 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* ─── Footer ─────────────────────────────────────────────────── */}
+      {/* ─── Footer with Legal Navigation ──────────────────────────── */}
       <footer className="border-t border-[#1e2631] bg-[#0c1015] px-4 py-3 mt-auto">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-2 font-mono text-[11px] text-[#576575]">
+        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-3 font-mono text-[11px] text-[#576575]">
           <div>
-            DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE WORKSTATION
+            DOMAIN ATTACK SURFACE SCANNER // NON-INTRUSIVE OSINT PLATFORM
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/history" className="hover:text-[#8b9bb0]">SCAN HISTORY</Link>
-            <button onClick={() => setGlossaryOpen(true)} className="hover:text-[#8b9bb0] cursor-pointer">
-              SECURITY FIELD MANUAL
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/privacy" className="hover:text-[#8b9bb0] transition-colors">PRIVACY POLICY</Link>
+            <Link to="/terms" className="hover:text-[#8b9bb0] transition-colors">TERMS OF USE</Link>
+            <Link to="/security" className="hover:text-[#8b9bb0] transition-colors">SECURITY & DISCLOSURE</Link>
+            <button onClick={() => setGlossaryOpen(true)} className="hover:text-[#8b9bb0] cursor-pointer transition-colors">
+              FIELD MANUAL
             </button>
-            <Link to="/scan/sample" className="hover:text-[#8b9bb0]">SAMPLE DOSSIER</Link>
+            <a
+              href="https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[#8b9bb0] transition-colors"
+            >
+              GITHUB
+            </a>
           </div>
         </div>
       </footer>
