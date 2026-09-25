@@ -5,10 +5,28 @@ import { config } from '../config';
 import { Express } from 'express';
 
 export function applySecurity(app: Express): void {
-  // Secure headers
+  // Secure headers with tailored CSP
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org'],
+        connectSrc: ["'self'", config.clientOrigin, 'https://ipapi.co', 'https://crt.sh'],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: { action: 'deny' },
   }));
+
+  // Restrict sensitive browser APIs
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+    next();
+  });
 
   // CORS
   app.use(cors({

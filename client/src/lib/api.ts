@@ -120,3 +120,18 @@ export async function deleteSavedScan(scanId: string): Promise<void> {
     throw new Error(data.error || 'Unable to delete scan');
   }
 }
+
+export async function deleteAccount(): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  const data = await response.json() as { success?: boolean; message?: string; error?: string };
+  if (!response.ok) {
+    throw new Error(data.error || 'Unable to delete account');
+  }
+  return {
+    success: data.success ?? true,
+    message: data.message ?? 'Account deleted successfully',
+  };
+}

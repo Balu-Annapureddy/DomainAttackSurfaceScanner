@@ -33,6 +33,7 @@ export function isPublicAddress(address: string): boolean {
       [ipv4ToBigInt('192.0.2.0'), 24], [ipv4ToBigInt('192.168.0.0'), 16],
       [ipv4ToBigInt('198.18.0.0'), 15], [ipv4ToBigInt('198.51.100.0'), 24],
       [ipv4ToBigInt('203.0.113.0'), 24], [ipv4ToBigInt('224.0.0.0'), 4],
+      [ipv4ToBigInt('240.0.0.0'), 4],
     ] as const;
     return !blocked.some(([start, prefix]) => inRange(value, start, prefix, 32));
   }

@@ -122,11 +122,11 @@ export default function LandingPage() {
 
             {/* Concise Authorized Use Notice */}
             <div id="auth-notice" className="font-mono text-[11px] text-[var(--text-secondary)] flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[#d29922] font-semibold">⚠ NOTICE:</span>
-              <span>Only scan domains and infrastructure that you own or are explicitly authorized to assess.</span>
+              <span className="text-[#d29922] font-semibold">⚠ AUTHORIZATION:</span>
+              <span>By initiating a scan, you confirm that you own or are explicitly authorized to assess the target domain.</span>
               <span className="text-[var(--text-muted)]">|</span>
               <Link to="/terms" className="text-[var(--accent-primary)] hover:underline">
-                Acceptable Use Policy
+                Terms of Use
               </Link>
             </div>
           </form>
@@ -223,7 +223,9 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link to="/privacy" className="hover:text-[var(--text-secondary)] transition-colors">PRIVACY POLICY</Link>
             <Link to="/terms" className="hover:text-[var(--text-secondary)] transition-colors">TERMS OF USE</Link>
-            <Link to="/security" className="hover:text-[var(--text-secondary)] transition-colors">SECURITY & DISCLOSURE</Link>
+            <Link to="/cookies" className="hover:text-[var(--text-secondary)] transition-colors">COOKIE POLICY</Link>
+            <Link to="/billing" className="hover:text-[var(--text-secondary)] transition-colors">BILLING &amp; REFUNDS</Link>
+            <Link to="/security" className="hover:text-[var(--text-secondary)] transition-colors">SECURITY &amp; DISCLOSURE</Link>
             <button onClick={() => setGlossaryOpen(true)} className="hover:text-[var(--text-secondary)] cursor-pointer transition-colors">
               FIELD MANUAL
             </button>

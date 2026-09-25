@@ -18,12 +18,15 @@ import { getUserScanHistory, deleteSavedScan } from '../lib/api';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, deleteAccount } = useAuth();
   const [selectedScanIds, setSelectedScanIds] = useState<string[]>([]);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [timelineDomain, setTimelineDomain] = useState<string | null>(null);
   const [serverScans, setServerScans] = useState<HistoryItem[]>([]);
   const [loadingServerScans, setLoadingServerScans] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   // Load persistent history if user is authenticated
   useEffect(() => {
@@ -131,6 +134,29 @@ export default function HistoryPage() {
       alert(err instanceof Error ? err.message : 'Unable to delete scan');
     }
   };
+
+  const handleConfirmDeleteAccount = async () => {
+    try {
+      setIsDeletingAccount(true);
+      setDeleteAccountError(null);
+      await deleteAccount();
+      setShowDeleteModal(false);
+      navigate('/');
+    } catch (err) {
+      setDeleteAccountError(err instanceof Error ? err.message : 'Failed to delete account');
+      setIsDeletingAccount(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showDeleteModal) {
+        setShowDeleteModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDeleteModal]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-mono pb-16 flex flex-col transition-colors duration-150">
@@ -335,6 +361,30 @@ export default function HistoryPage() {
             })}
           </div>
         )}
+
+        {/* Authenticated Account Privacy & Erasure Control */}
+        {user && (
+          <div className="console-panel p-4 border-l-2 border-l-[var(--border-technical)] space-y-2 mt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-[var(--text-primary)] block">
+                  ACCOUNT DATA MANAGEMENT &amp; PRIVACY RIGHTS (GDPR / DPDP)
+                </span>
+                <span className="text-[11px] text-[var(--text-secondary)]">
+                  Logged in as <span className="text-[var(--text-primary)] font-semibold">{user.email}</span> &middot; ID: {user.id}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="console-btn py-1 px-3 text-[11px] text-[#ef4444] border-[#ef4444]/40 hover:bg-[#ef4444]/10 transition"
+              >
+                <Trash2 size={12} className="inline mr-1" />
+                DELETE ACCOUNT &amp; ALL DATA
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Legal Footer */}
@@ -345,8 +395,69 @@ export default function HistoryPage() {
         <span>&middot;</span>
         <Link to="/terms" className="hover:text-[var(--accent-primary)] transition-colors">Terms of Use</Link>
         <span>&middot;</span>
+        <Link to="/cookies" className="hover:text-[var(--accent-primary)] transition-colors">Cookie Policy</Link>
+        <span>&middot;</span>
+        <Link to="/billing" className="hover:text-[var(--accent-primary)] transition-colors">Billing &amp; Refunds</Link>
+        <span>&middot;</span>
         <Link to="/security" className="hover:text-[var(--accent-primary)] transition-colors">Security &amp; Vulnerability Disclosure</Link>
       </footer>
+
+      {/* Account Deletion Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-account-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+        >
+          <div className="console-panel max-w-lg w-full p-6 space-y-4 border-l-4 border-l-[#ef4444] animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 text-[#ef4444] font-bold text-sm">
+              <AlertCircle size={16} />
+              <h2 id="delete-account-title">PERMANENT ACCOUNT &amp; DATA DELETION</h2>
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              This action exercises your right to erasure (GDPR Article 17 / DPDP data minimization). It will immediately and irreversibly delete:
+            </p>
+
+            <ul className="text-xs text-[var(--text-secondary)] list-disc pl-5 space-y-1 font-mono">
+              <li>Your account profile and login credentials</li>
+              <li>All active authentication sessions and session cookies</li>
+              <li>All saved scans, normalized assets, findings, and relationships</li>
+              <li>All historical usage and sliding-window quota records</li>
+            </ul>
+
+            <div className="console-panel-inset p-3 border border-[#ef4444]/30 text-xs text-[#ef4444]">
+              <strong>WARNING:</strong> This action cannot be undone. All data will be purged from the database immediately.
+            </div>
+
+            {deleteAccountError && (
+              <div className="text-xs text-[#ef4444] font-bold">
+                Error: {deleteAccountError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeletingAccount}
+                className="console-btn py-1.5 px-4 text-xs"
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAccount}
+                disabled={isDeletingAccount}
+                className="console-btn py-1.5 px-4 text-xs text-[#ef4444] border-[#ef4444] hover:bg-[#ef4444]/10 font-bold"
+              >
+                {isDeletingAccount ? 'DELETING ALL DATA…' : '[ PERMANENTLY DELETE MY ACCOUNT ]'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Intelligence Timeline Modal */}
       {timelineDomain && (

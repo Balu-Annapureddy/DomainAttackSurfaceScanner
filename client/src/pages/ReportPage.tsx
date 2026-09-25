@@ -477,10 +477,14 @@ export default function ReportPage() {
         {/* ─── Footer ────────────────────────────────────────────────── */}
         <footer className="border-t border-[#1e2631] pt-3 font-mono text-[11px] text-[#576575] flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE DOSSIER</span>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link to="/privacy" className="hover:text-[#58a6ff] transition-colors">Privacy</Link>
             <span>&middot;</span>
             <Link to="/terms" className="hover:text-[#58a6ff] transition-colors">Terms</Link>
+            <span>&middot;</span>
+            <Link to="/cookies" className="hover:text-[#58a6ff] transition-colors">Cookies</Link>
+            <span>&middot;</span>
+            <Link to="/billing" className="hover:text-[#58a6ff] transition-colors">Billing</Link>
             <span>&middot;</span>
             <Link to="/security" className="hover:text-[#58a6ff] transition-colors">Security &amp; Disclosure</Link>
           </div>

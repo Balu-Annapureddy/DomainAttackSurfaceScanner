@@ -8,7 +8,13 @@ import { authMiddleware } from './middleware/auth';
 import scanRouter, { getActiveScansCount } from './routes/scan';
 import authRouter from './routes/auth';
 
+import { db } from './db';
+
 const app = express();
+
+if (config.trustProxy !== false) {
+  app.set('trust proxy', config.trustProxy);
+}
 
 applySecurity(app);
 app.use(cookieParser());
@@ -28,20 +34,34 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.get('/api/health/ready', (_req, res) => {
+app.get('/api/health/ready', async (_req, res) => {
   try {
     const isReady = typeof config.port === 'number' && typeof config.scanTimeoutMs === 'number';
     if (!isReady) {
       res.status(503).json({ status: 'unready', error: 'Service configuration not ready' });
       return;
     }
+
+    let dbReady = true;
+    try {
+      await db.findUserById('health-check-probe');
+    } catch {
+      dbReady = false;
+    }
+
+    if (!dbReady) {
+      res.status(503).json({ status: 'unready', error: 'Database persistence unavailable' });
+      return;
+    }
+
     res.json({
       status: 'ready',
       timestamp: new Date().toISOString(),
       activeScans: getActiveScansCount(),
+      persistence: config.databaseUrl ? 'postgresql' : 'local-json',
     });
-  } catch (err) {
-    res.status(503).json({ status: 'unready', error: err instanceof Error ? err.message : 'Unknown error' });
+  } catch {
+    res.status(503).json({ status: 'unready', error: 'Readiness probe failed' });
   }
 });
 

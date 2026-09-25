@@ -250,3 +250,68 @@ Verification & Quality Gates:
 - Automated Tests: **44/44 passing** across 3 test suites (`scanner.test.ts`, `realDomainE2E.test.ts`, `authAndQuota.test.ts`).
 - Server Compilation: `tsc` compiles with 0 errors.
 - Client Bundle: Vite production build succeeds with 0 errors.
+
+---
+
+## SPRINT: FINAL PRODUCTION HARDENING + COMPLIANCE AUDIT
+Date: 2026-09-25  
+Status: COMPLETED  
+
+Overview:
+Executed the comprehensive final production hardening, compliance, privacy, accessibility, and operational audit sprint for DomainAttackSurfaceScanner. Closed all remaining operational readiness gaps without altering the established workstation visual design: implemented self-service account deletion with cascading purge, dedicated Cookie Policy (`/cookies`), Billing Policy (`/billing`), enhanced Privacy Policy distinguishing target data from personal data, hardened SSRF guards (reserved TLDs, numeric TLDs, reserved IPv4/IPv6 ranges), startup secret validation, trusted reverse proxy support, operational readiness probes, and complete SEO crawler policies.
+
+Key Implementations & Verifications:
+1. **Cookie Policy & Client Storage Transparency (`/cookies`)**:
+   - Created `client/src/pages/CookiePage.tsx` explaining the strictly essential `dass_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` in production, ~7 day lifetime).
+   - Confirmed zero tracking cookies: no advertising cookies, analytics pixels, or third-party behavioral trackers.
+   - Zero cookies issued to anonymous visitors performing public scans.
+   - Fully documented browser `localStorage` keys (`dass_theme`, `dass_guided_mode`, `domain_scanner_scans`).
+   - Complies with ePrivacy Directive Article 5(3) essential session cookie exemption; no deceptive fake consent banners.
+2. **Billing & Zero-Payment Policy (`/billing`)**:
+   - Created `client/src/pages/BillingPage.tsx` documenting the $0.00 free-to-use tier, absence of payment processing, and non-applicability of refund requests.
+   - Confirmed zero payment gateway dependencies or environment secrets.
+3. **Privacy Policy Final Audit (`/privacy`)**:
+   - Re-structured `PrivacyPage.tsx` into three distinct data categories: User-Provided Identity Data, Scanner-Generated Target Infrastructure Data, and Technical/Operational Data.
+   - Explicitly clarified that target infrastructure IPs and network observations belong to the scanned asset, not the visiting user.
+   - Documented exact retention periods: 24-hour volatile memory TTL for anonymous scans vs persistent cross-device history for registered users until explicit deletion.
+   - Documented DPDP and global privacy principles (data minimization, storage limitation, purpose specification) with realistic compliance guidance.
+4. **Complete Account Deletion & Right to Erasure**:
+   - Added `deleteUser(userId)` to `DatabaseAdapter`, `LocalJsonAdapter`, and `PostgresAdapter`.
+   - Cascading deletion permanently wipes the user record, active sessions, owned scan records, scan result dossiers, and sliding-window quota counts.
+   - Exposed `DELETE /api/auth/me` with `requireAuth` session guard, clearing the session cookie upon completion.
+   - Added self-service "Delete Account" button and accessible confirmation modal (`role="dialog"`, `aria-modal="true"`, Escape key dismissal) on `/history`.
+5. **Scan Deletion & Ownership Isolation**:
+   - Added automated tests verifying that User A cannot delete or inspect User B's scans (`403 Forbidden`).
+   - Authenticated users can selectively delete their own saved scans from `/history`.
+6. **Password & Session Security Review**:
+   - Verified RFC 7914 Scrypt configuration (`N=16384, r=8, p=1, keylen=64`, 16-byte cryptographically secure random salt, `crypto.timingSafeEqual`).
+   - Production startup validator (`server/src/config.ts`) enforces `SESSION_SECRET` length >= 32 characters and rejects known development defaults.
+   - Enforced zero-leakage logging policy: passwords, tokens, database credentials, and full authorization headers are excluded from logs.
+7. **Reverse Proxy & Client IP Model**:
+   - Added `TRUST_PROXY` configuration (`app.set('trust proxy', config.trustProxy)`).
+   - Documented proxy configuration for Nginx, Caddy, Cloudflare Pages, and AWS ALB to ensure accurate rate-limit binding without allowing client-spoofed `X-Forwarded-For`.
+8. **SSRF Final Audit & Target Hardening**:
+   - Hardened `domainValidation.ts`: rejects all-numeric TLDs, raw IP addresses, internal unqualified names, and reserved TLDs (`.onion`, `.invalid`, `.test`, `.example`, `.arpa`, `.localhost`, `.local`).
+   - Hardened `publicResolution.ts`: added `240.0.0.0/4` reserved block alongside existing loopback, RFC 1918, `169.254.0.0/16` (cloud metadata), carrier-grade NAT, and IPv6 ranges.
+   - Added comprehensive Jest test suite (`server/src/__tests__/ssrfSecurity.test.ts`) validating 10 distinct attack cases.
+9. **External Provider Resilience**:
+   - Configured bounded timeouts, retry caps, and isolated try/catch handlers for `crt.sh`, IP intelligence (`ipapi.co`), and DNS resolvers so third-party outages gracefully degrade without crashing the scan engine.
+10. **Database Lifecycle & Health/Readiness Probes**:
+    - Retained idempotent schema creation for development; documented safe production migration and backup strategies in `docs/DEPLOYMENT.md`.
+    - Added `/api/health/ready` probe testing database connectivity without exposing connection strings or schema internals.
+11. **Form Consent & Authorized Use**:
+    - Updated scan initiation form on `LandingPage.tsx` with explicit authorization notice ("By initiating a scan, you confirm that you own or are explicitly authorized to assess the target domain").
+12. **Accessibility & Content Trust Audit**:
+    - Verified all pages have valid form labels, accessible modal dialogs with Escape handling, visible focus states, and semantic headings.
+    - Verified zero fake testimonials, fake ratings, fabricated company addresses, or unsupported "100% secure" claims.
+13. **SEO & Search Crawler Architecture**:
+    - Updated `client/public/robots.txt` disallowing private and user-specific paths (`/login`, `/register`, `/api/`, `/scan/`, `/report/`, `/history/`, `/compare/`) while allowing public canonical pages.
+    - Updated `client/public/sitemap.xml` with canonical public URLs.
+    - Documented 7-step Google Search Console launch workflow in `docs/SEO.md`.
+
+Verification & Quality Gates:
+- Automated Tests: **64/64 passing** across 4 test suites (`scanner.test.ts`, `ssrfSecurity.test.ts`, `authAndQuota.test.ts`, `realDomainE2E.test.ts`).
+- Server Compilation: `tsc` compiles with 0 errors.
+- Client Bundle: Vite production build succeeds with 0 errors.
+- Security Headers: Helmet CSP, Permissions-Policy, HSTS, and nosniff verified.
+

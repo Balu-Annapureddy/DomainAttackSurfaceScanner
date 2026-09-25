@@ -144,10 +144,16 @@ export default function SecurityPage() {
       <footer className="border-t border-[#1e2631] bg-[#0c1015] px-4 py-3 mt-auto font-mono text-[11px] text-[#576575]">
         <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>DOMAIN ATTACK SURFACE SCANNER // SECURITY POLICY</span>
-          <div className="flex items-center gap-3">
-            <Link to="/privacy" className="hover:text-[#8b9bb0]">PRIVACY POLICY</Link>
-            <Link to="/terms" className="hover:text-[#8b9bb0]">TERMS OF USE</Link>
-            <Link to="/" className="hover:text-[#8b9bb0]">CONSOLE</Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/privacy" className="hover:text-[var(--accent-primary)] transition">PRIVACY POLICY</Link>
+            <span>&middot;</span>
+            <Link to="/terms" className="hover:text-[var(--accent-primary)] transition">TERMS OF USE</Link>
+            <span>&middot;</span>
+            <Link to="/cookies" className="hover:text-[var(--accent-primary)] transition">COOKIE POLICY</Link>
+            <span>&middot;</span>
+            <Link to="/billing" className="hover:text-[var(--accent-primary)] transition">BILLING &amp; REFUNDS</Link>
+            <span>&middot;</span>
+            <Link to="/security" className="text-[var(--accent-primary)] font-bold">SECURITY &amp; DISCLOSURE</Link>
           </div>
         </div>
       </footer>

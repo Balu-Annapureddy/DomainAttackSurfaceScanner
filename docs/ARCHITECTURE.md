@@ -40,6 +40,11 @@ DomainAttackSurfaceScanner/
   - Anonymous scans are tracked in volatile memory (or local browser storage) and automatically expire after 24 hours.
   - Authenticated scans record the owner's `userId`.
   - The API strictly enforces ownership: requests to view (`GET /api/scan/:scanId`), delete (`DELETE /api/scan/:scanId`), or compare scans verify ownership before responding. Unauthorized requests from other users return `403 Forbidden`.
+- **Complete Account Deletion (`DELETE /api/auth/me`)**:
+  - Registered users can permanently delete their account at any time with explicit confirmation.
+  - Cascades immediately across the persistent store: purges the `users` record, all associated active `sessions`, all stored `scans` and `scan_results` authored by the user, and sliding-window `quotas` records.
+  - Foreign key constraints with `ON DELETE CASCADE` guarantee no orphaned telemetry remains.
+  - Clears the `dass_session` cookie and resets frontend state to anonymous.
 
 ---
 
@@ -127,3 +132,66 @@ The database adapter ([server/src/db/index.ts](file:///c:/Users/annap/Desktop/Pr
 - **Aesthetic**: Network Intelligence Workstation (high-density telemetry, clear hierarchical grouping, monospace data readouts).
 - **Themes**: First-class Dark Theme and Light Theme toggled via `ThemeContext` and persisted in `localStorage`.
 - **CSS Architecture**: Pure Vanilla CSS custom properties (`index.css`) with zero layout flashes and high-contrast accessibility compliance.
+
+---
+
+## 8. Cookie & Client Storage Architecture
+
+The application adheres to strict data minimization and ePrivacy compliance:
+
+- **Essential Cookie (`dass_session`)**:
+  - Purpose: Cryptographic session identifier for registered, authenticated users.
+  - Attributes: `HttpOnly` (inaccessible to JavaScript, defending against XSS token theft), `SameSite=Lax` (defends against Cross-Site Request Forgery), `Secure` (enforced in production HTTPS), lifetime ~7 days.
+  - **Zero Anonymous Cookies**: Visitors performing unauthenticated scans receive **zero** cookies.
+  - **Zero Tracking**: The application contains no advertising trackers, analytics pixels, or behavioral cookies.
+- **Client-Side Local Storage**:
+  - `dass_theme`: Stores `'dark'` or `'light'` preference.
+  - `dass_guided_mode`: Stores boolean preference for interface explanatory helpers.
+  - `domain_scanner_scans`: Stores ephemeral recent scan IDs strictly on anonymous clients for browser history convenience.
+
+---
+
+## 9. Reverse Proxy & Client IP Model
+
+When deployed behind edge infrastructure (Cloudflare, AWS ALB, Nginx, Caddy):
+
+- **Express Proxy Trust (`TRUST_PROXY`)**:
+  - Configurable via `config.trustProxy`.
+  - When set to `1` or `true`, Express relies on the upstream reverse proxy to populate `req.ip` from `X-Forwarded-For`.
+  - **Anti-Spoofing**: If `TRUST_PROXY` is disabled, client-supplied `X-Forwarded-For` headers are strictly ignored, using the raw socket remote address to prevent quota evasion.
+- **Rate Limit Enforcement**:
+  - Anonymous hourly scan limits (`ANONYMOUS_SCAN_LIMIT`) bind to the validated client IP.
+  - Registered hourly limits bind to the authenticated `user.id`.
+
+---
+
+## 10. External Provider Resilience & Graceful Degradation
+
+Passive reconnaissance relies on external third-party services which can suffer downtime or rate limits:
+
+- **Certificate Transparency (`crt.sh`)**:
+  - Strict 8-second timeout.
+  - On HTTP 5xx, timeout, or parsing error, logs warning and gracefully falls back to DNS-only subdomain discovery.
+- **IP Intelligence (`ipapi.co` / custom provider)**:
+  - Bounded by `IP_INTELLIGENCE_TIMEOUT_MS` (default 5,000ms).
+  - Outage or failure gracefully degrades: ASN and geolocation fields are recorded as `unavailable` without failing the overall scan.
+- **Authoritative DNS Resolvers**:
+  - Per-query timeout caps and isolated try/catch handlers per record type (A, AAAA, MX, TXT, NS, CAA).
+  - A failure resolving one record type does not abort analysis of other record types.
+- **HTTP Perimeter Probes (`safeHttp.ts`)**:
+  - Strict 512 KB response size cap (`MAX_RESPONSE_BYTES`) to prevent memory exhaustion.
+  - Maximum 3 redirect hops (`MAX_REDIRECTS`), each validated against SSRF boundaries before following.
+
+---
+
+## 11. Database Lifecycle & Production Migration Strategy
+
+- **Development Mode**:
+  - With `DATABASE_URL` unset, uses zero-dependency atomic JSON store (`.data/dass_db.json`).
+  - With `DATABASE_URL` set, runs idempotent `CREATE TABLE IF NOT EXISTS` via `schema.sql`.
+- **Production Migration Model**:
+  - Production deployments must never drop tables or recreate existing schemas destructively.
+  - DDL changes are tracked via sequential migration scripts (`migrations/001_initial.sql`, etc.).
+  - Database users should operate with least privilege (CRUD permissions on application tables, without `SUPERUSER` privileges).
+  - Production databases should have automated daily snapshot backups with point-in-time recovery (PITR) enabled.
+

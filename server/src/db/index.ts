@@ -42,6 +42,7 @@ export interface DatabaseAdapter {
   getScan(scanId: string): Promise<{ scan: DomainScan; userId: string | null } | null>;
   getUserScans(userId: string): Promise<HistoryScanItem[]>;
   deleteScan(scanId: string, userId: string): Promise<boolean>;
+  deleteUser(userId: string): Promise<boolean>;
   getQuota(identityKey: string, windowMs: number): Promise<QuotaRecord>;
   incrementQuota(identityKey: string, windowMs: number): Promise<number>;
 }
@@ -243,6 +244,27 @@ class LocalJsonAdapter implements DatabaseAdapter {
       return false; // Authorization failure: user does not own scan
     }
     delete this.data.scans[scanId];
+    this.schedulePersist();
+    return true;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    if (!this.data.users[userId]) return false;
+    delete this.data.users[userId];
+
+    for (const [id, session] of Object.entries(this.data.sessions)) {
+      if (session.userId === userId) {
+        delete this.data.sessions[id];
+      }
+    }
+
+    for (const [id, record] of Object.entries(this.data.scans)) {
+      if (record.userId === userId) {
+        delete this.data.scans[id];
+      }
+    }
+
+    delete this.data.quotas[`user:${userId}`];
     this.schedulePersist();
     return true;
   }
@@ -527,6 +549,22 @@ class PostgresAdapter implements DatabaseAdapter {
     const query = `DELETE FROM scans WHERE id = $1 AND user_id = $2`;
     const res = await this.pool.query(query, [scanId, userId]);
     return (res.rowCount ?? 0) > 0;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`DELETE FROM quotas WHERE identity_key = $1`, [`user:${userId}`]);
+      const res = await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+      await client.query('COMMIT');
+      return (res.rowCount ?? 0) > 0;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   async getQuota(identityKey: string, windowMs: number): Promise<QuotaRecord> {

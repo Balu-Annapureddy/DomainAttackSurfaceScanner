@@ -15,6 +15,8 @@ import RegisterPage from './pages/RegisterPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import SecurityPage from './pages/SecurityPage';
+import CookiePage from './pages/CookiePage';
+import BillingPage from './pages/BillingPage';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -31,6 +33,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
+            <Route path="/cookies" element={<CookiePage />} />
+            <Route path="/billing" element={<BillingPage />} />
             <Route path="/security" element={<SecurityPage />} />
           </Routes>
         </BrowserRouter>

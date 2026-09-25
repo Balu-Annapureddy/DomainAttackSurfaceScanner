@@ -163,5 +163,70 @@ describe('Authentication, Authorization & Quotas', () => {
 
       expect([403, 404]).toContain(deleteRes.status);
     });
+
+    it('rejects account deletion without authentication with 401', async () => {
+      const res = await request(app).delete('/api/auth/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('executes complete account deletion and cascades removal of all user data', async () => {
+      const delEmail = `delete-me-${Date.now()}@security.test`;
+      const delPass = 'StrongPassword123!';
+
+      // 1. Register temporary user
+      const regRes = await request(app)
+        .post('/api/auth/register')
+        .send({ email: delEmail, password: delPass });
+      expect(regRes.status).toBe(201);
+      const tempCookie = extractSessionCookie(regRes);
+      const userId = regRes.body.user.id;
+
+      // 2. Attach a saved scan record directly to this user
+      const mockScanId = `mock-scan-${Date.now()}`;
+      await db.saveScan(
+        {
+          scanId: mockScanId,
+          domain: 'account-deletion-check.org',
+          status: 'completed',
+          score: 85,
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 86400000).toISOString(),
+          categories: {} as any,
+          assets: [],
+          relationships: [],
+          findings: [],
+          warnings: [],
+        },
+        userId,
+        true,
+      );
+
+      const scansBefore = await db.getUserScans(userId);
+      expect(scansBefore.length).toBe(1);
+
+      // 3. Delete account
+      const delRes = await request(app)
+        .delete('/api/auth/me')
+        .set('Cookie', tempCookie);
+
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.success).toBe(true);
+
+      // 4. Verify user scans are wiped
+      const scansAfter = await db.getUserScans(userId);
+      expect(scansAfter.length).toBe(0);
+
+      // 5. Verify login fails with 401 for deleted user
+      const reLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: delEmail, password: delPass });
+      expect(reLogin.status).toBe(401);
+
+      // 6. Verify the old session cookie is now invalid
+      const checkMe = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', tempCookie);
+      expect(checkMe.body.user).toBeNull();
+    });
   });
 });

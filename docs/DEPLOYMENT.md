@@ -80,6 +80,7 @@ PORT=3001
 CLIENT_ORIGIN=https://scanner.example.com
 DATABASE_URL=postgres://user:password@db.example.com:5432/dass?sslmode=require
 SESSION_SECRET=GENERATE_HIGH_ENTROPY_64_CHAR_HEX_KEY
+TRUST_PROXY=1
 ANONYMOUS_SCAN_LIMIT=5
 REGISTERED_SCAN_LIMIT=50
 SCAN_LIMIT_WINDOW_MS=3600000
@@ -89,16 +90,19 @@ IP_INTELLIGENCE_ENABLED=true
 IP_INTELLIGENCE_URL=https://ipapi.co/{ip}/json/
 ```
 
-Generate `SESSION_SECRET`:
+Generate `SESSION_SECRET` (minimum 32 characters, enforced at startup):
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ---
 
-## 5. Reverse Proxy & SSL Configuration (Nginx / Caddy)
+## 5. Reverse Proxy & SSL Configuration (Nginx / Caddy / Cloudflare)
 
 When running behind Nginx or Caddy on a Linux server:
+
+### Trusted Proxy Configuration
+Set `TRUST_PROXY=1` in your environment so Express correctly parses the client IP address from `X-Forwarded-For` without trusting arbitrary upstream hops.
 
 ### Nginx Example
 ```nginx
@@ -126,16 +130,16 @@ server {
 
 ## 6. Health & Readiness Verification
 
-After deployment, test the health check endpoints:
+The server exposes dedicated operational probes:
 
 ```bash
-# Basic liveness check
+# Basic liveness check (does not leak credentials)
 curl -f https://api.scanner.example.com/api/health
 # Response: {"status":"ok","timestamp":"...","uptime":...,"version":"1.0.0"}
 
-# Readiness check (database & store initialized)
+# Readiness check (probes database connectivity & store health)
 curl -f https://api.scanner.example.com/api/health/ready
-# Response: {"status":"ready","timestamp":"...","activeScans":0}
+# Response: {"status":"ready","database":"connected","timestamp":"...","activeScans":0}
 ```
 
 ---
@@ -155,13 +159,40 @@ curl -f https://api.scanner.example.com/api/health/ready
 
 ---
 
-## 8. Post-Deployment Verification Checklist
+## 8. Database Migration & Backup Strategy
 
-1. [ ] Confirm `/api/health` returns `200 OK`.
+- **Initial DDL**: On startup, `server/src/db/schema.sql` establishes tables idempotently (`CREATE TABLE IF NOT EXISTS`).
+- **Production Migrations**:
+  - Never drop tables or use destructive DDL in production.
+  - Future migrations should be applied through versioned SQL scripts.
+- **Backup Recommendations**:
+  - Enable automated daily snapshot backups.
+  - Maintain 30-day point-in-time recovery (PITR) for PostgreSQL.
+  - Test restoration procedures periodically.
+
+---
+
+## 9. Security Headers
+
+The backend automatically attaches security headers via Helmet and custom middleware:
+- `Content-Security-Policy`: Permits essential scripts, styles (Google Fonts), and OpenStreetMap tiles.
+- `Permissions-Policy: geolocation=(), camera=(), microphone=()`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security`: `max-age=31536000; includeSubDomains` (in production HTTPS).
+
+---
+
+## 10. Post-Deployment Verification Checklist
+
+1. [ ] Confirm `/api/health` and `/api/health/ready` return `200 OK`.
 2. [ ] Submit test scan for a known public domain (e.g. `example.com`).
 3. [ ] Verify quota deduction (anonymous quota drops from 5 to 4).
 4. [ ] Register a new account (`/register`), verify cookie `dass_session` set with `HttpOnly; Secure; SameSite=Lax`.
 5. [ ] Verify registered quota displays `50 / 50 remaining`.
 6. [ ] Save/view scan history (`/history`) and verify cross-session persistence.
-7. [ ] Toggle dark / light theme and refresh page; confirm preference persists.
-8. [ ] Check `robots.txt` (`https://domain.com/robots.txt`) and `sitemap.xml` (`https://domain.com/sitemap.xml`).
+7. [ ] Verify scan deletion removes the scan from `/history`.
+8. [ ] Test account deletion (`DELETE /api/auth/me`), verify complete wipe of user, scans, quotas, and session cookie.
+9. [ ] Toggle dark / light theme and refresh page; confirm preference persists.
+10. [ ] Check `robots.txt` (`https://domain.com/robots.txt`) and `sitemap.xml` (`https://domain.com/sitemap.xml`).
+11. [ ] Verify `/cookies` and `/billing` render accurately explaining essential cookies and $0.00 zero-payment model.

@@ -450,7 +450,9 @@ export default function ScanPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link to="/privacy" className="hover:text-[#8b9bb0] transition-colors">PRIVACY POLICY</Link>
             <Link to="/terms" className="hover:text-[#8b9bb0] transition-colors">TERMS OF USE</Link>
-            <Link to="/security" className="hover:text-[#8b9bb0] transition-colors">SECURITY & AUTHORIZED USE</Link>
+            <Link to="/cookies" className="hover:text-[#8b9bb0] transition-colors">COOKIE POLICY</Link>
+            <Link to="/billing" className="hover:text-[#8b9bb0] transition-colors">BILLING &amp; REFUNDS</Link>
+            <Link to="/security" className="hover:text-[#8b9bb0] transition-colors">SECURITY &amp; AUTHORIZED USE</Link>
             <a
               href="https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner"
               target="_blank"

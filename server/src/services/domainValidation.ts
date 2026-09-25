@@ -40,10 +40,21 @@ export function validateDomain(input: unknown): string {
     throw new Error('Malformed domain name.');
   }
 
-  // Reject obviously private or internal names that are common in local-only networks.
+  // Reject obviously private or internal names that are common in local-only networks or reserved TLDs.
   const labels = domain.split('.');
-  if (labels.some(label => ['local', 'internal', 'lan', 'corp', 'home', 'private'].includes(label))) {
+  const reservedInternalLabels = new Set([
+    'local', 'internal', 'lan', 'corp', 'home', 'private', 'localdomain',
+  ]);
+  const tld = labels[labels.length - 1];
+  const reservedTlds = new Set(['onion', 'invalid', 'test', 'example', 'arpa', 'localhost', 'local']);
+
+  if (labels.some((label) => reservedInternalLabels.has(label)) || (tld && reservedTlds.has(tld))) {
     throw new Error('Private or internal hostnames are not allowed.');
+  }
+
+  // Reject all-numeric TLDs (e.g. raw IP fragments or invalid TLDs)
+  if (!tld || /^\d+$/.test(tld)) {
+    throw new Error('Malformed domain name.');
   }
 
   if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/i.test(domain)) {

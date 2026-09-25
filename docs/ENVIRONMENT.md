@@ -10,9 +10,10 @@ This document describes all environment variables used by **Domain Attack Surfac
 |---|---|---|---|---|
 | `NODE_ENV` | `string` | `development` | Recommended | `production`, `development`, or `test` |
 | `PORT` | `integer` | `3001` | No | Port for the Express backend server |
-| `CLIENT_ORIGIN` | `url` | `http://localhost:5173` | **Yes** | Origin allowed by CORS and session cookies |
+| `CLIENT_ORIGIN` | `url` | `http://localhost:5173` | **Yes** | Origin allowed by CORS and session cookies (must not be localhost in production) |
 | `DATABASE_URL` | `string` | _empty (in-memory dev)_ | Recommended | PostgreSQL connection URI (`postgres://user:pass@host:5432/dbname`) |
-| `SESSION_SECRET` | `string` | _internal fallback_ | **Yes** | Cryptographic secret for signing session state / tokens |
+| `SESSION_SECRET` | `string` | _internal fallback_ | **Yes** | Cryptographic secret for signing session state (min 32 chars in production) |
+| `TRUST_PROXY` | `string/bool` | `false` | When behind proxy | Reverse proxy hop configuration (`true`, `false`, `1`, or CIDR) |
 | `ANONYMOUS_SCAN_LIMIT` | `integer` | `5` | No | Maximum scans per hour for unauthenticated IP addresses |
 | `REGISTERED_SCAN_LIMIT` | `integer` | `50` | No | Maximum scans per hour for registered user accounts |
 | `SCAN_LIMIT_WINDOW_MS` | `integer` | `3600000` (1 hr) | No | Quota sliding window duration in milliseconds |
@@ -48,10 +49,22 @@ This document describes all environment variables used by **Domain Attack Surfac
   ```env
   SESSION_SECRET=c8e9b4f2167d4a10e82c5f1a9b3e7d6c5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d
   ```
+- **Production Enforcement**: In `NODE_ENV=production`, the server will refuse to start if `SESSION_SECRET` is omitted, shorter than 32 characters, or contains obvious default values (e.g. `dev-secret`).
+
+### `TRUST_PROXY`
+- Controls Express `app.set('trust proxy', ...)`.
+- If deployed behind a single trusted reverse proxy (e.g., Nginx or Caddy on the same host), set `TRUST_PROXY=1` or `TRUST_PROXY=true`.
+- If deployed behind Cloudflare or AWS ALB, set to `1` or the specific subnet CIDR.
+- **Never** set `TRUST_PROXY=true` if the server is exposed directly to the public internet, as clients could spoof `X-Forwarded-For` headers to bypass rate limits.
 
 ### `CLIENT_ORIGIN`
 - Must match your deployed frontend domain exactly (e.g. `https://domainattacksurface.io`).
 - Do not use wildcards (`*`) because authentication requires `credentials: true` and cookie passing.
+- In `NODE_ENV=production`, the server startup validator prevents setting `CLIENT_ORIGIN` to `localhost`.
+
+### Payments & Billing Variables
+- **Zero Payment Configuration**: DomainAttackSurfaceScanner has no payment gateway integrations (no Stripe, PayPal, LemonSqueezy, etc.).
+- There are **no** `STRIPE_KEY`, `PAYMENT_SECRET`, or billing webhooks. Do not configure any billing credentials.
 
 ---
 

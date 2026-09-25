@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, QuotaInfo } from '../../../shared/types';
-import { getAuthStatus, loginUser, registerUser, logoutUser } from '../lib/api';
+import { getAuthStatus, loginUser, registerUser, logoutUser, deleteAccount as apiDeleteAccount } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 }
 
@@ -54,6 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshAuth();
   };
 
+  const deleteAccount = async () => {
+    await apiDeleteAccount();
+    setUser(null);
+    void refreshAuth();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        deleteAccount,
         refreshAuth,
       }}
     >

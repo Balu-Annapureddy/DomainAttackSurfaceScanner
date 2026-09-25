@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils/crypto';
-import { SESSION_COOKIE_NAME } from '../middleware/auth';
+import { SESSION_COOKIE_NAME, requireAuth } from '../middleware/auth';
 import { getQuotaStatus } from '../services/quotaService';
 import { config } from '../config';
 
@@ -154,6 +154,34 @@ router.get('/me', async (req, res) => {
   } catch (error) {
     console.error('[auth] Check session error:', error);
     res.status(500).json({ error: 'Unable to fetch user state', code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * Permanently delete authenticated user account and all associated data
+ */
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required', code: 'UNAUTHORIZED' });
+      return;
+    }
+
+    const success = await db.deleteUser(req.user.id);
+    clearSessionCookie(res);
+
+    if (!success) {
+      res.status(404).json({ error: 'Account not found', code: 'USER_NOT_FOUND' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Account, active sessions, saved scans, and quota records permanently deleted',
+    });
+  } catch (error) {
+    console.error('[auth] Delete account error:', error);
+    res.status(500).json({ error: 'Unable to delete account', code: 'SERVER_ERROR' });
   }
 });
 

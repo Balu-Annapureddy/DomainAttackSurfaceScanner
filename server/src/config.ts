@@ -52,6 +52,22 @@ function validateConfig() {
     throw new Error(`[config] IP_INTELLIGENCE_URL hostname "${parsedIpProviderUrl.hostname}" is not in the allowed providers list.`);
   }
 
+  const sessionSecret = process.env.SESSION_SECRET?.trim() || (nodeEnv !== 'production' ? 'dass_dev_session_secret_local_testing_only' : '');
+  if (nodeEnv === 'production') {
+    if (!sessionSecret || sessionSecret === 'dass_dev_session_secret_local_testing_only' || sessionSecret === 'dass_production_ready_session_key_secret_2026' || sessionSecret.length < 32) {
+      throw new Error('[config] In production, SESSION_SECRET must be set to a dedicated high-entropy secret (>= 32 characters).');
+    }
+    const originUrl = new URL(clientOrigin);
+    if (['localhost', '127.0.0.1', '::1'].includes(originUrl.hostname.toLowerCase())) {
+      throw new Error(`[config] In production, CLIENT_ORIGIN cannot be localhost or loopback ("${clientOrigin}").`);
+    }
+  }
+
+  const trustProxyEnv = process.env.TRUST_PROXY?.trim();
+  const trustProxy = trustProxyEnv
+    ? (/^\d+$/.test(trustProxyEnv) ? Number(trustProxyEnv) : trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv)
+    : (nodeEnv === 'production' ? 1 : false);
+
   const scanRateLimitDefaults = nodeEnv === 'production'
     ? { max: '10', windowMs: '3600000' }
     : { max: '100', windowMs: '900000' };
@@ -74,7 +90,8 @@ function validateConfig() {
     ipIntelligenceUrl,
     ipIntelligenceTimeoutMs: optionalInteger('IP_INTELLIGENCE_TIMEOUT_MS', '5000', 100),
     databaseUrl: process.env.DATABASE_URL?.trim(),
-    sessionSecret: process.env.SESSION_SECRET?.trim() || 'dass_production_ready_session_key_secret_2026',
+    sessionSecret,
+    trustProxy,
     anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '5', 1),
     registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '50', 1),
     scanLimitWindowMs: optionalInteger('SCAN_LIMIT_WINDOW_MS', '3600000', 1000), // 1 hour default

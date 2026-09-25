@@ -30,6 +30,7 @@ Modern organizations inadvertently expand their external attack surface through 
 - **Privacy-First Dual Identity Model**:
   - **Anonymous Mode**: Perform scans without an account; 0 tracking cookies; volatile 24-hr retention; local browser history cache; 5 scans/hour default quota.
   - **Registered Account Mode**: Minimal first-party signup (email + Scrypt password hash); persistent cross-device history; multi-scan comparison; 50 scans/hour default quota; essential `HttpOnly`, `SameSite=Lax`, `Secure` session cookie (`dass_session`).
+  - **Complete Account Deletion**: Self-service deletion (`DELETE /api/auth/me`) immediately cascades across the database to permanently purge the user, all active sessions, owned scan records, and quota telemetry.
   - **NO payments, NO subscriptions, NO external trackers, NO third-party data brokers**.
 - **Retro Network Intelligence Workstation UI**:
   - First-class Dark Theme (`#0B0F10`, `#131B1E`, `#1D332E`, `#2EE59D`) and Light Theme (`#F8FAFC`, `#FFFFFF`, `#BAE6FD`, `#0EA5E9`).
@@ -39,10 +40,11 @@ Modern organizations inadvertently expand their external attack surface through 
   - Production: PostgreSQL with connection pooling and automated DDL migration (`server/src/db/schema.sql`).
   - Development & CI: High-performance atomic in-memory/file-backed JSON store (`.data/dass_db.json`) allowing zero-dependency local runs and instant test execution.
 - **Strict SSRF & Request Boundaries**:
-  - Hardened loopback, private intranet, link-local, carrier-grade NAT, and cloud metadata (`169.254.169.254`) blocking via `publicResolution.ts`.
+  - Rejects raw IPs, numeric TLDs, internal hostnames, and reserved TLDs (`.onion`, `.invalid`, `.test`, `.example`, `.arpa`, `.localhost`, `.local`).
+  - Hardened loopback, private intranet, link-local, carrier-grade NAT, multicast, reserved `240.0.0.0/4`, and cloud metadata (`169.254.169.254`) blocking via `publicResolution.ts`.
   - Request timeouts, bounded redirect hops, and strict request budgets.
 - **SEO & Web Standards**:
-  - Canonical public pages (`/`, `/security`, `/privacy`, `/terms`, `/login`, `/register`).
+  - Canonical public pages (`/`, `/security`, `/privacy`, `/terms`, `/cookies`, `/billing`).
   - Crawler protection via `client/public/robots.txt` and `client/public/sitemap.xml`.
   - Rich Open Graph, Twitter Cards, and semantic HTML5 hierarchy.
 
@@ -111,7 +113,7 @@ For cloud hosting with PostgreSQL, Cloudflare Pages, Nginx reverse proxy, and en
 ## 5. Automated Testing & Validation
 
 ```bash
-# Run complete automated test suite (44 tests across 3 suites)
+# Run complete automated test suite (64 tests across 4 suites)
 npm test
 
 # Run build verification (Server TypeScript compiler + Client Vite production bundle)
