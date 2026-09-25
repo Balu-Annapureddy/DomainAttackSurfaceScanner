@@ -49,10 +49,10 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center font-mono">
+      <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center font-mono transition-colors">
         <div className="console-panel p-6 text-center space-y-2">
-          <RefreshCw className="h-6 w-6 animate-spin text-[#58a6ff] mx-auto" />
-          <p className="text-xs text-[#8b9bb0]">COMPILING INTELLIGENCE DOSSIER…</p>
+          <RefreshCw className="h-6 w-6 animate-spin text-[var(--accent-primary)] mx-auto" />
+          <p className="text-xs text-[var(--text-secondary)] font-bold tracking-wider">COMPILING INTELLIGENCE DOSSIER…</p>
         </div>
       </main>
     );
@@ -60,11 +60,11 @@ export default function ReportPage() {
 
   if (error || !scan) {
     return (
-      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center p-4 font-mono">
+      <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-mono transition-colors">
         <div className="max-w-md console-panel p-6 text-center space-y-3">
-          <AlertTriangle className="mx-auto h-7 w-7 text-[#f85149]" />
-          <h1 className="text-sm font-bold">DOSSIER UNAVAILABLE</h1>
-          <p className="text-xs text-[#8b9bb0]">{error || 'Scan record expired or not found.'}</p>
+          <AlertTriangle className="mx-auto h-7 w-7 text-red-500" />
+          <h1 className="text-sm font-bold tracking-wider">DOSSIER UNAVAILABLE</h1>
+          <p className="text-xs text-[var(--text-secondary)]">{error || 'Scan record expired or not found.'}</p>
           <Link
             to="/history"
             className="console-btn console-btn-primary inline-flex text-xs"
@@ -142,7 +142,7 @@ export default function ReportPage() {
             <button
               type="button"
               onClick={() => exportScanJson(scan)}
-              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[var(--text-secondary)]"
             >
               <Download size={10} />
               <span>JSON</span>
@@ -150,7 +150,7 @@ export default function ReportPage() {
             <button
               type="button"
               onClick={() => exportAssetsCsv(scan)}
-              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[var(--text-secondary)]"
             >
               <Download size={10} />
               <span>ASSETS CSV</span>
@@ -158,7 +158,7 @@ export default function ReportPage() {
             <button
               type="button"
               onClick={() => exportFindingsCsv(scan)}
-              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
+              className="console-btn py-0.5 px-2 text-[11px] text-[var(--text-secondary)]"
             >
               <Download size={10} />
               <span>FINDINGS CSV</span>
@@ -173,23 +173,23 @@ export default function ReportPage() {
         <header className="console-panel p-4 print:border-b print:border-slate-300">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 font-mono">
             <div>
-              <div className="flex items-center gap-1.5 text-[#58a6ff] text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">
                 <Shield size={13} />
                 <span>EXTERNAL ATTACK SURFACE INTELLIGENCE DOSSIER</span>
               </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#e6edf3] print:text-slate-900">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] print:text-slate-900">
                 {scan.domain}
               </h1>
-              <p className="mt-0.5 text-xs text-[#8b9bb0] print:text-slate-600 font-sans">
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)] print:text-slate-600 font-sans">
                 Passive external intelligence assessment. Authoritative DNS, CT logs, TLS transport, and HTTP security posture.
               </p>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end gap-1 text-[11px] text-[#8b9bb0] print:text-slate-600">
+            <div className="flex flex-col items-start sm:items-end gap-1 text-[11px] text-[var(--text-secondary)] print:text-slate-600">
               <span className="flex items-center gap-1">
                 <Calendar size={11} /> {new Date(scan.createdAt).toUTCString()}
               </span>
-              <span className="text-[10px] text-[#576575]">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 SCAN ID: {scan.scanId}
               </span>
               <span className="console-tag console-tag-cyan text-[10px]">
@@ -206,41 +206,41 @@ export default function ReportPage() {
               <span className="dossier-num">[01]</span>
               <span>EXECUTIVE INTELLIGENCE</span>
             </div>
-            <span className="text-[10px] text-[#8b9bb0]">KEY DEFENSIVE METRICS</span>
+            <span className="text-[10px] text-[var(--text-secondary)]">KEY DEFENSIVE METRICS</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#1e2631]">
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">ASSETS</div>
-              <div className="text-xl font-bold text-[#e6edf3] mt-0.5">{scan.assets?.length ?? 0}</div>
-              <div className="text-[10px] text-[#8b9bb0]">Discovered nodes</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[var(--border-technical)]">
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">ASSETS</div>
+              <div className="text-xl font-bold text-[var(--text-primary)] mt-0.5">{scan.assets?.length ?? 0}</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Discovered nodes</div>
             </div>
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">RELATIONS</div>
-              <div className="text-xl font-bold text-[#58a6ff] mt-0.5">{scan.relationships?.length ?? 0}</div>
-              <div className="text-[10px] text-[#8b9bb0]">Graph edges</div>
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">RELATIONS</div>
+              <div className="text-xl font-bold text-[var(--accent-primary)] mt-0.5">{scan.relationships?.length ?? 0}</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Graph edges</div>
             </div>
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">FINDINGS</div>
-              <div className="text-xl font-bold text-[#d29922] mt-0.5">{findings.length}</div>
-              <div className="text-[10px] text-[#8b9bb0]">Hygiene items</div>
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">FINDINGS</div>
+              <div className="text-xl font-bold text-amber-500 mt-0.5">{findings.length}</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Hygiene items</div>
             </div>
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">COMPLETENESS</div>
-              <div className="text-xl font-bold text-[#e6edf3] mt-0.5">
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">COMPLETENESS</div>
+              <div className="text-xl font-bold text-[var(--text-primary)] mt-0.5">
                 {scan.completeness === 'complete' ? '100%' : 'PARTIAL'}
               </div>
-              <div className="text-[10px] text-[#8b9bb0]">Probe categories</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Probe categories</div>
             </div>
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">SCORE</div>
-              <div className="text-xl font-bold text-[#3fb950] mt-0.5">{hasScore ? `${score}` : '—'} / 100</div>
-              <div className="text-[10px] text-[#8b9bb0]">Configuration rating</div>
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">SCORE</div>
+              <div className="text-xl font-bold text-emerald-500 mt-0.5">{hasScore ? `${score}` : '—'} / 100</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Configuration rating</div>
             </div>
-            <div className="bg-[#10151b] p-3 font-mono">
-              <div className="text-[10px] text-[#576575] uppercase">RECON SCOPE</div>
-              <div className="text-xs font-bold text-[#e6edf3] mt-1">PASSIVE OSINT</div>
-              <div className="text-[10px] text-[#8b9bb0]">Zero intrusive packets</div>
+            <div className="bg-[var(--bg-panel-subtle)] p-3 font-mono">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase">RECON SCOPE</div>
+              <div className="text-xs font-bold text-[var(--text-primary)] mt-1">PASSIVE OSINT</div>
+              <div className="text-[10px] text-[var(--text-secondary)]">Zero intrusive packets</div>
             </div>
           </div>
         </section>
@@ -256,28 +256,28 @@ export default function ReportPage() {
                   <span className="dossier-num">[02]</span>
                   <span>SURFACE FOOTPRINT</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">NETWORK ASSETS</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">NETWORK ASSETS</span>
               </div>
-              <div className="p-3 bg-[#10151b] space-y-2">
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">ROOT DOMAIN:</span>
-                  <span className="text-[#e6edf3] font-bold">{scan.domain}</span>
+              <div className="p-3 bg-[var(--bg-panel-subtle)] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">ROOT DOMAIN:</span>
+                  <span className="text-[var(--text-primary)] font-bold">{scan.domain}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">SUBDOMAINS DISCOVERED:</span>
-                  <span className="text-[#58a6ff] font-bold">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">SUBDOMAINS DISCOVERED:</span>
+                  <span className="text-[var(--accent-primary)] font-bold">
                     {scan.assets?.filter((a) => a.type === 'SUBDOMAIN').length ?? 0} hostnames
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">ROUTED IP ENDPOINTS:</span>
-                  <span className="text-[#e6edf3] font-bold">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">ROUTED IP ENDPOINTS:</span>
+                  <span className="text-[var(--text-primary)] font-bold">
                     {scan.assets?.filter((a) => a.type === 'IP').length ?? 0} public IPs
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-[#576575]">AUTONOMOUS SYSTEMS (ASN):</span>
-                  <span className="text-[#3fb950] font-bold">
+                  <span className="text-[var(--text-muted)]">AUTONOMOUS SYSTEMS (ASN):</span>
+                  <span className="text-emerald-500 font-bold">
                     {scan.assets?.filter((a) => a.type === 'ASN').map((a) => a.value).join(', ') || 'Direct routing'}
                   </span>
                 </div>
@@ -291,24 +291,24 @@ export default function ReportPage() {
                   <span className="dossier-num">[03]</span>
                   <span>TRANSPORT SECURITY</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">ENCRYPTION POSTURE</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">ENCRYPTION POSTURE</span>
               </div>
-              <div className="p-3 bg-[#10151b] space-y-2">
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">HTTPS ENFORCEMENT:</span>
-                  <span className={httpData?.httpsEnforced ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+              <div className="p-3 bg-[var(--bg-panel-subtle)] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">HTTPS ENFORCEMENT:</span>
+                  <span className={httpData?.httpsEnforced ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
                     {httpData?.httpsEnforced ? 'ENFORCED (HTTP→HTTPS)' : 'NOT ENFORCED'}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">TLS NEGOTIATION:</span>
-                  <span className={tlsData?.available ? 'text-[#3fb950] font-bold' : 'text-[#f85149] font-bold'}>
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">TLS NEGOTIATION:</span>
+                  <span className={tlsData?.available ? 'text-emerald-500 font-bold' : 'text-red-500 font-bold'}>
                     {tlsData?.available ? `ACTIVE (${tlsData.protocol || 'TLS'})` : 'UNAVAILABLE'}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-[#576575]">HSTS POLICY:</span>
-                  <span className={httpData?.https?.headers?.['strict-transport-security'] ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                  <span className="text-[var(--text-muted)]">HSTS POLICY:</span>
+                  <span className={httpData?.https?.headers?.['strict-transport-security'] ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
                     {httpData?.https?.headers?.['strict-transport-security'] ? 'OBSERVED' : 'NOT OBSERVED'}
                   </span>
                 </div>
@@ -322,24 +322,24 @@ export default function ReportPage() {
                   <span className="dossier-num">[04]</span>
                   <span>MAIL & PERIMETER</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">SPOOFING CONTROLS</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">SPOOFING CONTROLS</span>
               </div>
-              <div className="p-3 bg-[#10151b] space-y-2">
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">MX RECORD ROUTING:</span>
-                  <span className="text-[#e6edf3]">
+              <div className="p-3 bg-[var(--bg-panel-subtle)] space-y-2">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">MX RECORD ROUTING:</span>
+                  <span className="text-[var(--text-primary)]">
                     {dnsData?.mx && dnsData.mx.length > 0 ? `${dnsData.mx.length} mail servers` : 'None observed'}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">SPF SENDER POLICY:</span>
-                  <span className={dnsData?.spf?.record ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">SPF SENDER POLICY:</span>
+                  <span className={dnsData?.spf?.record ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
                     {dnsData?.spf?.record ? 'OBSERVED' : 'NOT OBSERVED'}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-[#576575]">DMARC ENFORCEMENT:</span>
-                  <span className={dnsData?.dmarc?.record ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                  <span className="text-[var(--text-muted)]">DMARC ENFORCEMENT:</span>
+                  <span className={dnsData?.dmarc?.record ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
                     {dnsData?.dmarc?.record ? 'OBSERVED' : 'NOT OBSERVED'}
                   </span>
                 </div>
@@ -353,22 +353,22 @@ export default function ReportPage() {
                   <span className="dossier-num">[05]</span>
                   <span>HYGIENE OBSERVATIONS</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">DEFENSIVE SIGNALS</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">DEFENSIVE SIGNALS</span>
               </div>
-              <div className="p-3 bg-[#10151b] space-y-2 font-sans text-[11px] text-[#8b9bb0]">
+              <div className="p-3 bg-[var(--bg-panel-subtle)] space-y-2 font-sans text-[11px] text-[var(--text-secondary)]">
                 <p>
                   Perimeter evaluation assessed transport layers, certificate provenance, and defensive response headers.
                 </p>
                 <div className="space-y-1 font-mono text-xs pt-1">
-                  <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                    <span className="text-[#576575]">CSP (CONTENT-SECURITY-POLICY):</span>
-                    <span className={httpData?.https?.headers?.['content-security-policy'] ? 'text-[#3fb950]' : 'text-[#d29922]'}>
+                  <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                    <span className="text-[var(--text-muted)]">CSP (CONTENT-SECURITY-POLICY):</span>
+                    <span className={httpData?.https?.headers?.['content-security-policy'] ? 'text-emerald-500' : 'text-amber-500'}>
                       {httpData?.https?.headers?.['content-security-policy'] ? 'OBSERVED' : 'NOT OBSERVED'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#576575]">X-FRAME-OPTIONS:</span>
-                    <span className={httpData?.https?.headers?.['x-frame-options'] ? 'text-[#3fb950]' : 'text-[#d29922]'}>
+                    <span className="text-[var(--text-muted)]">X-FRAME-OPTIONS:</span>
+                    <span className={httpData?.https?.headers?.['x-frame-options'] ? 'text-emerald-500' : 'text-amber-500'}>
                       {httpData?.https?.headers?.['x-frame-options'] ? 'OBSERVED' : 'NOT OBSERVED'}
                     </span>
                   </div>
@@ -386,14 +386,14 @@ export default function ReportPage() {
                   <span className="dossier-num">[06]</span>
                   <span>KEY OBSERVATIONS</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">SYNTHESIS</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">SYNTHESIS</span>
               </div>
-              <div className="p-3 bg-[#10151b] font-sans text-xs text-[#8b9bb0] space-y-2 leading-relaxed">
+              <div className="p-3 bg-[var(--bg-panel-subtle)] font-sans text-xs text-[var(--text-secondary)] space-y-2 leading-relaxed">
                 <p>
-                  Target <strong className="text-[#e6edf3] font-mono">{scan.domain}</strong> completed an external passive inspection across 6 probe categories.
+                  Target <strong className="text-[var(--text-primary)] font-mono">{scan.domain}</strong> completed an external passive inspection across 6 probe categories.
                 </p>
                 <p>
-                  Security hygiene calculated at <strong className="text-[#58a6ff] font-mono">{hasScore ? `${score}/100` : '—'}</strong> based on observable public defensive controls.
+                  Security hygiene calculated at <strong className="text-[var(--accent-primary)] font-mono">{hasScore ? `${score}/100` : '—'}</strong> based on observable public defensive controls.
                 </p>
               </div>
             </section>
@@ -405,25 +405,25 @@ export default function ReportPage() {
                   <span className="dossier-num">[07]</span>
                   <span>FINDINGS & ANOMALIES</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">{findings.length} RECORDS</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">{findings.length} RECORDS</span>
               </div>
-              <div className="divide-y divide-[#1e2631] bg-[#0c1015] max-h-72 overflow-y-auto">
+              <div className="divide-y divide-[var(--border-muted)] bg-[var(--bg-panel-inset)] max-h-72 overflow-y-auto">
                 {findings.length === 0 ? (
-                  <div className="p-4 text-center text-[#3fb950]">
+                  <div className="p-4 text-center text-emerald-500">
                     NO HYGIENE ANOMALIES OBSERVED
                   </div>
                 ) : (
                   findings.map((f) => (
-                    <div key={f.id} className="p-2.5 bg-[#10151b] space-y-1">
+                    <div key={f.id} className="p-2.5 bg-[var(--bg-panel-subtle)] space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#e6edf3]">{f.title}</span>
-                        <span className="text-[10px] text-[#d29922] uppercase">[{f.severity}]</span>
+                        <span className="font-bold text-[var(--text-primary)]">{f.title}</span>
+                        <span className="text-[10px] text-amber-500 uppercase">[{f.severity}]</span>
                       </div>
-                      <p className="text-[11px] text-[#8b9bb0] font-sans">
+                      <p className="text-[11px] text-[var(--text-secondary)] font-sans">
                         {f.description}
                       </p>
                       {f.recommendation && (
-                        <div className="text-[10px] text-[#3fb950] font-mono">
+                        <div className="text-[10px] text-emerald-500 font-mono">
                           ACTION: {f.recommendation}
                         </div>
                       )}
@@ -440,34 +440,34 @@ export default function ReportPage() {
                   <span className="dossier-num">[08]</span>
                   <span>TLS DOSSIER</span>
                 </div>
-                <span className="text-[10px] text-[#8b9bb0]">CERTIFICATE METADATA</span>
+                <span className="text-[10px] text-[var(--text-secondary)]">CERTIFICATE METADATA</span>
               </div>
-              <div className="p-3 bg-[#10151b] space-y-1.5 font-mono text-[11px]">
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">ISSUER:</span>
-                  <span className="text-[#e6edf3] truncate max-w-xs">{tlsData?.issuer || 'N/A'}</span>
+              <div className="p-3 bg-[var(--bg-panel-subtle)] space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">ISSUER:</span>
+                  <span className="text-[var(--text-primary)] truncate max-w-xs">{tlsData?.issuer || 'N/A'}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">SUBJECT:</span>
-                  <span className="text-[#e6edf3] truncate max-w-xs">{tlsData?.subject || 'N/A'}</span>
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">SUBJECT:</span>
+                  <span className="text-[var(--text-primary)] truncate max-w-xs">{tlsData?.subject || 'N/A'}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1e2631]">
-                  <span className="text-[#576575]">VALID UNTIL:</span>
-                  <span className="text-[#e6edf3]">{tlsData?.validTo || 'N/A'}</span>
+                <div className="flex justify-between py-1 border-b border-[var(--border-muted)]">
+                  <span className="text-[var(--text-muted)]">VALID UNTIL:</span>
+                  <span className="text-[var(--text-primary)]">{tlsData?.validTo || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-[#576575]">SAN DOMAINS:</span>
-                  <span className="text-[#58a6ff]">{tlsData?.subjectAltNames?.length ?? 0} alternate names</span>
+                  <span className="text-[var(--text-muted)]">SAN DOMAINS:</span>
+                  <span className="text-[var(--accent-primary)]">{tlsData?.subjectAltNames?.length ?? 0} alternate names</span>
                 </div>
               </div>
             </section>
 
             {/* [09] Methodology */}
-            <section className="console-panel-inset p-3 font-mono text-xs border border-[#1e2631]">
-              <div className="text-[10px] font-bold text-[#576575] uppercase tracking-wider mb-1">
+            <section className="console-panel-inset p-3 font-mono text-xs border border-[var(--border-muted)]">
+              <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
                 [09] RECONNAISSANCE METHODOLOGY & SCOPE
               </div>
-              <p className="text-[11px] text-[#8b9bb0] font-sans leading-relaxed">
+              <p className="text-[11px] text-[var(--text-secondary)] font-sans leading-relaxed">
                 This intelligence dossier was assembled entirely using passive open-source reconnaissance (OSINT). Inquiries were bounded by public DNS queries, Certificate Transparency logs, standard TLS handshakes, and public HTTP response headers. No port scans, vulnerability probes, or intrusive packets were transmitted.
               </p>
             </section>
@@ -475,18 +475,18 @@ export default function ReportPage() {
         </div>
 
         {/* ─── Footer ────────────────────────────────────────────────── */}
-        <footer className="border-t border-[#1e2631] pt-3 font-mono text-[11px] text-[#576575] flex flex-col sm:flex-row items-center justify-between gap-2">
+        <footer className="border-t border-[var(--border-muted)] pt-3 font-mono text-[11px] text-[var(--text-muted)] flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE DOSSIER</span>
           <div className="flex flex-wrap items-center gap-3">
-            <Link to="/privacy" className="hover:text-[#58a6ff] transition-colors">Privacy</Link>
+            <Link to="/privacy" className="hover:text-[var(--accent-primary)] transition-colors">Privacy</Link>
             <span>&middot;</span>
-            <Link to="/terms" className="hover:text-[#58a6ff] transition-colors">Terms</Link>
+            <Link to="/terms" className="hover:text-[var(--accent-primary)] transition-colors">Terms</Link>
             <span>&middot;</span>
-            <Link to="/cookies" className="hover:text-[#58a6ff] transition-colors">Cookies</Link>
+            <Link to="/cookies" className="hover:text-[var(--accent-primary)] transition-colors">Cookies</Link>
             <span>&middot;</span>
-            <Link to="/billing" className="hover:text-[#58a6ff] transition-colors">Billing</Link>
+            <Link to="/billing" className="hover:text-[var(--accent-primary)] transition-colors">Billing</Link>
             <span>&middot;</span>
-            <Link to="/security" className="hover:text-[#58a6ff] transition-colors">Security &amp; Disclosure</Link>
+            <Link to="/security" className="hover:text-[var(--accent-primary)] transition-colors">Security &amp; Disclosure</Link>
           </div>
           <span>COMPILED: {new Date().toUTCString()}</span>
         </footer>

@@ -9,18 +9,18 @@ interface AttackSurfaceGraphProps {
   sectionNumber?: string;
 }
 
-const TYPE_COLORS: Record<Asset['type'], { bg: string; border: string; text: string }> = {
-  DOMAIN: { bg: '#102236', border: '#388bfd', text: '#58a6ff' },
-  SUBDOMAIN: { bg: '#0e1f38', border: '#2188ff', text: '#79b8ff' },
-  IP: { bg: '#1c1538', border: '#8a63d2', text: '#b392f0' },
-  ASN: { bg: '#102e26', border: '#2ea043', text: '#3fb950' },
-  ORGANIZATION: { bg: '#0e2b20', border: '#34d399', text: '#7ee787' },
-  NAMESERVER: { bg: '#2b2110', border: '#d29922', text: '#e3b341' },
-  MAIL_SERVER: { bg: '#2e1910', border: '#db6d28', text: '#f0883e' },
-  CERTIFICATE: { bg: '#12262a', border: '#38bdf8', text: '#7dd3fc' },
-  GEOLOCATION: { bg: '#2e1224', border: '#f43f5e', text: '#fb7185' },
-  TECHNOLOGY: { bg: '#1d1936', border: '#6366f1', text: '#a5b4fc' },
-  URL: { bg: '#141a24', border: '#64748b', text: '#94a3b8' },
+const TYPE_COLORS: Record<Asset['type'], { border: string; text: string }> = {
+  DOMAIN: { border: '#0284c7', text: '#0284c7' },
+  SUBDOMAIN: { border: '#0ea5e9', text: '#0ea5e9' },
+  IP: { border: '#8b5cf6', text: '#8b5cf6' },
+  ASN: { border: '#10b981', text: '#10b981' },
+  ORGANIZATION: { border: '#14b8a6', text: '#14b8a6' },
+  NAMESERVER: { border: '#f59e0b', text: '#f59e0b' },
+  MAIL_SERVER: { border: '#f97316', text: '#f97316' },
+  CERTIFICATE: { border: '#06b6d4', text: '#06b6d4' },
+  GEOLOCATION: { border: '#f43f5e', text: '#f43f5e' },
+  TECHNOLOGY: { border: '#6366f1', text: '#6366f1' },
+  URL: { border: '#64748b', text: '#64748b' },
 };
 
 export default function AttackSurfaceGraph({
@@ -47,16 +47,18 @@ export default function AttackSurfaceGraph({
     return result;
   }, [assets, selectedType, graphSearch]);
 
-  // Generate wide, balanced node coordinates across the entire 1300px canvas
+  // Centered, balanced radial node coordinates across the entire 1300px canvas
   const layout = useMemo(() => {
     const width = 1300;
     const height = 580;
+    const centerX = 650;
+    const centerY = 290;
     const nodeCoords = new Map<string, { x: number; y: number }>();
 
     // Central Target Domain
     const domainNode = filteredAssets.find((a) => a.type === 'DOMAIN');
     if (domainNode) {
-      nodeCoords.set(domainNode.id, { x: 500, y: 290 });
+      nodeCoords.set(domainNode.id, { x: centerX, y: centerY });
     }
 
     // Categorized asset pools
@@ -69,45 +71,46 @@ export default function AttackSurfaceGraph({
     const orgs = filteredAssets.filter((a) => a.type === 'ORGANIZATION');
     const geos = filteredAssets.filter((a) => a.type === 'GEOLOCATION');
 
-    // 1. Subdomains: Left Column / Semi-circle (X: 120 .. 320)
+    // 1. Subdomains: Left Arc (X: 180 .. 420)
     subdomains.forEach((item, i) => {
       const count = Math.max(1, subdomains.length);
-      const angle = Math.PI * 0.6 + (i / count) * (Math.PI * 0.8);
-      const radius = 240;
+      const angle = Math.PI * 0.65 + (i / count) * (Math.PI * 0.7);
+      const radius = 260;
       nodeCoords.set(item.id, {
-        x: Math.max(80, 500 + Math.cos(angle) * radius * 1.3),
-        y: Math.min(height - 60, Math.max(60, 290 + Math.sin(angle) * radius * 0.9)),
+        x: Math.max(90, centerX + Math.cos(angle) * radius * 1.35),
+        y: Math.min(height - 60, Math.max(60, centerY + Math.sin(angle) * radius * 0.95)),
       });
     });
 
-    // 2. Nameservers & Mail: Top Region (X: 300 .. 700, Y: 70 .. 150)
+    // 2. Nameservers, Mail & Certs: Top Region (X: 380 .. 920, Y: 70 .. 150)
     const topInfra = [...nameservers, ...mailServers, ...certs];
     topInfra.forEach((item, i) => {
       const count = Math.max(1, topInfra.length);
-      const x = 320 + (i / count) * 360;
-      const y = 80 + (i % 2 === 0 ? 0 : 50);
+      const x = 380 + (i / count) * 540;
+      const y = 80 + (i % 2 === 0 ? 0 : 55);
       nodeCoords.set(item.id, { x, y });
     });
 
-    // 3. IPs: Right-Center Region (X: 740 .. 920)
+    // 3. IPs: Right Arc (X: 880 .. 1120)
     ips.forEach((item, i) => {
       const count = Math.max(1, ips.length);
       const angle = -Math.PI * 0.35 + (i / count) * (Math.PI * 0.7);
       const radius = 260;
       nodeCoords.set(item.id, {
-        x: 500 + Math.cos(angle) * radius * 1.25,
-        y: Math.min(height - 60, Math.max(60, 290 + Math.sin(angle) * radius * 0.85)),
+        x: Math.min(width - 90, centerX + Math.cos(angle) * radius * 1.35),
+        y: Math.min(height - 60, Math.max(60, centerY + Math.sin(angle) * radius * 0.95)),
       });
     });
 
-    // 4. ASNs & Organizations: Far Right Region (X: 1000 .. 1220)
+    // 4. ASNs & Organizations: Distributed symmetrically on outer flanks
     const rightIntel = [...asns, ...orgs, ...geos];
     rightIntel.forEach((item, i) => {
       const count = Math.max(1, rightIntel.length);
-      const x = 1040 + (i % 2 === 0 ? 0 : 70);
-      const y = 120 + (i / count) * 340;
+      const isRight = i % 2 === 0;
+      const x = isRight ? 1120 + ((i % 4) * 25) : 100 + ((i % 4) * 25);
+      const y = 140 + (i / count) * 320;
       nodeCoords.set(item.id, {
-        x: Math.min(width - 80, x),
+        x: Math.min(width - 70, Math.max(70, x)),
         y: Math.min(height - 60, Math.max(60, y)),
       });
     });
@@ -136,36 +139,36 @@ export default function AttackSurfaceGraph({
   };
 
   return (
-    <div className="console-panel overflow-hidden w-full">
+    <div className="console-panel overflow-hidden w-full rounded-xs">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
       <div className="dossier-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3.5 py-2">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
           <span className="font-bold">ATTACK SURFACE RELATIONSHIPS</span>
-          <span className="text-[11px] text-[#8b9bb0] ml-2">
-            {visibleRelationships.length} RELATIONSHIPS · {filteredAssets.length} ASSETS
+          <span className="text-[11px] text-[var(--text-secondary)] ml-2">
+            {visibleRelationships.length} RELATIONSHIPS &bull; {filteredAssets.length} ASSETS
           </span>
         </div>
 
         {/* Controls Toolbar */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           <div className="relative">
-            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="SEARCH NODE..."
               value={graphSearch}
               onChange={(e) => setGraphSearch(e.target.value)}
-              className="h-6 w-28 sm:w-36 border border-[#1e2631] bg-[#0c1015] pl-6 pr-1 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
+              className="h-6 w-28 sm:w-36 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-6 pr-1 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-xs"
             />
           </div>
 
-          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] px-1.5 h-6 text-[11px]">
-            <Filter size={10} className="text-[#576575] mr-1" />
+          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-1.5 h-6 text-[11px] rounded-xs">
+            <Filter size={10} className="text-[var(--text-muted)] mr-1" />
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer"
+              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer"
             >
               <option value="ALL">ALL TYPES</option>
               <option value="DOMAIN">DOMAINS</option>
@@ -178,21 +181,21 @@ export default function AttackSurfaceGraph({
             </select>
           </div>
 
-          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] h-6 px-1 gap-1">
+          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] h-6 px-1 gap-1 rounded-xs">
             <button
               type="button"
               onClick={() => setZoom((z) => Math.max(0.6, z - 0.15))}
-              className="text-[#8b9bb0] hover:text-[#e6edf3]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               title="Zoom out"
               aria-label="Zoom out graph"
             >
               <ZoomOut size={11} />
             </button>
-            <span className="text-[10px] text-[#576575]">{Math.round(zoom * 100)}%</span>
+            <span className="text-[10px] text-[var(--text-muted)]">{Math.round(zoom * 100)}%</span>
             <button
               type="button"
               onClick={() => setZoom((z) => Math.min(1.6, z + 0.15))}
-              className="text-[#8b9bb0] hover:text-[#e6edf3]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               title="Zoom in"
               aria-label="Zoom in graph"
             >
@@ -201,7 +204,7 @@ export default function AttackSurfaceGraph({
             <button
               type="button"
               onClick={() => setZoom(1)}
-              className="text-[#8b9bb0] hover:text-[#e6edf3] ml-1 pl-1 border-l border-[#1e2631]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] ml-1 pl-1 border-l border-[var(--border-muted)]"
               title="Reset zoom"
               aria-label="Reset graph zoom"
             >
@@ -212,7 +215,7 @@ export default function AttackSurfaceGraph({
       </div>
 
       {/* ─── Full-Width Canvas Container with Floating Overlay Inspector ─ */}
-      <div className="relative w-full overflow-hidden bg-[#080b0f] workstation-grid-bg">
+      <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)] workstation-grid-bg">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
           className="h-[520px] sm:h-[580px] w-full select-none transition-transform duration-150"
@@ -227,7 +230,7 @@ export default function AttackSurfaceGraph({
               refY="2"
               orient="auto"
             >
-              <polygon points="0 0, 6 2, 0 4" fill="#2a3749" />
+              <polygon points="0 0, 6 2, 0 4" fill="currentColor" className="text-[var(--border-technical)]" />
             </marker>
           </defs>
 
@@ -250,11 +253,11 @@ export default function AttackSurfaceGraph({
                   y1={from.y}
                   x2={to.x}
                   y2={to.y}
-                  stroke={isHighlighted ? '#58a6ff' : '#1e2631'}
-                  strokeWidth={isHighlighted ? 2 : 1}
+                  stroke={isHighlighted ? 'var(--accent-primary)' : 'var(--border-technical)'}
+                  strokeWidth={isHighlighted ? 2.5 : 1}
                   strokeDasharray={rel.type === 'located_approximately_at' ? '3 3' : undefined}
                   markerEnd="url(#arrowhead-retro)"
-                  opacity={isHighlighted ? 0.95 : 0.65}
+                  opacity={isHighlighted ? 1 : 0.65}
                 />
               </g>
             );
@@ -283,18 +286,18 @@ export default function AttackSurfaceGraph({
               >
                 <circle
                   r={radius}
-                  fill={style.bg}
-                  stroke={isSelected ? '#58a6ff' : isHovered ? '#ffffff' : style.border}
-                  strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
+                  className="fill-[var(--bg-panel)] transition-colors"
+                  stroke={isSelected ? 'var(--accent-primary)' : isHovered ? 'var(--text-primary)' : style.border}
+                  strokeWidth={isSelected ? 3 : isHovered ? 2.5 : 1.5}
                 />
 
                 {/* Node Label */}
                 <text
                   textAnchor="middle"
                   dy={isTargetDomain ? -28 : -18}
-                  fill={isSelected ? '#58a6ff' : isHovered ? '#ffffff' : style.text}
+                  fill={isSelected ? 'var(--accent-primary)' : isHovered ? 'var(--text-primary)' : style.text}
                   fontSize={isTargetDomain ? 11 : 9}
-                  fontWeight={isTargetDomain ? 700 : 500}
+                  fontWeight={isTargetDomain ? 700 : 600}
                   className="pointer-events-none font-mono"
                 >
                   {label}
@@ -304,10 +307,10 @@ export default function AttackSurfaceGraph({
                 <text
                   textAnchor="middle"
                   dy={3.5}
-                  fill="#ffffff"
+                  fill={style.border}
                   fontSize={isTargetDomain ? 9 : 7}
-                  fontWeight={700}
-                  className="pointer-events-none font-mono tracking-wider uppercase opacity-90"
+                  fontWeight={800}
+                  className="pointer-events-none font-mono tracking-wider uppercase"
                 >
                   {asset.type.slice(0, 3)}
                 </text>
@@ -317,24 +320,24 @@ export default function AttackSurfaceGraph({
         </svg>
 
         {filteredAssets.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center font-mono text-[#576575] text-xs">
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-[var(--text-muted)] text-xs">
             NO ASSETS MATCH CURRENT SEARCH
           </div>
         )}
 
         {/* ─── Floating Inspector Panel (Only Visible When a Node is Clicked) ── */}
         {activeAsset && (
-          <div className="absolute top-3 right-3 w-80 max-w-[calc(100%-24px)] bg-[#0c1015]/95 border border-[#58a6ff] shadow-2xl p-3.5 font-mono text-xs z-20 backdrop-blur-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-[#1e2631]">
-              <div className="flex items-center gap-1.5 font-bold text-[#e6edf3]">
-                <Info size={13} className="text-[#58a6ff]" />
+          <div className="absolute top-3 right-3 w-80 max-w-[calc(100%-24px)] bg-[var(--bg-panel)]/95 border border-[var(--accent-primary)] shadow-2xl p-3.5 font-mono text-xs z-20 backdrop-blur-xs rounded-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-muted)]">
+              <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
+                <Info size={13} className="text-[var(--accent-primary)]" />
                 <span>INSPECT: {activeAsset.type}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveAsset(null)}
                 aria-label="Close asset preview"
-                className="text-[#8b9bb0] hover:text-[#e6edf3] p-0.5 cursor-pointer"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -342,38 +345,38 @@ export default function AttackSurfaceGraph({
 
             <div className="mt-2.5 space-y-2">
               <div>
-                <div className="text-[10px] text-[#576575] uppercase">VALUE:</div>
-                <div className="text-[#e6edf3] font-semibold break-all bg-[#10151b] border border-[#1e2631] p-1.5 mt-0.5 select-all">
+                <div className="text-[10px] text-[var(--text-muted)] uppercase">VALUE:</div>
+                <div className="text-[var(--text-primary)] font-semibold break-all bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-1.5 mt-0.5 select-all rounded-xs">
                   {activeAsset.value}
                 </div>
               </div>
 
               <div>
-                <div className="text-[10px] text-[#576575] uppercase">CONNECTED RELATIONSHIPS ({activeRelationships.length}):</div>
+                <div className="text-[10px] text-[var(--text-muted)] uppercase">CONNECTED RELATIONSHIPS ({activeRelationships.length}):</div>
                 {activeRelationships.length > 0 ? (
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1 mt-1">
                     {activeRelationships.map((r, i) => {
                       const targetId = r.fromAssetId === activeAsset.id ? r.toAssetId : r.fromAssetId;
                       const targetAsset = assets.find((a) => a.id === targetId);
                       return (
-                        <div key={i} className="text-[10px] p-1.5 bg-[#10151b] border border-[#1e2631] truncate">
-                          <span className="text-[#8b9bb0]">{r.type.replace(/_/g, ' ')}: </span>
-                          <span className="text-[#e6edf3] font-semibold">{targetAsset?.value || targetId}</span>
+                        <div key={i} className="text-[10px] p-1.5 bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] truncate rounded-xs">
+                          <span className="text-[var(--text-secondary)]">{r.type.replace(/_/g, ' ')}: </span>
+                          <span className="text-[var(--text-primary)] font-semibold">{targetAsset?.value || targetId}</span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-[10px] text-[#576575] mt-0.5">No direct relationships mapped</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5">No direct relationships mapped</div>
                 )}
               </div>
             </div>
 
-            <div className="pt-2 mt-2 border-t border-[#1e2631] flex justify-between items-center text-[10px] text-[#576575]">
+            <div className="pt-2 mt-2 border-t border-[var(--border-muted)] flex justify-between items-center text-[10px] text-[var(--text-muted)]">
               <span>[ESC / X TO CLOSE]</span>
               <button
                 onClick={() => onSelectAsset?.(activeAsset)}
-                className="text-[#58a6ff] hover:underline"
+                className="text-[var(--accent-primary)] hover:underline cursor-pointer"
               >
                 VIEW FULL RAW DATA
               </button>
@@ -383,22 +386,22 @@ export default function AttackSurfaceGraph({
       </div>
 
       {/* ─── Legend Bar ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1e2631] bg-[#0c1015] px-3.5 py-1.5 font-mono text-[10px]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-3.5 py-1.5 font-mono text-[10px]">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[#576575]">NODE TYPES:</span>
+          <span className="text-[var(--text-muted)]">NODE TYPES:</span>
           {Object.entries(TYPE_COLORS)
             .slice(0, 8)
             .map(([type, style]) => (
               <div key={type} className="flex items-center gap-1">
                 <span
-                  className="h-1.5 w-1.5"
+                  className="h-1.5 w-1.5 rounded-full"
                   style={{ backgroundColor: style.border }}
                 />
-                <span className="text-[#8b9bb0]">{type}</span>
+                <span className="text-[var(--text-secondary)]">{type}</span>
               </div>
             ))}
         </div>
-        <span className="text-[#576575]">[CLICK ANY NODE TO INSPECT ATTRIBUTES]</span>
+        <span className="text-[var(--text-muted)]">[CLICK ANY NODE TO INSPECT ATTRIBUTES]</span>
       </div>
     </div>
   );

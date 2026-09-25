@@ -177,14 +177,14 @@ export default function InfrastructureMap({
   }, [geoPoints, onSelectAsset]);
 
   return (
-    <div className="console-panel">
+    <div className="console-panel rounded-xs">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
       <div className="dossier-header">
         <div>
           <span className="dossier-num">[{sectionNumber}]</span>
           <span>INFRASTRUCTURE DISTRIBUTION</span>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-[#8b9bb0]">
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
           <span>{geoPoints.length} GEOLOCATED ENDPOINT{geoPoints.length !== 1 ? 'S' : ''}</span>
           <span className="console-tag">REGISTRY_GEOIP</span>
         </div>
@@ -192,11 +192,11 @@ export default function InfrastructureMap({
 
       {/* ─── Map Canvas ─────────────────────────────────────────────── */}
       <div className="relative">
-        <div ref={mapContainerRef} className="h-64 sm:h-72 w-full bg-[#080b0f]" />
+        <div ref={mapContainerRef} className="h-64 sm:h-72 w-full bg-[var(--bg-canvas)]" />
 
         {/* Graceful Fallback Overlay if no IPs discovered */}
         {geoPoints.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#080b0f]/90 p-4 text-center font-mono text-xs text-[#576575]">
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-panel)]/90 p-4 text-center font-mono text-xs text-[var(--text-muted)]">
             NO PUBLIC IP ADDRESSES WITH REGISTRY GEOLOCATION DISCOVERED
           </div>
         )}
@@ -209,38 +209,38 @@ export default function InfrastructureMap({
       </div>
 
       {/* ─── Target Infrastructure Dossier ──────────────────────────── */}
-      <div className="border-t border-[#1e2631] bg-[#0c1015] p-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#8b9bb0] mb-2">
+      <div className="border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-3">
+        <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
           TARGET INFRASTRUCTURE SUMMARY
         </div>
 
         {geoPoints.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 font-mono text-xs">
             {geoPoints.slice(0, 4).map((pt, idx) => (
-              <div key={idx} className="bg-[#10151b] border border-[#1e2631] p-2 rounded-none">
-                <div className="text-[10px] text-[#576575] uppercase">ENDPOINT // {pt.ip}</div>
-                <div className="text-[#e6edf3] font-semibold truncate mt-0.5">
+              <div key={idx} className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2 rounded-xs">
+                <div className="text-[10px] text-[var(--text-muted)] uppercase">ENDPOINT // {pt.ip}</div>
+                <div className="text-[var(--text-primary)] font-semibold truncate mt-0.5">
                   {[pt.city, pt.country].filter(Boolean).join(', ') || 'Regional Datacenter'}
                 </div>
-                <div className="text-[11px] text-[#3fb950] truncate">{pt.asn || 'ASN Unassigned'}</div>
-                <div className="text-[10px] text-[#8b9bb0] truncate">{pt.organization || 'Hosting Provider'}</div>
+                <div className="text-[11px] text-[#16a34a] dark:text-[#2ee59d] truncate">{pt.asn || 'ASN Unassigned'}</div>
+                <div className="text-[10px] text-[var(--text-secondary)] truncate">{pt.organization || 'Hosting Provider'}</div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="font-mono text-xs text-[#576575]">
+          <div className="font-mono text-xs text-[var(--text-muted)]">
             No public endpoints available for regional network routing analysis.
           </div>
         )}
       </div>
 
       {/* ─── Disclaimer Footer ──────────────────────────────────────── */}
-      <div className="border-t border-[#1e2631] bg-[#080b0f] px-3 py-1.5 font-mono text-[10px] text-[#576575] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+      <div className="border-t border-[var(--border-muted)] bg-[var(--bg-panel-subtle)] px-3 py-1.5 font-mono text-[10px] text-[var(--text-muted)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <span>
-          <strong className="text-[#8b9bb0]">DISCLAIMER:</strong> Coordinates designate approximate network/datacenter infrastructure from registry records, <em>not an individual or physical building location</em>.
+          <strong className="text-[var(--text-secondary)]">DISCLAIMER:</strong> Coordinates designate approximate network/datacenter infrastructure from registry records, <em>not an individual or physical building location</em>.
         </span>
-        <span className="text-[#8b9bb0]">
-          &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-[#e6edf3]">OpenStreetMap</a> contributors
+        <span className="text-[var(--text-secondary)]">
+          &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-[var(--text-primary)]">OpenStreetMap</a> contributors
         </span>
       </div>
     </div>

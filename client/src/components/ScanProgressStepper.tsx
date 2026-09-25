@@ -26,10 +26,11 @@ export default function ScanProgressStepper({
   onSelectCategory,
 }: ScanProgressStepperProps) {
   return (
-    <div className="bg-[#10151b] border border-[#1e2631] p-2 overflow-x-auto">
+    <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-2 overflow-x-auto rounded-xs">
       <div className="flex items-center min-w-[680px] gap-2">
-        <div className="font-mono text-[10px] font-bold text-[#8b9bb0] uppercase pr-2 border-r border-[#1e2631] shrink-0">
-          SYS // PIPELINE
+        <div className="font-mono text-[10px] font-bold text-[var(--text-secondary)] uppercase pr-2.5 border-r border-[var(--border-muted)] shrink-0 flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)]" />
+          <span>SYS // PIPELINE</span>
         </div>
 
         <div className="grid grid-cols-7 gap-1.5 flex-1 font-mono text-xs">
@@ -38,21 +39,21 @@ export default function ScanProgressStepper({
             const isSelected = activeCategory === item.key;
 
             let symbol = '·';
-            let symbolColor = 'text-[#576575]';
-            let bgClass = 'bg-[#0c1015] border-[#1e2631]';
+            let symbolColor = 'text-[var(--text-muted)]';
+            let bgClass = 'bg-[var(--bg-panel-inset)] border-[var(--border-muted)] text-[var(--text-secondary)]';
 
             if (status === 'completed') {
               symbol = '✓';
-              symbolColor = 'text-[#3fb950]';
-              bgClass = 'bg-[#0c1015] border-[#2ea043]/40';
+              symbolColor = 'text-[#16a34a] dark:text-[#2ee59d]';
+              bgClass = 'bg-[var(--bg-panel-subtle)] border-[#16a34a]/30 dark:border-[#2ee59d]/30 text-[var(--text-primary)]';
             } else if (status === 'running') {
               symbol = '►';
-              symbolColor = 'text-[#58a6ff] animate-pulse';
-              bgClass = 'bg-[#15273b] border-[#388bfd]';
+              symbolColor = 'text-[var(--accent-primary)] animate-pulse';
+              bgClass = 'bg-[var(--accent-active-bg)] border-[var(--accent-primary)] text-[var(--accent-primary)] font-bold';
             } else if (status === 'failed') {
               symbol = '!';
-              symbolColor = 'text-[#d29922]';
-              bgClass = 'bg-[#0c1015] border-[#bb8009]/40';
+              symbolColor = 'text-[#d97706] dark:text-[#f59e0b]';
+              bgClass = 'bg-[var(--bg-panel-inset)] border-[#d97706]/40 text-[var(--text-secondary)]';
             }
 
             return (
@@ -60,16 +61,16 @@ export default function ScanProgressStepper({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectCategory?.(item.key)}
-                className={`flex items-center justify-between px-2 py-1 border text-left cursor-pointer transition ${bgClass} ${
-                  isSelected ? 'border-[#58a6ff] bg-[#151c23]' : 'hover:bg-[#151c23]'
+                className={`flex items-center justify-between px-2 py-1 border text-left cursor-pointer transition rounded-xs ${bgClass} ${
+                  isSelected ? 'ring-1 ring-[var(--accent-primary)] border-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'hover:border-[var(--accent-primary)]'
                 }`}
                 title={`Pipeline Stage: ${item.name} (${status})`}
               >
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-[#576575]">[{item.id}]</span>
-                  <span className="font-medium text-[#e6edf3] text-[11px] truncate">{item.name}</span>
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">[{item.id}]</span>
+                  <span className="font-semibold text-[11px] truncate">{item.name}</span>
                 </div>
-                <span className={`font-bold ${symbolColor} text-xs ml-1`}>{symbol}</span>
+                <span className={`font-bold ${symbolColor} text-xs ml-1 shrink-0`}>{symbol}</span>
               </button>
             );
           })}

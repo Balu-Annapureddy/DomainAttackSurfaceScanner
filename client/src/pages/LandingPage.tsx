@@ -122,7 +122,7 @@ export default function LandingPage() {
 
             {/* Concise Authorized Use Notice */}
             <div id="auth-notice" className="font-mono text-[11px] text-[var(--text-secondary)] flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[#d29922] font-semibold">⚠ AUTHORIZATION:</span>
+              <span className="text-amber-500 font-semibold">⚠ AUTHORIZATION:</span>
               <span>By initiating a scan, you confirm that you own or are explicitly authorized to assess the target domain.</span>
               <span className="text-[var(--text-muted)]">|</span>
               <Link to="/terms" className="text-[var(--accent-primary)] hover:underline">
@@ -136,7 +136,7 @@ export default function LandingPage() {
           </form>
 
           {error && (
-            <div className="mt-3 p-2 bg-[var(--bg-panel-inset)] border border-[#da3633] text-[#f85149] font-mono text-xs flex items-center gap-2">
+            <div className="mt-3 p-2 bg-[var(--bg-panel-inset)] border border-red-500 text-red-500 font-mono text-xs flex items-center gap-2">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               <span>{error}</span>
             </div>

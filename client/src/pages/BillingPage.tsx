@@ -82,7 +82,7 @@ export default function BillingPage() {
         {/* 2. Fraud & Scams Warning */}
         <section className="space-y-3 font-mono">
           <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-            <ShieldAlert size={14} className="text-[#ef4444]" />
+            <ShieldAlert size={14} className="text-red-500" />
             <span>2. FRAUD WARNING &amp; THIRD-PARTY CHARGES</span>
           </h2>
           <div className="console-panel p-4 space-y-2 font-sans text-xs text-[var(--text-secondary)] leading-relaxed">

@@ -352,4 +352,50 @@ Verification & Quality Gates:
 - Client Bundle: Vite production build succeeds with 0 errors.
 - Lint: 0 errors across client and server.
 
+---
+
+## SPRINT: UI TRANSFORMATION — RETRO NETWORK INTELLIGENCE WORKSTATION
+Date: 2026-09-25  
+Status: COMPLETED  
+
+Overview:
+Transformed the entire frontend into a cohesive, high-density "Retro Network Intelligence Workstation" based strictly on the approved design system and reference specifications. Maintained dual-theme visual parity between Light mode (crisp pale-blue technical workstation) and Dark mode (charcoal/phosphor-green workstation). Fully preserved all real live data integrations, scan engine contracts, APIs, quotas, auth, and legal routes without fake data, fake reviews, or fabricated claims.
+
+Key Implementations & Redesigned Screens:
+1. **Visual Token System & CSS Foundation (`client/src/index.css`)**:
+   - Implemented strict CSS custom properties for Light Mode (`--bg-canvas: #f8fafc`, `--bg-panel: #ffffff`, `--bg-panel-subtle: #f0f7ff`, `--bg-panel-inset: #eef6ff`, `--border-technical: #bae6fd`, `--border-muted: #e2e8f0`, `--text-primary: #0f172a`, `--text-secondary: #475569`, `--text-muted: #64748b`, `--accent-primary: #0ea5e9`, `--accent-hover: #0284c7`, `--accent-active-bg: #e0f2fe`).
+   - Implemented strict CSS custom properties for Dark Mode (`--bg-canvas: #0b0f10`, `--bg-panel: #131b1e`, `--bg-panel-subtle: #162425`, `--bg-panel-inset: #0c1214`, `--border-technical: #1d332e`, `--border-muted: #1e293b`, `--text-primary: #e2e8f0`, `--text-secondary: #8ca39e`, `--text-muted: #64748b`, `--accent-primary: #2ee59d`, `--accent-hover: #22c55e`, `--accent-active-bg: rgba(46, 229, 157, 0.12)`).
+   - Designed workstation utility classes: `.console-panel`, `.console-panel-inset`, `.dossier-header`, `.dossier-num`, `.telemetry-grid`, `.console-table`, `.console-btn`, `.console-btn-primary`, `.console-btn-phosphor`, `.console-tag`, and `.leaflet-dark-tiles`.
+2. **Workstation Navigation (`WorkstationNav.tsx`)**:
+   - Ultra-compact 42px header with strict 1px technical borders.
+   - Status indicators: `DAS // WORKSTATION` and `SESSION // PASSIVE-EXTERNAL • STATUS // ONLINE`.
+   - Real-time sliding-window quota pill showing remaining queries/hour and account state.
+   - Dual-theme toggle seamlessly toggling between Light and Dark palettes.
+3. **Scan Execution & Telemetry Strip (`ScanOverviewCard.tsx` & `ScanProgressStepper.tsx`)**:
+   - Pipeline stepper displaying all 6 probe stages (`RESOLVE`, `DISCOVER`, `CORRELATE`, `OBSERVE`, `ASSESS`, `REPORT`) with active, completed, running, and warning states adapting to theme tokens.
+   - Overview card featuring target identity, 6-metric telemetry strip (discovered assets, relationships, findings, completeness, hygiene score, reconnaissance scope), observable hygiene bar, defense check pills, evidentiary breakdown, and collapsible warnings.
+4. **Attack Surface Relationship Graph (`AttackSurfaceGraph.tsx`)**:
+   - Centered symmetrical canvas layout (1300x580) with root domain positioned at `(650, 290)` and connected nodes distributed radially across both left and right flanks.
+   - Dual-theme SVG rendering with high-contrast borders and connection links.
+   - Floating HUD inspector panel rendering asset properties, relationships, and findings on demand.
+5. **Infrastructure Map & Routing Chains (`InfrastructureMap.tsx` & `AssetChainVisualizer.tsx`)**:
+   - High-density map container with Leaflet dark tile filter and approximate network infrastructure disclosure.
+   - Structured routing chains rendering hops from root domain through subdomains to resolved IP endpoints and hosting ASNs.
+6. **Data Presentation & Findings (`AssetsInventoryTable.tsx` & `FindingsSection.tsx`)**:
+   - Monospace data tables for hostnames, IP addresses, ports, ASNs, and timestamps with responsive horizontal scrolling.
+   - Severity-coded findings with epistemological guidance bar, remediation advice, and evidence details.
+7. **Printable Intelligence Dossier (`ReportPage.tsx`)**:
+   - Print-optimized intelligence dossier with 2-column layout, executive telemetry, transport security, perimeter observations, and methodology statement.
+8. **Scan Differencing & Drift Engine (`ComparisonPage.tsx`)**:
+   - Redesigned with token-based score delta pills, certificate rotation alerts, DNS drift matrices, and deterministic asset diff inventories.
+9. **Universal Theme Parity Across All Pages**:
+   - `LandingPage.tsx`, `HistoryPage.tsx`, `LoginPage.tsx`, `RegisterPage.tsx`, `TermsPage.tsx`, `SecurityPage.tsx`, `PrivacyPage.tsx`, `CookiePage.tsx`, `BillingPage.tsx`, `GlossaryModal.tsx`, `AssetDetailModal.tsx`, and `IntelligenceTimeline.tsx` all fully adapted to use CSS custom properties with zero hardcoded dark styling.
+
+Verification & Quality Gates:
+- Automated Tests: **67/67 passing** across 4 test suites (`scanner.test.ts`, `ssrfSecurity.test.ts`, `authAndQuota.test.ts`, `realDomainE2E.test.ts`).
+- Server Compilation: `tsc` compiles with 0 errors.
+- Client Bundle: Vite production build succeeds with 0 errors (`dist/index.html`, `dist/assets/*.css`, `dist/assets/*.js`).
+- Lint: 0 errors across client (`oxlint`) and server (`eslint`).
+
+
 

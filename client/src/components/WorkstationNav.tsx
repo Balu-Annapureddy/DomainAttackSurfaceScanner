@@ -17,20 +17,21 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
   return (
     <nav
       aria-label="Workstation Top Navigation"
-      className="border-b border-[#1d332e] bg-[var(--bg-panel)] px-4 py-2 font-mono text-xs transition-colors duration-150"
+      className="border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-3 sm:px-4 py-1.5 font-mono text-xs transition-colors duration-150"
     >
-      <div className="mx-auto max-w-[1720px] flex flex-wrap items-center justify-between gap-3">
-        {/* Brand & Terminal Identifier */}
-        <div className="flex items-center gap-3">
+      <div className="mx-auto max-w-[1720px] flex flex-wrap items-center justify-between gap-2.5">
+        {/* Brand & Workstation Status Identifier */}
+        <div className="flex items-center gap-2.5">
           <Link
             to="/"
-            className="flex items-center gap-2 font-bold tracking-wider text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors"
+            className="flex items-center gap-1.5 font-bold tracking-wider text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors"
           >
-            <Shield size={14} className="text-[var(--accent-primary)]" />
-            <span>DOMAIN ATTACK SURFACE SCANNER</span>
+            <Shield size={13} className="text-[var(--accent-primary)]" />
+            <span className="font-extrabold">DAS // WORKSTATION</span>
           </Link>
-          <span className="hidden lg:inline text-[10px] text-[var(--text-muted)] border-l border-[var(--border-muted)] pl-2">
-            INTELLIGENCE WORKSTATION v2.0
+          <span className="hidden md:inline-flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] border-l border-[var(--border-muted)] pl-2.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#16a34a] dark:bg-[#2ee59d] animate-pulse" />
+            <span>SESSION // PASSIVE-EXTERNAL &bull; STATUS // ONLINE</span>
           </span>
         </div>
 

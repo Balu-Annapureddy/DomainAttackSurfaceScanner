@@ -66,12 +66,12 @@ export default function ComparisonPage() {
         )}
 
         {error && (
-          <div className="console-panel-inset border-l-2 border-l-[#f85149] p-4 text-xs text-[#f85149] space-y-2">
+          <div className="console-panel-inset border-l-2 border-l-red-500 p-4 text-xs text-red-500 space-y-2">
             <div className="flex items-center gap-2 font-bold">
               <AlertTriangle size={15} />
               <span>[COMPARISON ENGINE ERROR]: {error}</span>
             </div>
-            <Link to="/history" className="text-[#58a6ff] hover:underline block pt-1">
+            <Link to="/history" className="text-[var(--accent-primary)] hover:underline block pt-1">
               [Return to Scan History]
             </Link>
           </div>
@@ -81,26 +81,26 @@ export default function ComparisonPage() {
           <div className="space-y-6">
             {/* ─── Header Banner ───────────────────────────────────── */}
             <div className="console-panel p-5 space-y-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#1f2735] pb-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[var(--border-technical)] pb-4">
                 <div>
                   <div className="flex items-center gap-2 font-mono text-xs">
                     <span className="console-tag console-tag-cyan">
                       <GitCompare size={12} /> SCAN_DIFFERENCING_ENGINE
                     </span>
                   </div>
-                  <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#e6edf3]">
+                  <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
                     {comparison.domain}
                   </h1>
-                  <p className="mt-0.5 text-xs text-[#9aa5b8] font-sans">
+                  <p className="mt-0.5 text-xs text-[var(--text-secondary)] font-sans">
                     Deterministic diff calculating asset additions/removals, certificate rotation, and hygiene drift.
                   </p>
                 </div>
 
                 {/* Score Delta Pill */}
-                <div className="flex items-center gap-4 console-panel-inset p-3 border border-[#1f2735]">
+                <div className="flex items-center gap-4 console-panel-inset p-3 border border-[var(--border-muted)]">
                   <div>
-                    <span className="text-[10px] text-[#626e82] block">BASELINE SCORE</span>
-                    <span className="text-xl font-bold text-[#9aa5b8]">
+                    <span className="text-[10px] text-[var(--text-muted)] block">BASELINE SCORE</span>
+                    <span className="text-xl font-bold text-[var(--text-secondary)]">
                       {comparison.baselineScore ?? '—'}
                     </span>
                   </div>
@@ -119,12 +119,12 @@ export default function ComparisonPage() {
                         <Minus size={11} /> 0
                       </span>
                     )}
-                    <span className="text-[9px] text-[#626e82] block mt-0.5">DELTA</span>
+                    <span className="text-[9px] text-[var(--text-muted)] block mt-0.5">DELTA</span>
                   </div>
 
                   <div>
-                    <span className="text-[10px] text-[#626e82] block">TARGET SCORE</span>
-                    <span className="text-xl font-bold text-[#e6edf3]">
+                    <span className="text-[10px] text-[var(--text-muted)] block">TARGET SCORE</span>
+                    <span className="text-xl font-bold text-[var(--text-primary)]">
                       {comparison.currentScore ?? '—'}
                     </span>
                   </div>
@@ -135,40 +135,40 @@ export default function ComparisonPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
                 <div className="console-panel-inset p-3 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#626e82]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                       BASELINE SCAN (T0)
                     </span>
                     <Link
                       to={`/scan/${comparison.baselineScanId}`}
-                      className="text-[#58a6ff] hover:underline text-[10px]"
+                      className="text-[var(--accent-primary)] hover:underline text-[10px]"
                     >
                       [VIEW SCAN]
                     </Link>
                   </div>
-                  <div className="flex items-center gap-1 text-[#e6edf3]">
-                    <Calendar size={11} className="text-[#626e82]" />
+                  <div className="flex items-center gap-1 text-[var(--text-primary)]">
+                    <Calendar size={11} className="text-[var(--text-muted)]" />
                     <span>{new Date(comparison.baselineCreatedAt).toISOString().replace('T', ' ').slice(0, 19)} UTC</span>
                   </div>
-                  <span className="text-[10px] text-[#626e82] block truncate">{comparison.baselineScanId}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] block truncate">{comparison.baselineScanId}</span>
                 </div>
 
                 <div className="console-panel-inset p-3 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#58a6ff]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-primary)]">
                       TARGET SCAN (T1)
                     </span>
                     <Link
                       to={`/scan/${comparison.currentScanId}`}
-                      className="text-[#58a6ff] hover:underline text-[10px]"
+                      className="text-[var(--accent-primary)] hover:underline text-[10px]"
                     >
                       [VIEW SCAN]
                     </Link>
                   </div>
-                  <div className="flex items-center gap-1 text-[#e6edf3]">
-                    <Calendar size={11} className="text-[#626e82]" />
+                  <div className="flex items-center gap-1 text-[var(--text-primary)]">
+                    <Calendar size={11} className="text-[var(--text-muted)]" />
                     <span>{new Date(comparison.currentCreatedAt).toISOString().replace('T', ' ').slice(0, 19)} UTC</span>
                   </div>
-                  <span className="text-[10px] text-[#626e82] block truncate">{comparison.currentScanId}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] block truncate">{comparison.currentScanId}</span>
                 </div>
               </div>
             </div>
@@ -176,35 +176,35 @@ export default function ComparisonPage() {
             {/* ─── Metric Blocks ───────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
               <div className="console-panel-inset p-3.5 space-y-1">
-                <span className="text-[10px] text-[#9aa5b8] block">ADDED ASSETS</span>
-                <span className="text-xl font-bold text-[#3fb950] block">
+                <span className="text-[10px] text-[var(--text-secondary)] block">ADDED ASSETS</span>
+                <span className="text-xl font-bold text-emerald-500 block">
                   +{comparison.addedAssets.length}
                 </span>
-                <span className="text-[10px] text-[#626e82] block">Newly discovered</span>
+                <span className="text-[10px] text-[var(--text-muted)] block">Newly discovered</span>
               </div>
 
               <div className="console-panel-inset p-3.5 space-y-1">
-                <span className="text-[10px] text-[#9aa5b8] block">REMOVED ASSETS</span>
-                <span className="text-xl font-bold text-[#f85149] block">
+                <span className="text-[10px] text-[var(--text-secondary)] block">REMOVED ASSETS</span>
+                <span className="text-xl font-bold text-red-500 block">
                   -{comparison.removedAssets.length}
                 </span>
-                <span className="text-[10px] text-[#626e82] block">Decommissioned</span>
+                <span className="text-[10px] text-[var(--text-muted)] block">Decommissioned</span>
               </div>
 
               <div className="console-panel-inset p-3.5 space-y-1">
-                <span className="text-[10px] text-[#9aa5b8] block">NEW FINDINGS</span>
-                <span className="text-xl font-bold text-[#d29922] block">
+                <span className="text-[10px] text-[var(--text-secondary)] block">NEW FINDINGS</span>
+                <span className="text-xl font-bold text-amber-500 block">
                   +{comparison.newFindings.length}
                 </span>
-                <span className="text-[10px] text-[#626e82] block">Introduced issues</span>
+                <span className="text-[10px] text-[var(--text-muted)] block">Introduced issues</span>
               </div>
 
               <div className="console-panel-inset p-3.5 space-y-1">
-                <span className="text-[10px] text-[#9aa5b8] block">RESOLVED FINDINGS</span>
-                <span className="text-xl font-bold text-[#58a6ff] block">
+                <span className="text-[10px] text-[var(--text-secondary)] block">RESOLVED FINDINGS</span>
+                <span className="text-xl font-bold text-[var(--accent-primary)] block">
                   -{comparison.resolvedFindings.length}
                 </span>
-                <span className="text-[10px] text-[#626e82] block">Remediated issues</span>
+                <span className="text-[10px] text-[var(--text-muted)] block">Remediated issues</span>
               </div>
             </div>
 
@@ -212,9 +212,9 @@ export default function ComparisonPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 text-xs">
               {/* Certificate Drift */}
               <div className="console-panel p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                  <div className="flex items-center gap-1.5 font-bold text-[#e6edf3]">
-                    <Lock size={13} className="text-[#8a63d2]" />
+                <div className="flex items-center justify-between border-b border-[var(--border-technical)] pb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
+                    <Lock size={13} className="text-purple-400" />
                     <span>CERTIFICATE ROTATION & IDENTITY</span>
                   </div>
                   {comparison.certificateDiff.changed ? (
@@ -228,17 +228,17 @@ export default function ComparisonPage() {
 
                 <div className="space-y-2">
                   <div className="console-panel-inset p-2.5">
-                    <span className="text-[10px] text-[#626e82] block">SHA-256 FINGERPRINT:</span>
+                    <span className="text-[10px] text-[var(--text-muted)] block">SHA-256 FINGERPRINT:</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                       <div className="truncate">
-                        <span className="text-[10px] text-[#9aa5b8] block">Baseline:</span>
-                        <span className="text-[10px] text-[#626e82] truncate block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">Baseline:</span>
+                        <span className="text-[10px] text-[var(--text-muted)] truncate block">
                           {comparison.certificateDiff.baselineFingerprint || 'None observed'}
                         </span>
                       </div>
                       <div className="truncate">
-                        <span className="text-[10px] text-[#9aa5b8] block">Current:</span>
-                        <span className="text-[10px] text-[#58a6ff] truncate block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">Current:</span>
+                        <span className="text-[10px] text-[var(--accent-primary)] truncate block">
                           {comparison.certificateDiff.currentFingerprint || 'None observed'}
                         </span>
                       </div>
@@ -247,14 +247,14 @@ export default function ComparisonPage() {
 
                   <div className="console-panel-inset p-2.5 flex justify-between">
                     <div>
-                      <span className="text-[10px] text-[#626e82] block">Baseline Valid To:</span>
-                      <span className="text-[11px] text-[#9aa5b8]">
+                      <span className="text-[10px] text-[var(--text-muted)] block">Baseline Valid To:</span>
+                      <span className="text-[11px] text-[var(--text-secondary)]">
                         {comparison.certificateDiff.baselineValidTo || 'N/A'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#626e82] block">Current Valid To:</span>
-                      <span className="text-[11px] text-[#58a6ff]">
+                      <span className="text-[10px] text-[var(--text-muted)] block">Current Valid To:</span>
+                      <span className="text-[11px] text-[var(--accent-primary)]">
                         {comparison.certificateDiff.currentValidTo || 'N/A'}
                       </span>
                     </div>
@@ -264,9 +264,9 @@ export default function ComparisonPage() {
 
               {/* DNS Drift */}
               <div className="console-panel p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                  <div className="flex items-center gap-1.5 font-bold text-[#e6edf3]">
-                    <Globe size={13} className="text-[#58a6ff]" />
+                <div className="flex items-center justify-between border-b border-[var(--border-technical)] pb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
+                    <Globe size={13} className="text-[var(--accent-primary)]" />
                     <span>DNS & EMAIL SECURITY DRIFT</span>
                   </div>
                   {comparison.dnsDiff.changed ? (
@@ -280,20 +280,20 @@ export default function ComparisonPage() {
 
                 <div className="space-y-2">
                   <div className="console-panel-inset p-2.5 flex justify-between">
-                    <span className="text-[#9aa5b8]">SPF Policy Drift:</span>
-                    <span className={comparison.dnsDiff.baselineSpf !== comparison.dnsDiff.currentSpf ? 'text-[#d29922] font-bold' : 'text-[#626e82]'}>
+                    <span className="text-[var(--text-secondary)]">SPF Policy Drift:</span>
+                    <span className={comparison.dnsDiff.baselineSpf !== comparison.dnsDiff.currentSpf ? 'text-amber-500 font-bold' : 'text-[var(--text-muted)]'}>
                       {comparison.dnsDiff.baselineSpf !== comparison.dnsDiff.currentSpf ? 'MODIFIED' : 'NO CHANGE'}
                     </span>
                   </div>
                   <div className="console-panel-inset p-2.5 flex justify-between">
-                    <span className="text-[#9aa5b8]">DMARC Policy Drift:</span>
-                    <span className={comparison.dnsDiff.baselineDmarc !== comparison.dnsDiff.currentDmarc ? 'text-[#d29922] font-bold' : 'text-[#626e82]'}>
+                    <span className="text-[var(--text-secondary)]">DMARC Policy Drift:</span>
+                    <span className={comparison.dnsDiff.baselineDmarc !== comparison.dnsDiff.currentDmarc ? 'text-amber-500 font-bold' : 'text-[var(--text-muted)]'}>
                       {comparison.dnsDiff.baselineDmarc !== comparison.dnsDiff.currentDmarc ? 'MODIFIED' : 'NO CHANGE'}
                     </span>
                   </div>
                   <div className="console-panel-inset p-2.5 flex justify-between">
-                    <span className="text-[#9aa5b8]">Nameservers Drift:</span>
-                    <span className={comparison.dnsDiff.addedNameservers.length > 0 || comparison.dnsDiff.removedNameservers.length > 0 ? 'text-[#d29922] font-bold' : 'text-[#626e82]'}>
+                    <span className="text-[var(--text-secondary)]">Nameservers Drift:</span>
+                    <span className={comparison.dnsDiff.addedNameservers.length > 0 || comparison.dnsDiff.removedNameservers.length > 0 ? 'text-amber-500 font-bold' : 'text-[var(--text-muted)]'}>
                       {comparison.dnsDiff.addedNameservers.length > 0 || comparison.dnsDiff.removedNameservers.length > 0 ? 'MODIFIED' : 'NO CHANGE'}
                     </span>
                   </div>
@@ -303,24 +303,24 @@ export default function ComparisonPage() {
 
             {/* ─── Detailed Asset Additions / Deletions ─────────────── */}
             <div className="console-panel p-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-[#1f2735] pb-2">
-                <span className="font-bold text-[#e6edf3]">ASSET DELTA INVENTORY</span>
+              <div className="flex items-center justify-between border-b border-[var(--border-technical)] pb-2">
+                <span className="font-bold text-[var(--text-primary)]">ASSET DELTA INVENTORY</span>
                 <span className="console-tag">DETERMINISTIC_DIFF</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Added Assets */}
                 <div className="space-y-2">
-                  <span className="text-[10px] text-[#3fb950] font-bold block">
+                  <span className="text-[10px] text-emerald-500 font-bold block">
                     + NEWLY DISCOVERED ENTITIES ({comparison.addedAssets.length})
                   </span>
                   {comparison.addedAssets.length === 0 ? (
-                    <p className="text-[#626e82] text-[11px]">No new assets detected.</p>
+                    <p className="text-[var(--text-muted)] text-[11px]">No new assets detected.</p>
                   ) : (
                     <div className="space-y-1">
                       {comparison.addedAssets.map((a) => (
                         <div key={a.id} className="console-panel-inset p-2 flex items-center justify-between">
-                          <span className="text-[#e6edf3] font-bold truncate max-w-[240px]">{a.value}</span>
+                          <span className="text-[var(--text-primary)] font-bold truncate max-w-[240px]">{a.value}</span>
                           <span className="console-tag text-[9px]">{a.type}</span>
                         </div>
                       ))}
@@ -330,16 +330,16 @@ export default function ComparisonPage() {
 
                 {/* Removed Assets */}
                 <div className="space-y-2">
-                  <span className="text-[10px] text-[#f85149] font-bold block">
+                  <span className="text-[10px] text-red-500 font-bold block">
                     - DECOMMISSIONED / UNRESOLVED ENTITIES ({comparison.removedAssets.length})
                   </span>
                   {comparison.removedAssets.length === 0 ? (
-                    <p className="text-[#626e82] text-[11px]">No decommissioned assets detected.</p>
+                    <p className="text-[var(--text-muted)] text-[11px]">No decommissioned assets detected.</p>
                   ) : (
                     <div className="space-y-1">
                       {comparison.removedAssets.map((a) => (
                         <div key={a.id} className="console-panel-inset p-2 flex items-center justify-between">
-                          <span className="text-[#9aa5b8] line-through truncate max-w-[240px]">{a.value}</span>
+                          <span className="text-[var(--text-secondary)] line-through truncate max-w-[240px]">{a.value}</span>
                           <span className="console-tag text-[9px]">{a.type}</span>
                         </div>
                       ))}

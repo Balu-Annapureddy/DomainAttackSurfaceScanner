@@ -130,11 +130,11 @@ export default function ScanPage() {
 
   if (!scanId || error || (!scan && !loading)) {
     return (
-      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center p-4 font-mono">
+      <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-mono transition-colors">
         <div className="max-w-md console-panel p-6 text-center space-y-3">
-          <XCircle size={28} className="mx-auto text-[#f85149]" />
-          <h1 className="text-sm font-bold">SCAN RECORD UNAVAILABLE</h1>
-          <p className="text-xs text-[#8b9bb0] leading-relaxed">
+          <XCircle size={28} className="mx-auto text-red-500" />
+          <h1 className="text-sm font-bold tracking-wider">SCAN RECORD UNAVAILABLE</h1>
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
             {error ?? 'The requested scan could not be found or has expired from memory.'}
           </p>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
@@ -142,7 +142,7 @@ export default function ScanPage() {
               <ArrowLeft size={12} />
               <span>RETURN TO CONSOLE</span>
             </Link>
-            <Link to="/scan/sample" className="console-btn text-xs text-[#58a6ff]">
+            <Link to="/scan/sample" className="console-btn text-xs text-[var(--accent-primary)]">
               <Sparkles size={11} />
               <span>VIEW SAMPLE SCAN</span>
             </Link>
@@ -154,11 +154,11 @@ export default function ScanPage() {
 
   if (loading && !scan) {
     return (
-      <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] flex items-center justify-center font-mono">
+      <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center font-mono transition-colors">
         <div className="console-panel p-6 text-center space-y-2">
-          <div className="mx-auto h-6 w-6 animate-spin border-2 border-[#58a6ff]/30 border-t-[#58a6ff]" />
-          <p className="text-xs text-[#e6edf3] font-bold">INITIALIZING WORKSTATION TELEMETRY…</p>
-          <p className="text-[11px] text-[#576575]">Querying public reconnaissance pipelines</p>
+          <div className="mx-auto h-6 w-6 animate-spin border-2 border-[var(--border-technical)] border-t-[var(--accent-primary)] rounded-full" />
+          <p className="text-xs text-[var(--text-primary)] font-bold tracking-wider">INITIALIZING WORKSTATION TELEMETRY…</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Querying public reconnaissance pipelines</p>
         </div>
       </main>
     );
@@ -236,13 +236,13 @@ export default function ScanPage() {
         />
 
         {/* ─── Operational View Tabs ─────────────────────────────────── */}
-        <div className="flex border-b border-[#1e2631] gap-1 overflow-x-auto font-mono text-xs pt-1">
+        <div className="flex border-b border-[var(--border-technical)] gap-1 overflow-x-auto font-mono text-xs pt-1">
           <button
             onClick={() => setActiveViewTab('graph')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'graph'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <GitFork size={12} />
@@ -253,8 +253,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('map')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'map'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <MapPin size={12} />
@@ -265,8 +265,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('chains')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'chains'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <Network size={12} />
@@ -277,8 +277,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('inventory')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'inventory'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <Layers size={12} />
@@ -289,8 +289,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('findings')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'findings'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <AlertTriangle size={12} />
@@ -301,8 +301,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('raw')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'raw'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <FileText size={12} />
@@ -313,8 +313,8 @@ export default function ScanPage() {
             onClick={() => setActiveViewTab('all')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
               activeViewTab === 'all'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
             }`}
           >
             <ListTree size={12} />
@@ -444,20 +444,20 @@ export default function ScanPage() {
       />
 
       {/* ─── Compact Legal Footer ─────────────────────────────────── */}
-      <footer className="mt-8 border-t border-[#1e2631] bg-[#0c1015] px-4 py-2.5 font-mono text-[11px] text-[#576575]">
+      <footer className="mt-8 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-4 py-2.5 font-mono text-[11px] text-[var(--text-muted)]">
         <div className="mx-auto max-w-[1720px] flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>DOMAIN ATTACK SURFACE SCANNER // RECONNAISSANCE CONSOLE</span>
           <div className="flex flex-wrap items-center gap-3">
-            <Link to="/privacy" className="hover:text-[#8b9bb0] transition-colors">PRIVACY POLICY</Link>
-            <Link to="/terms" className="hover:text-[#8b9bb0] transition-colors">TERMS OF USE</Link>
-            <Link to="/cookies" className="hover:text-[#8b9bb0] transition-colors">COOKIE POLICY</Link>
-            <Link to="/billing" className="hover:text-[#8b9bb0] transition-colors">BILLING &amp; REFUNDS</Link>
-            <Link to="/security" className="hover:text-[#8b9bb0] transition-colors">SECURITY &amp; AUTHORIZED USE</Link>
+            <Link to="/privacy" className="hover:text-[var(--text-primary)] transition-colors">PRIVACY POLICY</Link>
+            <Link to="/terms" className="hover:text-[var(--text-primary)] transition-colors">TERMS OF USE</Link>
+            <Link to="/cookies" className="hover:text-[var(--text-primary)] transition-colors">COOKIE POLICY</Link>
+            <Link to="/billing" className="hover:text-[var(--text-primary)] transition-colors">BILLING &amp; REFUNDS</Link>
+            <Link to="/security" className="hover:text-[var(--text-primary)] transition-colors">SECURITY &amp; AUTHORIZED USE</Link>
             <a
               href="https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-[#8b9bb0] transition-colors"
+              className="hover:text-[var(--text-primary)] transition-colors"
             >
               GITHUB
             </a>

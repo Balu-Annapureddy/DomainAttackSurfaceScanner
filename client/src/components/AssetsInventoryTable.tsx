@@ -38,13 +38,13 @@ export default function AssetsInventoryTable({
   }, [assets]);
 
   return (
-    <div className="console-panel">
+    <div className="console-panel rounded-xs">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
       <div className="dossier-header flex-col sm:flex-row gap-2">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
           <span>ASSET INVENTORY</span>
-          <span className="text-[11px] text-[#8b9bb0] ml-2">
+          <span className="text-[11px] text-[var(--text-secondary)] ml-2">
             {filteredAssets.length} NORMALIZED ENTITIES
           </span>
         </div>
@@ -52,7 +52,7 @@ export default function AssetsInventoryTable({
         {/* Search & Filter Toolbar */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           <div className="relative">
-            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="SEARCH ASSET..."
@@ -61,19 +61,19 @@ export default function AssetsInventoryTable({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-6 w-32 sm:w-44 border border-[#1e2631] bg-[#0c1015] pl-6 pr-2 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
+              className="h-6 w-32 sm:w-44 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-xs"
             />
           </div>
 
-          <div className="flex items-center border border-[#1e2631] bg-[#0c1015] px-1.5 h-6 text-[11px]">
-            <Filter size={10} className="text-[#576575] mr-1" />
+          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-1.5 h-6 text-[11px] rounded-xs">
+            <Filter size={10} className="text-[var(--text-muted)] mr-1" />
             <select
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer"
+              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer"
             >
               <option value="ALL">ALL TYPES ({assets.length})</option>
               {assetTypes.map((t) => (
@@ -101,7 +101,7 @@ export default function AssetsInventoryTable({
           <tbody>
             {paginatedAssets.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-[#576575]">
+                <td colSpan={5} className="py-6 text-center text-[var(--text-muted)]">
                   NO ASSET RECORDS MATCHING FILTER
                 </td>
               </tr>
@@ -109,22 +109,22 @@ export default function AssetsInventoryTable({
               paginatedAssets.map((asset) => {
                 const isGeo = asset.type === 'GEOLOCATION';
                 const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
-                const statusColor = isGeo ? 'text-[#d29922]' : 'text-[#3fb950]';
+                const statusColor = isGeo ? 'text-[#d97706] dark:text-[#f59e0b]' : 'text-[#16a34a] dark:text-[#2ee59d]';
                 const sources = asset.evidence.map((e) => e.source).join(', ') || 'DNS / CT';
 
                 return (
                   <tr
                     key={asset.id}
                     onClick={() => onSelectAsset?.(asset)}
-                    className="cursor-pointer hover:bg-[#151c23] transition-colors"
+                    className="cursor-pointer transition-colors"
                   >
                     <td>
-                      <span className="text-[10px] text-[#58a6ff] font-bold">
+                      <span className="text-[10px] text-[var(--accent-primary)] font-bold">
                         {asset.type}
                       </span>
                     </td>
-                    <td className="text-[#e6edf3] font-semibold">
-                      <span className="truncate block max-w-xs sm:max-w-md" title={asset.value}>
+                    <td className="text-[var(--text-primary)] font-semibold">
+                      <span className="truncate block max-w-xs sm:max-w-md font-mono" title={asset.value}>
                         {asset.value}
                       </span>
                     </td>
@@ -133,7 +133,7 @@ export default function AssetsInventoryTable({
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="text-[#8b9bb0] text-[11px] truncate max-w-xs">
+                    <td className="text-[var(--text-secondary)] text-[11px] truncate max-w-xs">
                       {sources}
                     </td>
                     <td className="text-right">
@@ -143,7 +143,7 @@ export default function AssetsInventoryTable({
                           e.stopPropagation();
                           onSelectAsset?.(asset);
                         }}
-                        className="text-[#58a6ff] hover:underline text-[10px] cursor-pointer"
+                        className="text-[var(--accent-primary)] hover:underline text-[10px] cursor-pointer"
                       >
                         [INSPECT]
                       </button>
@@ -157,7 +157,7 @@ export default function AssetsInventoryTable({
       </div>
 
       {/* ─── Pagination Footer ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-[#1e2631] bg-[#0c1015] px-3 py-1.5 font-mono text-[10px] text-[#8b9bb0]">
+      <div className="flex items-center justify-between border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-3 py-1.5 font-mono text-[10px] text-[var(--text-secondary)]">
         <span>
           PAGE {currentPage} OF {totalPages} ({filteredAssets.length} TOTAL)
         </span>
@@ -165,14 +165,14 @@ export default function AssetsInventoryTable({
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage <= 1}
-            className="border border-[#1e2631] bg-[#10151b] px-1.5 py-0.5 disabled:opacity-30 text-[#e6edf3] hover:border-[#58a6ff]"
+            className="border border-[var(--border-muted)] bg-[var(--bg-panel)] px-1.5 py-0.5 disabled:opacity-30 text-[var(--text-primary)] hover:border-[var(--accent-primary)] rounded-xs cursor-pointer"
           >
             <ChevronLeft size={11} />
           </button>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage >= totalPages}
-            className="border border-[#1e2631] bg-[#10151b] px-1.5 py-0.5 disabled:opacity-30 text-[#e6edf3] hover:border-[#58a6ff]"
+            className="border border-[var(--border-muted)] bg-[var(--bg-panel)] px-1.5 py-0.5 disabled:opacity-30 text-[var(--text-primary)] hover:border-[var(--accent-primary)] rounded-xs cursor-pointer"
           >
             <ChevronRight size={11} />
           </button>

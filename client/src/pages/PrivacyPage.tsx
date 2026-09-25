@@ -46,7 +46,7 @@ export default function PrivacyPage() {
               <span className="text-[11px] text-[var(--text-secondary)] font-sans">1 session cookie for login. Zero advertising or tracking cookies.</span>
             </div>
             <div className="bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-2.5">
-              <span className="text-[10px] text-[#d29922] block font-bold">FULL ERASURE RIGHTS</span>
+              <span className="text-[10px] text-amber-500 block font-bold">FULL ERASURE RIGHTS</span>
               <span className="text-[11px] text-[var(--text-secondary)] font-sans">Self-service one-click account and scan record deletion.</span>
             </div>
           </div>
@@ -83,9 +83,9 @@ export default function PrivacyPage() {
             </div>
 
             {/* Category B: Target Infrastructure Data */}
-            <div className="console-panel p-4 space-y-2 border-l-2 border-l-[#388bfd]">
+            <div className="console-panel p-4 space-y-2 border-l-2 border-l-[var(--accent-primary)]">
               <div className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)] text-xs">
-                <Server size={14} className="text-[#388bfd]" />
+                <Server size={14} className="text-[var(--accent-primary)]" />
                 <span>B. SCANNER-GENERATED DATA (TARGET INFRASTRUCTURE ONLY)</span>
               </div>
               <p className="text-[var(--text-secondary)] leading-relaxed">
@@ -114,9 +114,9 @@ export default function PrivacyPage() {
             </div>
 
             {/* Category C: Technical & Security Data */}
-            <div className="console-panel p-4 space-y-2 border-l-2 border-l-[#d29922]">
+            <div className="console-panel p-4 space-y-2 border-l-2 border-l-amber-500">
               <div className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)] text-xs">
-                <Lock size={14} className="text-[#d29922]" />
+                <Lock size={14} className="text-amber-500" />
                 <span>C. TECHNICAL &amp; SECURITY DATA (NETWORK &amp; SESSIONS)</span>
               </div>
               <ul className="list-disc pl-5 space-y-1 font-mono text-[11px] text-[var(--text-secondary)]">
@@ -144,27 +144,27 @@ export default function PrivacyPage() {
             <p>To ensure strict privacy preservation, our system architecture contains zero mechanisms to collect or process:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[11px] pt-1">
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO real names or phone numbers</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO physical addresses or government IDs</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO payment, card, or billing information</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO plaintext passwords</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO advertising or behavioral trackers</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO biometric or sensitive personal data</span>
               </div>
             </div>

@@ -146,7 +146,7 @@ export default function CookiePage() {
         {/* 3. Explicit Prohibitions */}
         <section className="space-y-3 font-mono">
           <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-            <EyeOff size={14} className="text-[#ef4444]" />
+            <EyeOff size={14} className="text-red-500" />
             <span>3. TRACKERS &amp; TECHNOLOGIES WE DO NOT USE</span>
           </h2>
           <div className="console-panel p-4 space-y-3 font-sans text-xs text-[var(--text-secondary)]">
@@ -155,19 +155,19 @@ export default function CookiePage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[11px]">
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO Advertising / AdTech Cookies</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO Third-Party Analytics Trackers</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO Behavioral Tracking Pixels</span>
               </div>
               <div className="console-panel-inset p-2 flex items-center gap-2">
-                <EyeOff size={13} className="text-[#ef4444]" />
+                <EyeOff size={13} className="text-red-500" />
                 <span>NO Canvas / Hardware Fingerprinting</span>
               </div>
             </div>

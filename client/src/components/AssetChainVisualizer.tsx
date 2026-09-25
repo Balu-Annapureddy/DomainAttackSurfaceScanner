@@ -93,50 +93,50 @@ export default function AssetChainVisualizer({
   }, [chains, filterSearch]);
 
   return (
-    <div className="console-panel">
+    <div className="console-panel rounded-xs">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
       <div className="dossier-header flex-col sm:flex-row gap-2">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
           <span>ASSET ROUTING CHAINS</span>
-          <span className="text-[11px] text-[#8b9bb0] ml-2">
-            TRACE: DOMAIN → IP → ASN → ORG → LOCATION
+          <span className="text-[11px] text-[var(--text-secondary)] ml-2">
+            TRACE: DOMAIN &rarr; IP &rarr; ASN &rarr; ORG &rarr; LOCATION
           </span>
         </div>
 
         {/* Filter Search */}
         <div className="relative font-mono text-xs">
-          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#576575]" />
+          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="FILTER TRACE..."
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
-            className="h-6 w-36 sm:w-48 border border-[#1e2631] bg-[#0c1015] pl-6 pr-2 text-[11px] text-[#e6edf3] placeholder-[#576575] outline-none focus:border-[#58a6ff]"
+            className="h-6 w-36 sm:w-48 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-xs"
           />
         </div>
       </div>
 
       {/* ─── Trace Rows (Network Tracing Console) ───────────────────── */}
-      <div className="p-3 bg-[#080b0f] space-y-2">
+      <div className="p-3 bg-[var(--bg-canvas)] space-y-2">
         {filteredChains.length === 0 ? (
-          <div className="p-6 text-center font-mono text-xs text-[#576575]">
+          <div className="p-6 text-center font-mono text-xs text-[var(--text-muted)]">
             NO RESOLUTION CHAINS MATCH QUERY
           </div>
         ) : (
           filteredChains.map((chain, idx) => (
             <div
               key={idx}
-              className="bg-[#10151b] border border-[#1e2631] p-2.5 font-mono text-xs"
+              className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 font-mono text-xs rounded-xs"
             >
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 {/* 01: Host */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-[#576575] font-bold">01</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold">01</span>
                   <button
                     type="button"
                     onClick={() => onSelectAsset?.(chain.domainAsset)}
-                    className="border border-[#388bfd]/40 bg-[#15273b] text-[#58a6ff] px-2 py-0.5 text-xs font-semibold hover:border-[#58a6ff] cursor-pointer max-w-[210px] truncate flex items-center gap-1"
+                    className="border border-[var(--accent-primary)]/40 bg-[var(--accent-active-bg)] text-[var(--accent-primary)] px-2 py-0.5 text-xs font-semibold hover:border-[var(--accent-primary)] cursor-pointer max-w-[210px] truncate flex items-center gap-1 rounded-xs"
                     title="Target Host / Subdomain"
                   >
                     <Globe size={10} className="shrink-0" />
@@ -144,23 +144,23 @@ export default function AssetChainVisualizer({
                   </button>
                 </div>
 
-                <span className="text-[#576575] text-xs font-bold">→</span>
+                <span className="text-[var(--text-muted)] text-xs font-bold">&rarr;</span>
 
                 {/* 02: IP Address */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-[#576575] font-bold">02</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold">02</span>
                   {chain.ipAsset ? (
                     <button
                       type="button"
                       onClick={() => onSelectAsset?.(chain.ipAsset!)}
-                      className="border border-[#1e2631] bg-[#0c1015] text-[#e6edf3] px-2 py-0.5 text-xs font-medium hover:border-[#58a6ff] cursor-pointer flex items-center gap-1"
+                      className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-primary)] px-2 py-0.5 text-xs font-medium hover:border-[var(--accent-primary)] cursor-pointer flex items-center gap-1 rounded-xs"
                       title="Resolved IP"
                     >
-                      <Server size={10} className="text-[#8a63d2] shrink-0" />
+                      <Server size={10} className="text-[#8b5cf6] shrink-0" />
                       <span>{chain.ipAsset.value}</span>
                     </button>
                   ) : (
-                    <span className="border border-[#1e2631] bg-[#0c1015] text-[#576575] px-2 py-0.5 text-xs">
+                    <span className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-muted)] px-2 py-0.5 text-xs rounded-xs">
                       UNRESOLVED
                     </span>
                   )}
@@ -169,13 +169,13 @@ export default function AssetChainVisualizer({
                 {/* 03: ASN */}
                 {chain.asnAsset && (
                   <>
-                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <span className="text-[var(--text-muted)] text-xs font-bold">&rarr;</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-[#576575] font-bold">03</span>
+                      <span className="text-[10px] text-[var(--text-muted)] font-bold">03</span>
                       <button
                         type="button"
                         onClick={() => onSelectAsset?.(chain.asnAsset!)}
-                        className="border border-[#2ea043]/40 bg-[#0f2214] text-[#3fb950] px-2 py-0.5 text-xs font-semibold hover:border-[#3fb950] cursor-pointer"
+                        className="border border-[#16a34a]/40 bg-[#16a34a]/10 text-[#16a34a] dark:text-[#2ee59d] px-2 py-0.5 text-xs font-semibold hover:border-[#16a34a] cursor-pointer rounded-xs"
                         title="BGP ASN"
                       >
                         <span>{chain.asnAsset.value}</span>
@@ -187,13 +187,13 @@ export default function AssetChainVisualizer({
                 {/* 04: Organization */}
                 {chain.orgAsset && (
                   <>
-                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <span className="text-[var(--text-muted)] text-xs font-bold">&rarr;</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-[#576575] font-bold">04</span>
+                      <span className="text-[10px] text-[var(--text-muted)] font-bold">04</span>
                       <button
                         type="button"
                         onClick={() => onSelectAsset?.(chain.orgAsset!)}
-                        className="border border-[#1e2631] bg-[#0c1015] text-[#8b9bb0] px-2 py-0.5 text-xs hover:border-[#e6edf3] cursor-pointer max-w-[180px] truncate"
+                        className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)] px-2 py-0.5 text-xs hover:border-[var(--text-primary)] cursor-pointer max-w-[180px] truncate rounded-xs"
                         title="Operating Network / Cloud Provider"
                       >
                         <span className="truncate">{chain.orgAsset.value}</span>
@@ -205,13 +205,13 @@ export default function AssetChainVisualizer({
                 {/* 05: Location */}
                 {chain.geoAsset && (
                   <>
-                    <span className="text-[#576575] text-xs font-bold">→</span>
+                    <span className="text-[var(--text-muted)] text-xs font-bold">&rarr;</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-[#576575] font-bold">05</span>
+                      <span className="text-[10px] text-[var(--text-muted)] font-bold">05</span>
                       <button
                         type="button"
                         onClick={() => onSelectAsset?.(chain.geoAsset!)}
-                        className="border border-[#bb8009]/40 bg-[#251a08] text-[#d29922] px-2 py-0.5 text-xs hover:border-[#d29922] cursor-pointer flex items-center gap-1"
+                        className="border border-[#d97706]/40 bg-[#d97706]/10 text-[#d97706] dark:text-[#f59e0b] px-2 py-0.5 text-xs hover:border-[#d97706] cursor-pointer flex items-center gap-1 rounded-xs"
                         title="Approximate Datacenter"
                       >
                         <MapPin size={9} className="shrink-0" />
@@ -229,7 +229,7 @@ export default function AssetChainVisualizer({
       </div>
 
       {/* ─── Footer ─────────────────────────────────────────────────── */}
-      <div className="border-t border-[#1e2631] bg-[#0c1015] px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#576575]">
+      <div className="border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)]">
         <span>{filteredChains.length} of {chains.length} resolution traces</span>
         <span>[CLICK ASSET IN TRACE TO INSPECT RAW DETAILS]</span>
       </div>
