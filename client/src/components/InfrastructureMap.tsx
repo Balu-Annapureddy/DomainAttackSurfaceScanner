@@ -1,6 +1,5 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import L from 'leaflet';
-import { MapPin, Info, Globe } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface InfrastructureMapProps {
@@ -27,6 +26,7 @@ export default function InfrastructureMap({
 }: InfrastructureMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const [tileError, setTileError] = useState(false);
 
   // Extract geolocated IP nodes
   const geoPoints = useMemo<GeoPoint[]>(() => {
@@ -45,7 +45,6 @@ export default function InfrastructureMap({
         );
         const ipAsset = rel ? ipAssets.find((ip) => ip.id === rel.fromAssetId) : undefined;
 
-        // Also find ASN and Organization if linked to IP
         let asnName: string | undefined;
         let orgName: string | undefined;
 
@@ -66,8 +65,8 @@ export default function InfrastructureMap({
         const existingCount = points.filter(
           (p) => Math.abs(p.lat - lat) < 0.001 && Math.abs(p.lng - lng) < 0.001,
         ).length;
-        const adjustedLat = existingCount > 0 ? lat + (existingCount * 0.008) : lat;
-        const adjustedLng = existingCount > 0 ? lng + (existingCount * 0.008) : lng;
+        const adjustedLat = existingCount > 0 ? lat + existingCount * 0.008 : lat;
+        const adjustedLng = existingCount > 0 ? lng + existingCount * 0.008 : lng;
 
         points.push({
           ip: ipAsset?.value ?? 'Discovered Host',
@@ -88,7 +87,6 @@ export default function InfrastructureMap({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Default view center
       const firstPoint = geoPoints[0];
       const initialCenter: [number, number] = firstPoint
         ? [firstPoint.lat, firstPoint.lng]
@@ -98,18 +96,25 @@ export default function InfrastructureMap({
       const map = L.map(mapContainerRef.current, {
         center: initialCenter,
         zoom: initialZoom,
-        minZoom: 2,
-        maxZoom: 18,
-        zoomControl: true,
+        minZoom: 1,
+        maxZoom: 14,
+        zoomControl: false,
+        attributionControl: false,
       });
 
-      // CartoDB Dark Matter tile layer
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Dark CartoDB tile layer with error handling
+      const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 19,
-      }).addTo(map);
+      });
 
+      tileLayer.on('tileerror', () => {
+        setTileError(true);
+      });
+
+      tileLayer.addTo(map);
       mapInstanceRef.current = map;
     }
 
@@ -122,116 +127,90 @@ export default function InfrastructureMap({
       }
     });
 
+    if (geoPoints.length === 0) return;
+
     const bounds = L.latLngBounds([]);
 
-    // Add glowing custom circle markers
     geoPoints.forEach((point) => {
       bounds.extend([point.lat, point.lng]);
 
       const marker = L.circleMarker([point.lat, point.lng], {
-        radius: 8,
-        fillColor: '#06b6d4',
-        color: '#ffffff',
-        weight: 2,
+        radius: 7,
+        fillColor: '#388bfd',
+        color: '#58a6ff',
+        weight: 1.5,
         opacity: 0.9,
-        fillOpacity: 0.85,
-        className: 'infrastructure-marker',
-      }).addTo(map);
+        fillOpacity: 0.75,
+      });
 
-      const escapeHtml = (str?: string) =>
-        (str || '').replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c] || c));
+      // Escape popup content to prevent injection
+      const locText = [point.city, point.country].filter(Boolean).join(', ') || 'Regional datacenter';
+      const asnText = point.asn ? `ASN: ${point.asn}` : '';
+      const orgText = point.organization ? `Org: ${point.organization}` : '';
 
-      const safeIp = escapeHtml(point.ip);
-      const safeCity = escapeHtml(point.city);
-      const safeCountry = escapeHtml(point.country ?? 'Unknown Location');
-      const safeAsn = escapeHtml(point.asn);
-      const safeOrg = escapeHtml(point.organization);
-
-      const popupContent = `
-        <div style="font-family: inherit; color: #0f172a; padding: 4px; min-width: 180px;">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #0284c7; font-weight: 700; margin-bottom: 2px;">
-            Target Infrastructure
-          </div>
-          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; font-family: monospace;">
-            ${safeIp}
-          </div>
-          <div style="font-size: 12px; color: #475569; margin-bottom: 2px;">
-            📍 ${safeCity ? `${safeCity}, ` : ''}${safeCountry}
-          </div>
-          ${safeAsn ? `<div style="font-size: 11px; color: #64748b; font-family: monospace;">ASN: ${safeAsn}</div>` : ''}
-          ${safeOrg ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Org: ${safeOrg}</div>` : ''}
-          <div style="margin-top: 8px; font-size: 10px; color: #94a3b8; font-style: italic;">
-            Approximate network location
-          </div>
+      marker.bindPopup(`
+        <div style="font-family: monospace; font-size: 11px; color: #e6edf3; background: #111620; padding: 6px; border: 1px solid #1f2735; border-radius: 4px;">
+          <div style="color: #58a6ff; font-weight: bold; margin-bottom: 2px;">IP: ${point.ip}</div>
+          <div style="color: #9aa5b8;">${locText}</div>
+          ${asnText ? `<div style="color: #3fb950; font-size: 10px;">${asnText}</div>` : ''}
+          ${orgText ? `<div style="color: #9aa5b8; font-size: 10px;">${orgText}</div>` : ''}
+          <div style="margin-top: 4px; font-size: 9px; color: #626e82;">[CLICK MARKER FOR ASSET DETAILS]</div>
         </div>
-      `;
+      `);
 
-      marker.bindPopup(popupContent);
       marker.on('click', () => {
         onSelectAsset?.(point.asset);
       });
+
+      marker.addTo(map);
     });
 
-    if (geoPoints.length > 0 && bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
+    if (geoPoints.length > 0) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
     }
-
-    return () => {
-      // Map stays alive across renders unless unmounted
-    };
   }, [geoPoints, onSelectAsset]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-xl">
-      {/* Header */}
-      <div className="flex flex-col gap-2 border-b border-slate-800/80 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
-            <Globe size={18} />
+    <div className="console-panel overflow-hidden">
+      {/* ─── Map Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2 border-b border-[#1f2735] p-3.5 sm:flex-row sm:items-center sm:justify-between bg-[#111620]">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="text-[#58a6ff] font-bold">[GEOIP]</span>
+            <span className="font-bold text-[#e6edf3]">APPROXIMATE INFRASTRUCTURE GEOLOCATION</span>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">Infrastructure Distribution</h2>
-            <p className="text-xs text-slate-400">
-              {geoPoints.length} geolocated IP endpoint{geoPoints.length === 1 ? '' : 's'} discovered
-            </p>
-          </div>
+          <p className="text-[11px] text-[#9aa5b8] mt-0.5 font-mono">
+            {geoPoints.length} network points of presence mapped
+          </p>
         </div>
 
-        {/* Disclaimer Pill */}
-        <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-1.5 text-[11px] text-slate-400">
-          <Info size={13} className="text-cyan-400" />
-          <span>Approximate network / datacenter location, not an individual location.</span>
+        <div className="flex items-center gap-2 font-mono text-[11px] text-[#9aa5b8]">
+          <span className="console-tag">ESTIMATED_DATACENTERS</span>
         </div>
       </div>
 
-      {/* Map Canvas */}
+      {/* ─── Map Canvas ─────────────────────────────────────────────── */}
       <div className="relative">
-        <div
-          ref={mapContainerRef}
-          className="h-[380px] w-full bg-slate-950"
-          style={{ zIndex: 10 }}
-        />
+        <div ref={mapContainerRef} className="h-72 sm:h-80 w-full bg-[#0b0e14]" />
 
-        {geoPoints.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center backdrop-blur-sm" style={{ zIndex: 20 }}>
-            <MapPin size={32} className="mb-2 text-slate-600" />
-            <p className="text-sm font-medium text-slate-300">No Geolocation Coordinates Reported</p>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm">
-              IP intelligence geolocation data was either unavailable or omitted for the resolved public addresses.
-            </p>
+        {/* Graceful Tile Error or Empty State */}
+        {geoPoints.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0b0e14]/90 p-6 text-center font-mono text-xs text-[#626e82]">
+            NO PUBLIC IP ADDRESSES WITH REGISTRY GEOLOCATION DISCOVERED
           </div>
-        )}
+        ) : tileError ? (
+          <div className="absolute bottom-2 left-2 console-tag console-tag-amber text-[10px]">
+            MAP TILES OFFLINE // MARKERS RENDERED ON INTERNAL GRID
+          </div>
+        ) : null}
       </div>
 
-      {/* Footer Info */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800/60 bg-slate-950/50 px-5 py-3 text-xs text-slate-400">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-            <span>Target IP Infrastructure</span>
-          </div>
-        </div>
-        <span>Click any node to view asset context</span>
+      {/* ─── Disclaimer Footer ──────────────────────────────────────── */}
+      <div className="border-t border-[#1f2735] bg-[#0d121a] px-4 py-2 font-mono text-[11px] text-[#626e82] flex items-center justify-between">
+        <span>
+          <strong className="text-[#9aa5b8]">DISCLAIMER:</strong> Coordinates indicate regional network datacenters or ISP routers derived from registry records, <em>NEVER physical buildings or individuals</em>.
+        </span>
+        <span className="hidden sm:inline">[MAP LEAFLET // CARTO DARK]</span>
       </div>
     </div>
   );

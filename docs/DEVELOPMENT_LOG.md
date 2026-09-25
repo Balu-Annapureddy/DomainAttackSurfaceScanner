@@ -99,9 +99,42 @@ Tests & Build Verification:
 - Linter: **0 errors, 0 warnings** across client and server.
 - Production build: Both TypeScript backend (`tsc`) and Vite frontend (`tsc -b && vite build`) compile cleanly with zero errors.
 
-Known limitations & Roadmap:
-- In-memory scan store with 24-hour TTL (suitable for single-node deployment; migration to PostgreSQL/Redis planned for multi-instance clusters).
-- Rate limits on third-party passive APIs (CT logs, GeoIP) may necessitate external API keys in high-throughput deployments.
-- Scheduled recurring scans and automated drift alert webhooks deferred to post-release roadmap.
+
+---
+
+## Sprint [Final UI Redesign]: Retro-Digital Intelligence Console & UI Hardening
+
+Date: 2026-09-25
+Status: COMPLETED
+
+Overview:
+Consolidated final UI/UX hardening sprint transforming DomainAttackSurfaceScanner into a distinctive, cohesive, retro-digital cybersecurity terminal / intelligence console. Solved all previous layout, spacing, and hierarchy issues while preserving 100% of underlying backend scanning, evidentiary models, and security logic.
+
+Design System & Visual Language:
+- **Palette**: Deep charcoal/near-black foundation (`#0b0e14`, `#111620`, `#161c28`), warm off-white typography (`#e6edf3`), phosphor green (`#3fb950`), amber (`#d29922`), coral/red (`#f85149`), muted console cyan/blue (`#58a6ff`).
+- **Typography**: Display headings in retro technical styles, body text in crisp readable sans-serif, and all technical data (IPs, hashes, ports, DNS records) in dedicated monospace typography.
+- **CRT / Console Details**: High-density CRT panel headers, subtle grid textures, technical section indicators (`[01] WHOIS`, `SYS // ONLINE`), status tags (`OBSERVED`, `NOT OBSERVED`, `CHECK FAILED`). Completely free of cheap neon glow, generic glassmorphism, or cliché hacker tropes.
+
+Components & Pages Redesigned:
+- **Global Application Shell & Navigation**: Persistent console topbar with system telemetry (`SYS // ONLINE`, `PASSIVE RECON`), clean navigation hierarchy, contextual actions, and Knowledge Guide trigger.
+- **Landing Page (`/`)**: Compact, editorial-style console layout replacing the giant centered hero. Includes Scan Console, quick sample scan launcher, 3-column "What We Observe" grid, 6-stage "How It Works" pipeline, and Passive Reconnaissance Guarantee callout.
+- **Scan Dashboard (`/scan/:id`)**:
+  - Horizontal retro system pipeline (`[01] WHOIS ✓` through `[07] HYGIENE ✓`).
+  - Executive summary 6-cell metric grid (`ASSETS`, `RELATIONSHIPS`, `OBSERVATIONS`, `FINDINGS`, `COMPLETENESS`, `HYGIENE SCORE`).
+  - Security posture score card with explicit epistemological breakdown: *What was observed*, *What was not observed*, *What could not be verified*.
+  - Tabbed intelligence views: Topology Graph & Map, Routing Chains, Executive Synthesis, Asset Inventory, Findings, and Raw Telemetry.
+- **Findings Dossier**: Each finding formatted as a structured intelligence record with prominent severity badges, status tags, and 4 expandable dossiers (Observed Evidence, Why It Matters, Recommended Action, Backing Probes).
+- **Attack Surface Graph**: SVG-based console grid canvas with search, asset-type filters, zoom controls, responsive node coordinates, and intelligence detail panel.
+- **Asset Chain Visualizer**: Retro system trace routing chain (`DOMAIN → SUBDOMAIN → IP → ASN → ORGANIZATION → LOCATION`).
+- **Infrastructure Map**: Integrated dark-theme CartoDB map with graceful fallback state, location cards, and network/datacenter disclaimer.
+- **Report Page (`/report/:id`)**: Fully utilizes desktop width with a 2-column security dossier grid, executive summary, posture score, transport security, findings, and export controls (PDF, JSON, CSV).
+- **Knowledge Guide & Mode Switcher**: Comprehensive cybersecurity glossary modal and seamless toggle between Guided Mode (plain English) and Technical Mode (raw evidence).
+
+Quality & Verification:
+- Tests: **34/34 passing** across Jest test suites.
+- Lint: **0 errors, 0 warnings** across client (oxlint) and server (eslint).
+- Build: Backend (`tsc`) and Frontend (`tsc -b && vite build`) compile cleanly.
+- Sample Scan: `perimeter-demo.io` verified end-to-end with presentation-ready status.
+
 
 

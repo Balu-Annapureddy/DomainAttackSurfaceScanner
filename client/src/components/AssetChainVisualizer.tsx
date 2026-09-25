@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Globe, Server, Network, Building2, MapPin, ArrowRight, Search } from 'lucide-react';
+import { ArrowRight, Search, Globe, Server, MapPin } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AssetChainVisualizerProps {
@@ -39,7 +39,6 @@ export default function AssetChainVisualizer({
         .filter((a): a is Asset => Boolean(a && a.type === 'IP'));
 
       if (targetIpAssets.length === 0) {
-        // Unresolved subdomain or pending
         result.push({ domainAsset: host });
         continue;
       }
@@ -83,152 +82,135 @@ export default function AssetChainVisualizer({
   }, [assets, relationships]);
 
   const filteredChains = useMemo(() => {
-    if (!filterSearch) return chains;
+    if (!filterSearch.trim()) return chains;
     const q = filterSearch.toLowerCase();
-    return chains.filter((c) =>
-      c.domainAsset.value.toLowerCase().includes(q) ||
-      (c.ipAsset?.value && c.ipAsset.value.toLowerCase().includes(q)) ||
-      (c.asnAsset?.value && c.asnAsset.value.toLowerCase().includes(q)) ||
-      (c.orgAsset?.value && c.orgAsset.value.toLowerCase().includes(q)) ||
-      (c.geoAsset?.value && c.geoAsset.value.toLowerCase().includes(q))
+    return chains.filter(
+      (c) =>
+        c.domainAsset.value.toLowerCase().includes(q) ||
+        (c.ipAsset?.value && c.ipAsset.value.toLowerCase().includes(q)) ||
+        (c.asnAsset?.value && c.asnAsset.value.toLowerCase().includes(q)) ||
+        (c.orgAsset?.value && c.orgAsset.value.toLowerCase().includes(q)) ||
+        (c.geoAsset?.value && c.geoAsset.value.toLowerCase().includes(q)),
     );
   }, [chains, filterSearch]);
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 backdrop-blur-xl shadow-xl space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
+    <div className="console-panel p-5 space-y-4">
+      {/* ─── Header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#1f2735] pb-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <Network size={15} />
-            </span>
-            <h3 className="text-base font-bold text-white">Asset Relationship Chains</h3>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="text-[#3fb950] font-bold">[TRACE ROUTE]</span>
+            <span className="font-bold text-[#e6edf3]">ASSET RESOLUTION & INFRASTRUCTURE CHAINS</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            End-to-end routing hierarchy: <strong className="text-slate-300">Domain → IP → ASN → Organization → Approximate Location</strong>
+          <p className="text-xs text-[#9aa5b8] mt-0.5">
+            End-to-end telemetry paths: <strong className="text-[#e6edf3]">Domain → IP Address → BGP ASN → Organization → Geolocation</strong>
           </p>
         </div>
 
-        {/* Search Filter */}
-        <div className="relative w-full sm:w-64">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        {/* Filter Search */}
+        <div className="relative font-mono text-xs">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626e82]" />
           <input
             type="text"
-            placeholder="Filter chain targets…"
+            placeholder="Search chains..."
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/80 pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500/50"
+            className="h-8 w-44 sm:w-56 rounded border border-[#1f2735] bg-[#0d121a] pl-7 pr-3 text-xs text-[#e6edf3] placeholder-[#626e82] outline-none focus:border-[#388bfd]"
           />
         </div>
       </div>
 
-      {/* Explanatory Guidance */}
-      <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-3.5 text-xs text-cyan-200/90 flex items-start gap-2.5">
-        <span className="text-cyan-400 font-bold text-sm">⛓️</span>
-        <div>
-          <strong>How this chain works:</strong> Each row traces an observable perimeter asset through DNS resolution down to its physical hosting provider and routing announcement. Click any node in the chain to open its full cryptographic and discovery evidence.
-        </div>
-      </div>
-
-      {/* Chains List */}
-      <div className="space-y-3">
+      {/* ─── Chain Trace Records ────────────────────────────────────── */}
+      <div className="space-y-2.5">
         {filteredChains.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-8 text-center text-xs text-slate-400">
-            No relationship chains match your search filter.
+          <div className="p-8 text-center font-mono text-xs text-[#626e82]">
+            NO RESOLUTION CHAINS MATCH QUERY
           </div>
         ) : (
-          filteredChains.slice(0, 20).map((chain, index) => (
+          filteredChains.map((chain, idx) => (
             <div
-              key={`${chain.domainAsset.id}-${chain.ipAsset?.id ?? index}`}
-              className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 hover:border-slate-700 transition"
+              key={idx}
+              className="console-panel-inset p-3 border border-[#1f2735] hover:border-[#388bfd]/50 transition"
             >
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {/* 1. Domain / Subdomain */}
+              {/* Chain Steps Horizontal Flow */}
+              <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                {/* Step 1: Host */}
                 <button
                   type="button"
                   onClick={() => onSelectAsset?.(chain.domainAsset)}
-                  className="flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-cyan-300 font-semibold hover:bg-cyan-500/20 transition"
-                  title="Click to view domain evidence"
+                  className="console-tag console-tag-cyan hover:brightness-125 cursor-pointer max-w-[200px] truncate"
+                  title="Target Domain / Subdomain - Click to inspect"
                 >
-                  <Globe size={13} />
-                  <span>{chain.domainAsset.value}</span>
+                  <Globe size={11} className="shrink-0" />
+                  <span className="truncate">{chain.domainAsset.value}</span>
                 </button>
 
-                <ArrowRight size={13} className="text-slate-600 shrink-0" />
+                <ArrowRight size={12} className="text-[#626e82] shrink-0" />
 
-                {/* 2. Resolved IP */}
+                {/* Step 2: IP Address */}
                 {chain.ipAsset ? (
                   <button
                     type="button"
                     onClick={() => onSelectAsset?.(chain.ipAsset!)}
-                    className="flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-blue-300 font-mono text-[11px] hover:bg-blue-500/20 transition"
-                    title="Click to view IP evidence"
+                    className="console-tag hover:border-[#58a6ff] cursor-pointer"
+                    title="Resolved IP Endpoint - Click to inspect"
                   >
-                    <Server size={13} />
+                    <Server size={11} className="text-[#8a63d2] shrink-0" />
                     <span>{chain.ipAsset.value}</span>
                   </button>
                 ) : (
-                  <span className="rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-slate-500 text-[11px] italic">
-                    Unresolved
+                  <span className="console-tag text-[#626e82]">
+                    [UNRESOLVED]
                   </span>
                 )}
 
-                <ArrowRight size={13} className="text-slate-600 shrink-0" />
-
-                {/* 3. BGP ASN */}
-                {chain.asnAsset ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelectAsset?.(chain.asnAsset!)}
-                    className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1.5 text-indigo-300 text-[11px] hover:bg-indigo-500/20 transition"
-                    title="Click to view ASN evidence"
-                  >
-                    <Network size={13} />
-                    <span>{chain.asnAsset.value}</span>
-                  </button>
-                ) : (
-                  <span className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-slate-600 text-[11px]">
-                    ASN unknown
-                  </span>
+                {/* Step 3: ASN */}
+                {chain.asnAsset && (
+                  <>
+                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => onSelectAsset?.(chain.asnAsset!)}
+                      className="console-tag console-tag-phosphor hover:brightness-125 cursor-pointer"
+                      title="BGP Autonomous System Number"
+                    >
+                      <span>{chain.asnAsset.value}</span>
+                    </button>
+                  </>
                 )}
 
-                <ArrowRight size={13} className="text-slate-600 shrink-0" />
-
-                {/* 4. Organization */}
-                {chain.orgAsset ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelectAsset?.(chain.orgAsset!)}
-                    className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1.5 text-purple-300 text-[11px] hover:bg-purple-500/20 transition max-w-[200px] truncate"
-                    title="Click to view Organization evidence"
-                  >
-                    <Building2 size={13} />
-                    <span className="truncate">{chain.orgAsset.value}</span>
-                  </button>
-                ) : (
-                  <span className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-slate-600 text-[11px]">
-                    Org unknown
-                  </span>
+                {/* Step 4: Hosting Organization */}
+                {chain.orgAsset && (
+                  <>
+                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => onSelectAsset?.(chain.orgAsset!)}
+                      className="console-tag hover:border-[#3fb950] cursor-pointer max-w-[180px] truncate text-[#9aa5b8]"
+                      title="Operating Network / Cloud Provider"
+                    >
+                      <span className="truncate">{chain.orgAsset.value}</span>
+                    </button>
+                  </>
                 )}
 
-                <ArrowRight size={13} className="text-slate-600 shrink-0" />
-
-                {/* 5. Approximate Geolocation */}
-                {chain.geoAsset ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelectAsset?.(chain.geoAsset!)}
-                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-300 text-[11px] hover:bg-emerald-500/20 transition max-w-[220px] truncate"
-                    title="Click to view Location details (approximate network datacenter location)"
-                  >
-                    <MapPin size={13} />
-                    <span className="truncate">{chain.geoAsset.value}</span>
-                  </button>
-                ) : (
-                  <span className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-slate-600 text-[11px]">
-                    Location unknown
-                  </span>
+                {/* Step 5: Approximate Geolocation */}
+                {chain.geoAsset && (
+                  <>
+                    <ArrowRight size={12} className="text-[#626e82] shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => onSelectAsset?.(chain.geoAsset!)}
+                      className="console-tag console-tag-amber hover:brightness-125 cursor-pointer"
+                      title="Approximate Datacenter Geolocation"
+                    >
+                      <MapPin size={10} className="shrink-0" />
+                      <span>
+                        {String(chain.geoAsset.metadata?.city || chain.geoAsset.metadata?.country || chain.geoAsset.value)}
+                      </span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -236,11 +218,10 @@ export default function AssetChainVisualizer({
         )}
       </div>
 
-      {filteredChains.length > 20 && (
-        <p className="text-center text-xs text-slate-500 pt-2">
-          Showing 20 of {filteredChains.length} discovered routing paths. Use search to filter specific hosts.
-        </p>
-      )}
+      <div className="pt-2 border-t border-[#1f2735] flex items-center justify-between text-[11px] font-mono text-[#626e82]">
+        <span>Showing {filteredChains.length} of {chains.length} infrastructure resolution paths</span>
+        <span>[CLICK ASSET PILL FOR RAW METADATA]</span>
+      </div>
     </div>
   );
 }

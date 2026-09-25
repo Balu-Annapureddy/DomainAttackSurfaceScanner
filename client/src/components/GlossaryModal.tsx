@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, HelpCircle, X, ShieldCheck, Info } from 'lucide-react';
+import { BookOpen, X, Info } from 'lucide-react';
 import { GLOSSARY, type GlossaryEntry } from '../lib/glossary';
 
 interface GlossaryModalProps {
@@ -18,7 +18,7 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
   const filtered = entries.filter(([key, entry]) =>
     entry.term.toLowerCase().includes(search.toLowerCase()) ||
     entry.shortExplanation.toLowerCase().includes(search.toLowerCase()) ||
-    key.toLowerCase().includes(search.toLowerCase())
+    key.toLowerCase().includes(search.toLowerCase()),
   );
 
   const fallbackEntry: GlossaryEntry = GLOSSARY.passive_osint ?? {
@@ -32,116 +32,138 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
   const activeEntry: GlossaryEntry = GLOSSARY[selectedKey] ?? fallbackEntry;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e14]/85 p-4 backdrop-blur-sm">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col console-panel shadow-2xl overflow-hidden font-mono">
+        {/* ─── Header ─────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-b border-[#1f2735] px-5 py-3.5 bg-[#111620]">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <BookOpen size={16} />
+            <div className="flex h-7 w-7 items-center justify-center rounded border border-[#388bfd]/30 bg-[#162030] text-[#58a6ff]">
+              <BookOpen size={14} />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">How to Read This Scanner: Knowledge Guide</h2>
-              <p className="text-xs text-slate-400">Plain-English explanations of technical terms, signals, and security concepts</p>
+              <h2 className="text-sm font-bold text-[#e6edf3]">
+                KNOWLEDGE GUIDE // TECHNICAL TERMINOLOGY & OSINT EPISTEMOLOGY
+              </h2>
+              <p className="text-[11px] text-[#9aa5b8] font-sans">
+                Technical definitions explained in plain English for security analysts and beginners.
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
-            aria-label="Close glossary"
+            className="console-btn py-1 px-2 text-[#9aa5b8] hover:text-[#e6edf3]"
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
 
-        {/* Content Body: Sidebar + Detail */}
-        <div className="flex flex-1 flex-col md:flex-row overflow-hidden min-h-[420px]">
-          {/* Sidebar / List */}
-          <div className="w-full md:w-72 border-r border-slate-800 bg-slate-950/30 flex flex-col">
-            <div className="p-3 border-b border-slate-800/80">
+        {/* ─── Body (Master/Detail Layout) ────────────────────────────── */}
+        <div className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-12">
+          {/* Term List Sidebar (Cols 1-4) */}
+          <div className="flex flex-col border-b border-[#1f2735] md:border-b-0 md:border-r md:col-span-4 bg-[#0d121a]">
+            {/* Search */}
+            <div className="p-3 border-b border-[#1f2735]">
               <input
                 type="text"
-                placeholder="Search concepts…"
+                placeholder="Search concepts..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500/50"
+                className="console-input text-xs h-8"
               />
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {filtered.map(([key, entry]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedKey(key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition flex flex-col ${
-                    selectedKey === key
-                      ? 'bg-cyan-500/15 text-cyan-300 font-semibold border border-cyan-500/30'
-                      : 'text-slate-300 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span className="font-medium">{entry.term}</span>
-                  <span className="text-[10px] text-slate-400 truncate mt-0.5">{entry.shortExplanation}</span>
-                </button>
-              ))}
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto divide-y divide-[#171e2b] max-h-48 md:max-h-[500px]">
+              {filtered.map(([key, item]) => {
+                const isSelected = selectedKey === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedKey(key)}
+                    className={`w-full text-left p-3 transition text-xs ${
+                      isSelected
+                        ? 'bg-[#161c28] border-l-2 border-l-[#388bfd] text-[#e6edf3]'
+                        : 'text-[#9aa5b8] hover:bg-[#111620] hover:text-[#e6edf3]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold">{item.term}</span>
+                      <span className="console-tag text-[9px]">
+                        {item.category}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#626e82] line-clamp-2 font-sans">
+                      {item.shortExplanation}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Main Detail Panel */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-900/60">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
-                {activeEntry.category.toUpperCase()}
-              </span>
-              <h3 className="text-xl font-bold text-white mt-2">{activeEntry.term}</h3>
-              <p className="text-sm font-medium text-cyan-300 mt-1 italic">
-                “{activeEntry.shortExplanation}”
+          {/* Term Detail (Cols 5-12) */}
+          <div className="flex-1 overflow-y-auto p-5 md:col-span-8 space-y-4 bg-[#111620]">
+            {/* Title & Badge */}
+            <div className="border-b border-[#1f2735] pb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="console-tag console-tag-cyan text-[10px]">
+                  CATEGORY // {activeEntry.category.toUpperCase()}
+                </span>
+                <span className="console-tag console-tag-phosphor text-[10px]">
+                  PEER_REVIEWED
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-[#e6edf3]">
+                {activeEntry.term}
+              </h3>
+              <p className="mt-1 text-xs text-[#58a6ff] font-sans">
+                {activeEntry.shortExplanation}
               </p>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-slate-800/80">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
-                  <Info size={14} className="text-cyan-400" />
-                  What is this?
-                </h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{activeEntry.whatIsThis}</p>
+            {/* 4 Structured Pillars */}
+            <div className="space-y-4 font-sans text-xs">
+              {/* Pillar 1: What is this? */}
+              <div className="console-panel-inset p-3.5 space-y-1">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#58a6ff]">
+                  [01] WHAT IS THIS?
+                </div>
+                <p className="text-[#e6edf3] leading-relaxed">
+                  {activeEntry.whatIsThis}
+                </p>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-amber-400" />
-                  Why does it matter?
-                </h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{activeEntry.whyItMatters}</p>
+              {/* Pillar 2: Why it matters */}
+              <div className="console-panel-inset p-3.5 space-y-1">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#d29922]">
+                  [02] WHY IT MATTERS FOR DEFENDERS
+                </div>
+                <p className="text-[#9aa5b8] leading-relaxed">
+                  {activeEntry.whyItMatters}
+                </p>
               </div>
 
-              <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-1.5 flex items-center gap-1.5">
-                  <HelpCircle size={14} className="text-cyan-400" />
-                  What does it mean in this scan?
-                </h4>
-                <p className="text-xs text-slate-200 leading-relaxed font-normal">{activeEntry.whatDoesItMean}</p>
-              </div>
-            </div>
-
-            {/* Passive Epistemology Notice */}
-            <div className="rounded-xl border border-slate-800/80 bg-slate-950/80 p-3.5 text-[11px] text-slate-400 flex items-start gap-2.5">
-              <span className="text-cyan-400 text-sm font-bold">💡</span>
-              <div>
-                <strong className="text-slate-200">The Core Principle of Passive Reconnaissance:</strong>{' '}
-                <em>“We did not observe X” ≠ “X does not exist.”</em> Our scanner operates strictly on public signals and never intrudes, breaks authentication, or probes behind private network perimeters.
+              {/* Pillar 3: What does it mean? */}
+              <div className="console-panel-inset p-3.5 space-y-1">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#3fb950]">
+                  [03] WHAT DOES IT MEAN IN PRACTICE?
+                </div>
+                <p className="text-[#e6edf3] leading-relaxed">
+                  {activeEntry.whatDoesItMean}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-slate-800 px-6 py-3 bg-slate-950/70 text-xs text-slate-400">
-          <span>DomainAttackSurfaceScanner • Education & Defensive Hygiene</span>
+        {/* ─── Footer ─────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-t border-[#1f2735] px-5 py-3 bg-[#0d121a] text-xs text-[#626e82]">
+          <span>EPISTEMOLOGY: “WE DID NOT OBSERVE X” ≠ “X DOES NOT EXIST”</span>
           <button
             onClick={onClose}
-            className="rounded-lg bg-cyan-500 px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400 transition"
+            className="console-btn py-1 px-3 text-xs"
           >
-            Got it
+            DISMISS
           </button>
         </div>
       </div>
@@ -149,26 +171,24 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
   );
 }
 
-interface TermExplainerProps {
+export function TermExplainer({
+  termKey,
+  onOpen,
+  label = 'What is this?',
+}: {
   termKey: string;
+  onOpen: (key: string) => void;
   label?: string;
-  className?: string;
-  onOpenGlossary: (key: string) => void;
-}
-
-export function TermExplainer({ termKey, label, className = '', onOpenGlossary }: TermExplainerProps) {
-  const entry = GLOSSARY[termKey];
-  const displayLabel = label ?? entry?.term ?? termKey;
-
+}) {
   return (
     <button
       type="button"
-      onClick={() => onOpenGlossary(termKey)}
-      className={`inline-flex items-center gap-1 text-slate-300 hover:text-cyan-300 transition group text-left ${className}`}
-      title={entry ? `${entry.term}: ${entry.shortExplanation}` : 'Click for explanation'}
+      onClick={() => onOpen(termKey)}
+      className="inline-flex items-center gap-1 font-mono text-[10px] text-[#58a6ff] hover:underline cursor-pointer"
+      title={`Open terminology definition for ${termKey}`}
     >
-      <span className="border-b border-dotted border-slate-600 group-hover:border-cyan-400">{displayLabel}</span>
-      <HelpCircle size={12} className="text-slate-500 group-hover:text-cyan-400 transition inline shrink-0" />
+      <Info size={10} />
+      <span>{label}</span>
     </button>
   );
 }

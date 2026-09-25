@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { GitFork, ZoomIn, ZoomOut, RotateCcw, Filter, Search } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Filter, Search } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AttackSurfaceGraphProps {
@@ -8,18 +8,18 @@ interface AttackSurfaceGraphProps {
   onSelectAsset?: (asset: Asset) => void;
 }
 
-const TYPE_COLORS: Record<Asset['type'], { bg: string; border: string; text: string; ring: string }> = {
-  DOMAIN: { bg: '#083344', border: '#06b6d4', text: '#22d3ee', ring: 'rgba(6,182,212,0.3)' },
-  SUBDOMAIN: { bg: '#172554', border: '#3b82f6', text: '#60a5fa', ring: 'rgba(59,130,246,0.3)' },
-  IP: { bg: '#2e1065', border: '#8b5cf6', text: '#c084fc', ring: 'rgba(139,92,246,0.3)' },
-  ASN: { bg: '#134e4a', border: '#14b8a6', text: '#2dd4bf', ring: 'rgba(20,184,166,0.3)' },
-  ORGANIZATION: { bg: '#064e3b', border: '#10b981', text: '#34d399', ring: 'rgba(16,185,129,0.3)' },
-  NAMESERVER: { bg: '#713f12', border: '#eab308', text: '#fde047', ring: 'rgba(234,179,8,0.3)' },
-  MAIL_SERVER: { bg: '#7c2d12', border: '#f97316', text: '#fb923c', ring: 'rgba(249,115,22,0.3)' },
-  CERTIFICATE: { bg: '#042f2e', border: '#2dd4bf', text: '#5eead4', ring: 'rgba(45,212,191,0.3)' },
-  GEOLOCATION: { bg: '#831843', border: '#ec4899', text: '#f472b6', ring: 'rgba(236,72,153,0.3)' },
-  TECHNOLOGY: { bg: '#312e81', border: '#6366f1', text: '#818cf8', ring: 'rgba(99,102,241,0.3)' },
-  URL: { bg: '#1e293b', border: '#64748b', text: '#94a3b8', ring: 'rgba(100,116,139,0.3)' },
+const TYPE_COLORS: Record<Asset['type'], { bg: string; border: string; text: string }> = {
+  DOMAIN: { bg: '#102236', border: '#388bfd', text: '#58a6ff' },
+  SUBDOMAIN: { bg: '#0e1f38', border: '#2188ff', text: '#79b8ff' },
+  IP: { bg: '#1c1538', border: '#8a63d2', text: '#b392f0' },
+  ASN: { bg: '#102e26', border: '#2ea043', text: '#3fb950' },
+  ORGANIZATION: { bg: '#0e2b20', border: '#34d399', text: '#7ee787' },
+  NAMESERVER: { bg: '#2b2110', border: '#d29922', text: '#e3b341' },
+  MAIL_SERVER: { bg: '#2e1910', border: '#db6d28', text: '#f0883e' },
+  CERTIFICATE: { bg: '#12262a', border: '#38bdf8', text: '#7dd3fc' },
+  GEOLOCATION: { bg: '#2e1224', border: '#f43f5e', text: '#fb7185' },
+  TECHNOLOGY: { bg: '#1d1936', border: '#6366f1', text: '#a5b4fc' },
+  URL: { bg: '#141a24', border: '#64748b', text: '#94a3b8' },
 };
 
 export default function AttackSurfaceGraph({
@@ -29,7 +29,7 @@ export default function AttackSurfaceGraph({
 }: AttackSurfaceGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [nodeLimit, setNodeLimit] = useState<number>(50);
+  const [nodeLimit, setNodeLimit] = useState<number>(60);
   const [graphSearch, setGraphSearch] = useState<string>('');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -45,10 +45,10 @@ export default function AttackSurfaceGraph({
     return nodeLimit === 0 ? result : result.slice(0, nodeLimit);
   }, [assets, selectedType, graphSearch, nodeLimit]);
 
-  // Generate node coordinates using layered radial/hierarchical grouping
+  // Generate node coordinates using layered hierarchical grouping
   const layout = useMemo(() => {
-    const width = 900;
-    const height = 550;
+    const width = 960;
+    const height = 540;
     const centerX = width / 2;
     const centerY = height / 2;
 
@@ -60,7 +60,7 @@ export default function AttackSurfaceGraph({
       nodeCoords.set(domainNode.id, { x: centerX, y: centerY });
     }
 
-    // Rings by type
+    // Categorized groups
     const subdomains = filteredAssets.filter((a) => a.type === 'SUBDOMAIN');
     const ips = filteredAssets.filter((a) => a.type === 'IP');
     const infra = filteredAssets.filter(
@@ -70,43 +70,47 @@ export default function AttackSurfaceGraph({
       (a) => ['ASN', 'ORGANIZATION', 'GEOLOCATION'].includes(a.type),
     );
 
-    // Place subdomains in inner-left ring
+    // Place subdomains in left semi-circle
     subdomains.forEach((item, i) => {
-      const angle = (Math.PI * 0.8) + (i / Math.max(1, subdomains.length)) * (Math.PI * 0.8);
-      const radius = 170;
+      const count = Math.max(1, subdomains.length);
+      const angle = Math.PI * 0.65 + (i / count) * (Math.PI * 0.7);
+      const radius = 175;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * (radius * 0.8),
+        y: centerY + Math.sin(angle) * (radius * 0.85),
       });
     });
 
-    // Place IPs in inner-right ring
+    // Place IPs in right semi-circle
     ips.forEach((item, i) => {
-      const angle = (-Math.PI * 0.3) + (i / Math.max(1, ips.length)) * (Math.PI * 0.6);
-      const radius = 160;
+      const count = Math.max(1, ips.length);
+      const angle = -Math.PI * 0.35 + (i / count) * (Math.PI * 0.7);
+      const radius = 175;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * (radius * 0.8),
+        y: centerY + Math.sin(angle) * (radius * 0.85),
       });
     });
 
     // Place Nameservers, Mail, Certs on top & bottom arcs
     infra.forEach((item, i) => {
-      const angle = (-Math.PI * 0.8) + (i / Math.max(1, infra.length)) * (Math.PI * 0.7);
-      const radius = 230;
+      const count = Math.max(1, infra.length);
+      const angle = -Math.PI * 0.85 + (i / count) * (Math.PI * 0.7);
+      const radius = 245;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius,
+        y: centerY + Math.sin(angle) * (radius * 0.9),
       });
     });
 
-    // Place ASN, Org, Geo on outer arcs connected to IPs
+    // Place ASN, Org, Geo on outer right arcs
     intel.forEach((item, i) => {
-      const angle = (-Math.PI * 0.15) + (i / Math.max(1, intel.length)) * (Math.PI * 0.7);
-      const radius = 280;
+      const count = Math.max(1, intel.length);
+      const angle = -Math.PI * 0.2 + (i / count) * (Math.PI * 0.7);
+      const radius = 295;
       nodeCoords.set(item.id, {
         x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius,
+        y: centerY + Math.sin(angle) * (radius * 0.9),
       });
     });
 
@@ -121,116 +125,114 @@ export default function AttackSurfaceGraph({
   }, [relationships, layout.nodeCoords]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-xl">
-      {/* Control Bar */}
-      <div className="flex flex-col gap-3 border-b border-slate-800/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400">
-            <GitFork size={18} />
+    <div className="console-panel overflow-hidden">
+      {/* ─── Graph Header Bar ───────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 border-b border-[#1f2735] p-3.5 sm:flex-row sm:items-center sm:justify-between bg-[#111620]">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="text-[#58a6ff] font-bold">[GRAPH]</span>
+            <span className="font-bold text-[#e6edf3]">ATTACK SURFACE RELATIONSHIP TOPOLOGY</span>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">Attack Surface Relationship Graph</h2>
-            <p className="text-xs text-slate-400">
-              {visibleRelationships.length} relationships across {filteredAssets.length} nodes
-            </p>
-          </div>
+          <p className="text-[11px] text-[#9aa5b8] mt-0.5 font-mono">
+            {visibleRelationships.length} relationships active · {filteredAssets.length} nodes rendered
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           {/* Quick Search */}
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626e82]" />
             <input
               type="text"
-              placeholder="Find node..."
+              placeholder="Filter node..."
               value={graphSearch}
               onChange={(e) => setGraphSearch(e.target.value)}
-              className="h-7 w-28 sm:w-36 rounded-lg border border-slate-800 bg-slate-950/70 pl-7 pr-2 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-cyan-500/50"
+              className="h-7 w-28 sm:w-36 rounded border border-[#1f2735] bg-[#0d121a] pl-7 pr-2 text-xs text-[#e6edf3] placeholder-[#626e82] outline-none focus:border-[#388bfd]"
             />
           </div>
 
-          {/* Filter Type */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950/70 px-2 py-1 text-xs">
-            <Filter size={13} className="text-slate-400" />
+          {/* Type Filter */}
+          <div className="flex items-center gap-1.5 rounded border border-[#1f2735] bg-[#0d121a] px-2 py-1 text-xs">
+            <Filter size={11} className="text-[#626e82]" />
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-transparent text-slate-200 outline-none cursor-pointer"
+              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer text-xs"
             >
               <option value="ALL">All Asset Types</option>
               <option value="DOMAIN">Domains</option>
               <option value="SUBDOMAIN">Subdomains</option>
-              <option value="IP">IP Addresses</option>
+              <option value="IP">IP Endpoints</option>
               <option value="CERTIFICATE">Certificates</option>
-              <option value="ASN">ASNs</option>
+              <option value="ASN">BGP ASNs</option>
               <option value="ORGANIZATION">Organizations</option>
               <option value="GEOLOCATION">Geolocations</option>
             </select>
           </div>
 
-          {/* Limit Selector */}
-          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-950/70 px-2 py-1 text-xs">
+          {/* Node Limit */}
+          <div className="flex items-center rounded border border-[#1f2735] bg-[#0d121a] px-2 py-1 text-xs">
             <select
               value={nodeLimit}
               onChange={(e) => setNodeLimit(Number(e.target.value))}
-              className="bg-transparent text-slate-200 outline-none cursor-pointer"
+              className="bg-transparent text-[#e6edf3] outline-none cursor-pointer text-xs"
             >
               <option value={30}>30 nodes</option>
-              <option value={50}>50 nodes</option>
+              <option value={60}>60 nodes</option>
               <option value={100}>100 nodes</option>
               <option value={0}>All nodes</option>
             </select>
           </div>
 
-          {/* Zoom Buttons */}
-          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-950/70 p-0.5">
+          {/* Zoom Controls */}
+          <div className="flex items-center rounded border border-[#1f2735] bg-[#0d121a] p-0.5">
             <button
               onClick={() => setZoom((z) => Math.max(0.6, z - 0.15))}
-              className="rounded p-1 text-slate-400 hover:text-white transition"
+              className="rounded p-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
               title="Zoom out"
             >
-              <ZoomOut size={15} />
+              <ZoomOut size={13} />
             </button>
-            <span className="px-1.5 text-[11px] font-mono text-slate-400">{Math.round(zoom * 100)}%</span>
+            <span className="px-1.5 text-[10px] font-mono text-[#626e82]">{Math.round(zoom * 100)}%</span>
             <button
               onClick={() => setZoom((z) => Math.min(1.6, z + 0.15))}
-              className="rounded p-1 text-slate-400 hover:text-white transition"
+              className="rounded p-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
               title="Zoom in"
             >
-              <ZoomIn size={15} />
+              <ZoomIn size={13} />
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="border-l border-slate-800 ml-1 pl-1 pr-1 text-slate-400 hover:text-white transition"
+              className="border-l border-[#1f2735] ml-0.5 pl-1 pr-1 text-[#9aa5b8] hover:text-[#e6edf3] transition"
               title="Reset view"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={12} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* SVG Interactive Canvas */}
-      <div className="relative overflow-hidden bg-slate-950 p-4">
+      {/* ─── SVG Canvas with Console Grid ───────────────────────────── */}
+      <div className="relative overflow-hidden bg-[#0a0d13] p-4 console-grid-bg">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
-          className="h-[520px] w-full select-none transition-transform duration-200"
+          className="h-[500px] w-full select-none transition-transform duration-150"
           style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
         >
           <defs>
             <marker
-              id="arrowhead"
-              markerWidth="8"
-              markerHeight="6"
-              refX="14"
-              refY="3"
+              id="arrowhead-retro"
+              markerWidth="7"
+              markerHeight="5"
+              refX="13"
+              refY="2.5"
               orient="auto"
             >
-              <polygon points="0 0, 8 3, 0 6" fill="#475569" opacity="0.8" />
+              <polygon points="0 0, 7 2.5, 0 5" fill="#303c50" />
             </marker>
           </defs>
 
-          {/* Render Lines / Relationships */}
+          {/* Relationships / Edges */}
           {visibleRelationships.map((rel, idx) => {
             const from = layout.nodeCoords.get(rel.fromAssetId);
             const to = layout.nodeCoords.get(rel.toAssetId);
@@ -246,17 +248,17 @@ export default function AttackSurfaceGraph({
                   y1={from.y}
                   x2={to.x}
                   y2={to.y}
-                  stroke={isHighlighted ? '#06b6d4' : '#1e293b'}
-                  strokeWidth={isHighlighted ? 2.5 : 1.2}
-                  strokeDasharray={rel.type === 'located_approximately_at' ? '4 4' : undefined}
-                  markerEnd="url(#arrowhead)"
-                  opacity={isHighlighted ? 0.9 : 0.6}
+                  stroke={isHighlighted ? '#388bfd' : '#1f2937'}
+                  strokeWidth={isHighlighted ? 2 : 1}
+                  strokeDasharray={rel.type === 'located_approximately_at' ? '4 3' : undefined}
+                  markerEnd="url(#arrowhead-retro)"
+                  opacity={isHighlighted ? 0.95 : 0.65}
                 />
               </g>
             );
           })}
 
-          {/* Render Nodes */}
+          {/* Nodes */}
           {filteredAssets.map((asset) => {
             const coords = layout.nodeCoords.get(asset.id);
             if (!coords) return null;
@@ -265,54 +267,45 @@ export default function AttackSurfaceGraph({
             const isHovered = hoveredNodeId === asset.id;
             const isTargetDomain = asset.type === 'DOMAIN';
             const radius = isTargetDomain ? 24 : 16;
-            const label = asset.value.length > 20 ? `${asset.value.slice(0, 18)}…` : asset.value;
+            const label = asset.value.length > 22 ? `${asset.value.slice(0, 20)}…` : asset.value;
 
             return (
               <g
                 key={asset.id}
                 transform={`translate(${coords.x}, ${coords.y})`}
-                className="cursor-pointer transition-all duration-150"
+                className="cursor-pointer transition-transform"
                 onClick={() => onSelectAsset?.(asset)}
                 onMouseEnter={() => setHoveredNodeId(asset.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
               >
-                {/* Glow ring on hover */}
-                {isHovered && (
-                  <circle
-                    r={radius + 8}
-                    fill="none"
-                    stroke={style.border}
-                    strokeWidth={2}
-                    opacity={0.4}
-                    className="animate-pulse"
-                  />
-                )}
-
+                {/* Node Box */}
                 <circle
                   r={radius}
                   fill={style.bg}
-                  stroke={style.border}
-                  strokeWidth={isHovered ? 2.5 : 1.5}
+                  stroke={isHovered ? '#ffffff' : style.border}
+                  strokeWidth={isHovered ? 2 : 1.2}
                 />
 
+                {/* Node Label */}
                 <text
                   textAnchor="middle"
                   dy={isTargetDomain ? -28 : -20}
                   fill={isHovered ? '#ffffff' : style.text}
-                  fontSize={isTargetDomain ? 12 : 10}
+                  fontSize={isTargetDomain ? 11 : 9.5}
                   fontWeight={isTargetDomain ? 700 : 500}
                   className="pointer-events-none font-mono"
                 >
                   {label}
                 </text>
 
+                {/* Type Code */}
                 <text
                   textAnchor="middle"
-                  dy={4}
+                  dy={3.5}
                   fill="#ffffff"
-                  fontSize={isTargetDomain ? 10 : 8}
+                  fontSize={isTargetDomain ? 9.5 : 7.5}
                   fontWeight={600}
-                  className="pointer-events-none uppercase tracking-wider"
+                  className="pointer-events-none font-mono tracking-wider uppercase opacity-90"
                 >
                   {asset.type.slice(0, 3)}
                 </text>
@@ -322,28 +315,29 @@ export default function AttackSurfaceGraph({
         </svg>
 
         {filteredAssets.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
-            No assets match the selected filter.
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-[#626e82] text-xs">
+            NO ASSETS MATCH CURRENT FILTER
           </div>
         )}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/60 bg-slate-950/50 px-5 py-3 text-xs text-slate-400">
+      {/* ─── Legend Bar ─────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1f2735] bg-[#0d121a] px-4 py-2.5 font-mono text-[11px]">
         <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[#626e82]">NODE TYPES:</span>
           {Object.entries(TYPE_COLORS)
-            .slice(0, 6)
+            .slice(0, 7)
             .map(([type, style]) => (
               <div key={type} className="flex items-center gap-1.5">
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: style.border }}
                 />
-                <span className="text-[11px] text-slate-400">{type}</span>
+                <span className="text-[#9aa5b8]">{type}</span>
               </div>
             ))}
         </div>
-        <span className="text-[11px] text-slate-500">Click node for asset details</span>
+        <span className="text-[#626e82]">[CLICK NODE FOR RAW EVIDENCE DRAWER]</span>
       </div>
     </div>
   );

@@ -1,13 +1,10 @@
 import {
   Shield,
   Layers,
-  Globe,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
   Lock,
   Mail,
-  Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
 import { generateExecutiveSummary } from '../lib/executiveSummary';
@@ -17,202 +14,169 @@ interface ExecutiveSummaryProps {
   compact?: boolean;
 }
 
-export default function ExecutiveSummary({ scan, compact = false }: ExecutiveSummaryProps) {
+export default function ExecutiveSummary({ scan }: ExecutiveSummaryProps) {
   const summary = generateExecutiveSummary(scan);
 
   return (
-    <div className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-xl">
-      {/* Title & Scope Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-4">
+    <div className="console-panel p-5 space-y-4">
+      {/* ─── Header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#1f2735] pb-3">
         <div>
-          <div className="flex items-center gap-2">
-            <Shield className="text-cyan-400" size={18} />
-            <h2 className="text-lg font-bold text-white">Executive Intelligence Summary</h2>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <Shield className="text-[#58a6ff]" size={14} />
+            <span className="font-bold text-[#e6edf3]">EXECUTIVE INTELLIGENCE SYNTHESIS</span>
           </div>
-          <p className="mt-1 text-xs text-slate-400">
-            Synthesized assessment of observable attack surface, perimeter configurations, and hygiene posture.
+          <p className="mt-0.5 text-xs text-[#9aa5b8]">
+            Synthesized assessment of observable perimeter footprint, cryptographic posture, and email anti-spoofing controls.
           </p>
         </div>
 
-        <span className="self-start sm:self-auto rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold text-cyan-300">
-          Passive Reconnaissance Only
+        <span className="console-tag console-tag-cyan text-[10px]">
+          PASSIVE_TELEMETRY_ONLY
         </span>
       </div>
 
-      {/* Discovered Footprint & Configuration Observations Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* ─── Discovered Footprint & Configuration Observations Grid ── */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 font-mono text-xs">
         {/* Footprint Discovered */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Surface Footprint</span>
-            <Layers size={15} className="text-cyan-400" />
+        <div className="console-panel-inset p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-[#9aa5b8] pb-1 border-b border-[#171e2b]">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Surface Footprint</span>
+            <Layers size={13} className="text-[#58a6ff]" />
           </div>
           <div className="space-y-1 text-xs">
             <div className="flex justify-between">
-              <span className="text-slate-400">Subdomains:</span>
-              <span className="font-semibold text-white">{summary.stats.subdomains}</span>
+              <span className="text-[#626e82]">Subdomains:</span>
+              <span className="font-bold text-[#e6edf3]">{summary.stats.subdomains}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">IPv4/IPv6 Addresses:</span>
-              <span className="font-semibold text-white">{summary.stats.ipAddresses}</span>
+              <span className="text-[#626e82]">IP Endpoints:</span>
+              <span className="font-bold text-[#e6edf3]">{summary.stats.ipAddresses}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Autonomous Systems:</span>
-              <span className="font-semibold text-white">{summary.stats.asns}</span>
+              <span className="text-[#626e82]">BGP ASNs:</span>
+              <span className="font-bold text-[#e6edf3]">{summary.stats.asns}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Hosting Organizations:</span>
-              <span className="font-semibold text-white">{summary.stats.organizations}</span>
+              <span className="text-[#626e82]">Hosting Orgs:</span>
+              <span className="font-bold text-[#e6edf3]">{summary.stats.organizations}</span>
             </div>
           </div>
         </div>
 
         {/* Cryptography & Transport */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Transport Security</span>
-            <Lock size={15} className="text-purple-400" />
+        <div className="console-panel-inset p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-[#9aa5b8] pb-1 border-b border-[#171e2b]">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Transport Security</span>
+            <Lock size={13} className="text-[#8a63d2]" />
           </div>
           <div className="space-y-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">HTTPS Enforced:</span>
-              <span className="flex items-center gap-1 font-semibold">
+              <span className="text-[#626e82]">HTTPS Enforced:</span>
+              <span className="font-bold">
                 {summary.observations.httpsEnforced ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <CheckCircle size={12} /> Yes
+                  <span className="text-[#3fb950] flex items-center gap-1">
+                    <CheckCircle size={11} /> YES
                   </span>
                 ) : (
-                  <span className="text-amber-400 flex items-center gap-1">
-                    <XCircle size={12} /> No
+                  <span className="text-[#d29922] flex items-center gap-1">
+                    <XCircle size={11} /> NO
                   </span>
                 )}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">TLS Encryption:</span>
-              <span className="font-semibold text-white">
-                {summary.observations.tlsActive ? summary.observations.tlsProtocol || 'Active' : 'Unavailable'}
+              <span className="text-[#626e82]">TLS Encryption:</span>
+              <span className="font-bold text-[#e6edf3]">
+                {summary.observations.tlsActive ? summary.observations.tlsProtocol || 'ACTIVE' : 'UNAVAILABLE'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Cert Expiry:</span>
-              <span className="font-semibold text-slate-300">
+              <span className="text-[#626e82]">Cert Expiry:</span>
+              <span className="font-bold text-[#9aa5b8]">
                 {typeof summary.observations.certExpiresDays === 'number'
-                  ? `${summary.observations.certExpiresDays} days`
+                  ? `${summary.observations.certExpiresDays}d remaining`
                   : 'N/A'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Certificates Found:</span>
-              <span className="font-semibold text-white">{summary.stats.certificates}</span>
+              <span className="text-[#626e82]">Defense Headers:</span>
+              <span className="font-bold text-[#e6edf3]">
+                {summary.observations.presentHeadersCount} observed / {summary.observations.missingHeadersCount} absent
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Perimeter & Mail Authentication */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Mail & Perimeter</span>
-            <Mail size={15} className="text-blue-400" />
+        {/* Mail & Anti-Spoofing */}
+        <div className="console-panel-inset p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-[#9aa5b8] pb-1 border-b border-[#171e2b]">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Mail Security</span>
+            <Mail size={13} className="text-[#58a6ff]" />
           </div>
           <div className="space-y-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">SPF Record:</span>
-              <span className="font-semibold">
-                {summary.observations.hasSpf ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <CheckCircle size={12} /> Present
-                  </span>
-                ) : (
-                  <span className="text-amber-400 flex items-center gap-1">
-                    <XCircle size={12} /> Missing
-                  </span>
-                )}
+              <span className="text-[#626e82]">Routes Email:</span>
+              <span className="font-bold text-[#e6edf3]">
+                {summary.stats.mailServers > 0 ? `${summary.stats.mailServers} MX Records` : 'No MX Observed'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">DMARC Policy:</span>
-              <span className="font-semibold">
-                {summary.observations.hasDmarc ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <CheckCircle size={12} /> Configured
-                  </span>
-                ) : (
-                  <span className="text-amber-400 flex items-center gap-1">
-                    <XCircle size={12} /> Missing
-                  </span>
-                )}
+              <span className="text-[#626e82]">SPF Policy:</span>
+              <span className={summary.observations.hasSpf ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                {summary.observations.hasSpf ? 'CONFIGURED' : 'NOT OBSERVED'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Mail Exchangers:</span>
-              <span className="font-semibold text-white">{summary.stats.mailServers}</span>
+              <span className="text-[#626e82]">DMARC Policy:</span>
+              <span className={summary.observations.hasDmarc ? 'text-[#3fb950] font-bold' : 'text-[#d29922] font-bold'}>
+                {summary.observations.hasDmarc ? 'CONFIGURED' : 'NOT OBSERVED'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Exposed Files:</span>
-              <span className="font-semibold text-slate-300">
+              <span className="text-[#626e82]">Exposed Files:</span>
+              <span className="font-bold text-[#9aa5b8]">
                 {summary.observations.exposedFiles.length > 0
                   ? summary.observations.exposedFiles.join(', ')
-                  : 'None detected'}
+                  : 'None'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Posture Findings Breakdown */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Hygiene Observations</span>
-            <AlertTriangle size={15} className="text-amber-400" />
+        {/* Perimeter Hygiene Takeaways */}
+        <div className="console-panel-inset p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-[#9aa5b8] pb-1 border-b border-[#171e2b]">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Hygiene Summary</span>
+            <span className="font-bold text-[#d29922]">{summary.findingsSummary.total} Findings</span>
           </div>
           <div className="space-y-1 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-rose-400">High Priority:</span>
-              <span className="font-bold text-rose-400">{summary.findingsSummary.high}</span>
+            <div className="flex justify-between">
+              <span className="text-[#626e82]">High Severity:</span>
+              <span className={summary.findingsSummary.high > 0 ? 'text-[#f85149] font-bold' : 'text-[#e6edf3]'}>
+                {summary.findingsSummary.high}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-amber-400">Medium Priority:</span>
-              <span className="font-bold text-amber-400">{summary.findingsSummary.medium}</span>
+            <div className="flex justify-between">
+              <span className="text-[#626e82]">Medium Consideration:</span>
+              <span className={summary.findingsSummary.medium > 0 ? 'text-[#d29922] font-bold' : 'text-[#e6edf3]'}>
+                {summary.findingsSummary.medium}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-cyan-400">Low Priority:</span>
-              <span className="font-bold text-cyan-400">{summary.findingsSummary.low}</span>
+            <div className="flex justify-between">
+              <span className="text-[#626e82]">Low / Hygiene:</span>
+              <span className="text-[#58a6ff] font-bold">
+                {summary.findingsSummary.low}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Informational:</span>
-              <span className="font-bold text-slate-300">{summary.findingsSummary.informational}</span>
+            <div className="flex justify-between">
+              <span className="text-[#626e82]">Info Signals:</span>
+              <span className="text-[#626e82]">
+                {summary.findingsSummary.informational}
+              </span>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Key Takeaways */}
-      {!compact && summary.keyTakeaways.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Info size={14} className="text-cyan-400" />
-            Key Observations & Actionable Takeaways
-          </h3>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
-            {summary.keyTakeaways.map((takeaway, idx) => (
-              <li key={idx} className="flex items-start gap-2 bg-slate-900/60 rounded-lg p-2.5 border border-slate-800/80">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-400 flex-shrink-0" />
-                <span>{takeaway}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Methodology & Passive Boundaries Note */}
-      <div className="flex items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5 text-xs text-slate-400">
-        <Globe size={15} className="mt-0.5 text-slate-500 flex-shrink-0" />
-        <p>
-          <strong className="text-slate-300">Methodology & Scope Notice:</strong> This analysis represents an external,
-          passive examination of public records (DNS, RDAP, Certificate Transparency logs) and unauthenticated web
-          service responses. No active intrusion, fuzzing, port sweeps, or authentication bypasses were conducted.
-          Infrastructure geolocations correspond to approximate network datacenters or ISP points of presence.
-        </p>
       </div>
     </div>
   );
