@@ -52,32 +52,32 @@ export default function AssetsInventoryTable({
         {/* Search & Filter Toolbar */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           <div className="relative">
-            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
-              placeholder="SEARCH ASSET..."
+              placeholder="Search assets..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-6 w-32 sm:w-44 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-xs"
+              className="h-8 w-36 sm:w-52 border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] pl-8 pr-2 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-md shadow-inner"
             />
           </div>
 
-          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-1.5 h-6 text-[11px] rounded-xs">
-            <Filter size={10} className="text-[var(--text-muted)] mr-1" />
+          <div className="flex items-center border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] px-2 h-8 rounded-md shadow-inner">
+            <Filter size={12} className="text-[var(--text-muted)] mr-1.5" />
             <select
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer"
+              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer text-xs"
             >
-              <option value="ALL">ALL TYPES ({assets.length})</option>
+              <option value="ALL" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">All Types ({assets.length})</option>
               {assetTypes.map((t) => (
-                <option key={t} value={t}>
+                <option key={t} value={t} className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">
                   {t} ({assets.filter((a) => a.type === t).length})
                 </option>
               ))}
@@ -88,29 +88,34 @@ export default function AssetsInventoryTable({
 
       {/* ─── High-Density Technical Table ───────────────────────────── */}
       <div className="overflow-x-auto">
-        <table className="console-table font-mono">
+        <table className="console-table">
           <thead>
             <tr>
-              <th className="w-24">TYPE</th>
+              <th className="w-28">TYPE</th>
               <th>VALUE</th>
-              <th className="w-28">STATUS</th>
+              <th className="w-32">STATUS</th>
               <th>OBSERVED EVIDENCE / SOURCE</th>
-              <th className="w-16 text-right">ACTION</th>
+              <th className="w-20 text-right">ACTION</th>
             </tr>
           </thead>
           <tbody>
             {paginatedAssets.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-[var(--text-muted)]">
-                  NO ASSET RECORDS MATCHING FILTER
+                <td colSpan={5} className="py-8 text-center text-[var(--text-muted)] text-sm">
+                  No asset records match the current filter
                 </td>
               </tr>
             ) : (
               paginatedAssets.map((asset) => {
                 const isGeo = asset.type === 'GEOLOCATION';
                 const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
-                const statusColor = isGeo ? 'text-[#d97706] dark:text-[#f59e0b]' : 'text-[#16a34a] dark:text-[#2ee59d]';
-                const sources = asset.evidence.map((e) => e.source).join(', ') || 'DNS / CT';
+                const statusClass = isGeo
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+                
+                // Deduplicate evidence sources cleanly
+                const uniqueSources = Array.from(new Set(asset.evidence.map((e) => e.source).filter(Boolean)));
+                const sources = uniqueSources.length > 0 ? uniqueSources.join(' • ') : 'DNS / CT';
 
                 return (
                   <tr
@@ -119,21 +124,21 @@ export default function AssetsInventoryTable({
                     className="cursor-pointer transition-colors"
                   >
                     <td>
-                      <span className="text-[10px] text-[var(--accent-primary)] font-bold">
+                      <span className="text-[11px] font-mono text-[var(--accent-primary)] font-bold px-2 py-0.5 rounded bg-[var(--accent-active-bg)] border border-[var(--accent-primary)] border-opacity-20">
                         {asset.type}
                       </span>
                     </td>
-                    <td className="text-[var(--text-primary)] font-semibold">
-                      <span className="truncate block max-w-xs sm:max-w-md font-mono" title={asset.value}>
+                    <td className="text-[var(--text-primary)] font-medium">
+                      <span className="truncate block max-w-xs sm:max-w-md font-mono text-xs select-all" title={asset.value}>
                         {asset.value}
                       </span>
                     </td>
                     <td>
-                      <span className={`text-[10px] font-bold ${statusColor}`}>
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${statusClass}`}>
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="text-[var(--text-secondary)] text-[11px] truncate max-w-xs">
+                    <td className="text-[var(--text-secondary)] text-xs truncate max-w-sm">
                       {sources}
                     </td>
                     <td className="text-right">

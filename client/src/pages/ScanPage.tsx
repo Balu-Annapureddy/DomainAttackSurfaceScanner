@@ -170,49 +170,48 @@ export default function ScanPage() {
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] pb-12 font-sans w-full transition-colors duration-150 flex flex-col">
       <WorkstationNav onOpenGlossary={openGlossary} />
 
-      {/* ─── Ultra-Compact Security Workstation Sub-Header ────────────── */}
-      <div className="border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] px-3 sm:px-5 py-1.5 font-mono text-xs">
-        <div className="mx-auto flex max-w-[1720px] items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="font-bold text-[var(--accent-primary)] truncate max-w-[200px] sm:max-w-md">
+      {/* ─── Modern Security Workstation Sub-Header ────────────── */}
+      <div className="border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] px-4 sm:px-8 py-3 text-xs">
+        <div className="mx-auto flex max-w-[1720px] flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-extrabold text-sm sm:text-base text-[var(--accent-primary)] truncate max-w-[280px] sm:max-w-md">
               TARGET: {scan.domain}
             </span>
-            <span className="text-[var(--border-muted)] hidden sm:inline">|</span>
-            <div className="hidden sm:flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-              <span className="text-[var(--accent-primary)] font-semibold">PASSIVE-EXTERNAL</span>
-              <span>•</span>
-              <span className="text-[var(--text-muted)]">ID: {scan.scanId.slice(0, 8)}…</span>
+            <span className="text-[var(--border-muted)] hidden sm:inline">•</span>
+            <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-mono">
+              <span className="console-tag font-bold text-[var(--accent-primary)]">PASSIVE-EXTERNAL</span>
+              <span className="text-[var(--text-muted)]">SCAN_ID: {scan.scanId.slice(0, 8)}…</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <button
               type="button"
               onClick={toggleGuidedMode}
-              className={`console-btn py-0.5 px-2 text-[10px] ${
-                isGuidedMode ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'
+              className={`console-btn py-1.5 px-3 text-xs font-semibold rounded-lg ${
+                isGuidedMode ? 'border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'text-[var(--text-secondary)]'
               }`}
               title="Toggle guided interpretation vs raw technical dossier"
             >
-              <SlidersHorizontal size={10} />
-              <span>{isGuidedMode ? 'GUIDED' : 'TECH'}</span>
+              <SlidersHorizontal size={13} />
+              <span>{isGuidedMode ? 'MODE: GUIDED' : 'MODE: RAW'}</span>
             </button>
 
             <Link
               to={`/report/${encodeURIComponent(scan.scanId)}`}
-              className="console-btn console-btn-primary py-0.5 px-2 text-[10px]"
+              className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold rounded-lg"
             >
-              <FileText size={10} />
-              <span>DOSSIER</span>
+              <FileText size={13} />
+              <span>FULL DOSSIER</span>
             </Link>
 
-            <Link to="/history" className="console-btn py-0.5 px-2 text-[10px] text-[var(--text-secondary)]">
-              <Clock3 size={10} />
+            <Link to="/history" className="console-btn py-1.5 px-3 text-xs text-[var(--text-secondary)] rounded-lg">
+              <Clock3 size={13} />
               <span className="hidden sm:inline">HISTORY</span>
             </Link>
 
-            <Link to="/" className="console-btn console-btn-phosphor py-0.5 px-2 text-[10px]">
-              <RotateCw size={10} />
+            <Link to="/" className="console-btn console-btn-phosphor py-1.5 px-3 text-xs font-bold rounded-lg">
+              <RotateCw size={13} />
               <span>NEW SCAN</span>
             </Link>
           </div>
@@ -220,7 +219,7 @@ export default function ScanPage() {
       </div>
 
       {/* ─── Main Workstation Layout ─────────────────────────────────── */}
-      <div className="mx-auto max-w-[1720px] px-3 sm:px-5 pt-3 space-y-2.5">
+      <div className="mx-auto max-w-[1720px] px-4 sm:px-8 pt-6 space-y-8 sm:space-y-10">
         {/* Compact Pipeline Stepper */}
         <ScanProgressStepper
           categories={scan.categories}
@@ -236,89 +235,99 @@ export default function ScanPage() {
         />
 
         {/* ─── Operational View Tabs ─────────────────────────────────── */}
-        <div className="flex border-b border-[var(--border-technical)] gap-1 overflow-x-auto font-mono text-xs pt-1">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2">
           <button
             onClick={() => setActiveViewTab('graph')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'graph'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <GitFork size={12} />
-            <span>[RELATIONSHIP GRAPH]</span>
+            <GitFork size={14} />
+            <span>Relationship Graph</span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'map'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <MapPin size={12} />
-            <span>[INFRASTRUCTURE MAP]</span>
+            <MapPin size={14} />
+            <span>Infrastructure Map</span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('chains')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'chains'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <Network size={12} />
-            <span>[ROUTING CHAINS]</span>
+            <Network size={14} />
+            <span>Routing Chains</span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('inventory')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'inventory'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <Layers size={12} />
-            <span>[ASSET INVENTORY ({scan.assets?.length ?? 0})]</span>
+            <Layers size={14} />
+            <span>Asset Inventory</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeViewTab === 'inventory' ? 'bg-white/20 text-white' : 'bg-[var(--bg-panel-inset)] text-[var(--accent-primary)]'
+            }`}>
+              {scan.assets?.length ?? 0}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('findings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'findings'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <AlertTriangle size={12} />
-            <span>[FINDINGS ({scan.findings?.length ?? 0})]</span>
+            <AlertTriangle size={14} />
+            <span>Findings</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeViewTab === 'findings' ? 'bg-white/20 text-white' : 'bg-[var(--bg-panel-inset)] text-[#d97706] dark:text-[#f59e0b]'
+            }`}>
+              {scan.findings?.length ?? 0}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('raw')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'raw'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <FileText size={12} />
-            <span>[RAW TELEMETRY]</span>
+            <FileText size={14} />
+            <span>Raw Telemetry</span>
           </button>
 
           <button
             onClick={() => setActiveViewTab('all')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
               activeViewTab === 'all'
-                ? 'border-[var(--border-technical)] bg-[var(--bg-panel)] text-[var(--accent-primary)] font-bold shadow-xs'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
             }`}
           >
-            <ListTree size={12} />
-            <span>[ALL DOSSIER SECTIONS]</span>
+            <ListTree size={14} />
+            <span>All Dossier Sections</span>
           </button>
         </div>
 
@@ -392,7 +401,7 @@ export default function ScanPage() {
 
         {/* Primary View 7: All Dossier Sections Sequentially */}
         {activeViewTab === 'all' && (
-          <div className="space-y-4 w-full">
+          <div className="space-y-10 sm:space-y-12 w-full">
             <AttackSurfaceGraph
               sectionNumber="03"
               assets={scan.assets ?? []}

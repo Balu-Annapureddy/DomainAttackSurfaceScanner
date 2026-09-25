@@ -26,14 +26,14 @@ export default function ScanProgressStepper({
   onSelectCategory,
 }: ScanProgressStepperProps) {
   return (
-    <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-2 overflow-x-auto rounded-xs">
-      <div className="flex items-center min-w-[680px] gap-2">
-        <div className="font-mono text-[10px] font-bold text-[var(--text-secondary)] uppercase pr-2.5 border-r border-[var(--border-muted)] shrink-0 flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)]" />
-          <span>SYS // PIPELINE</span>
+    <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-3 sm:p-3.5 overflow-x-auto rounded-xl shadow-xs">
+      <div className="flex items-center min-w-[720px] gap-3">
+        <div className="font-mono text-xs font-bold text-[var(--text-secondary)] uppercase pr-3 border-r border-[var(--border-muted)] shrink-0 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+          <span>PIPELINE</span>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 flex-1 font-mono text-xs">
+        <div className="grid grid-cols-7 gap-2 flex-1 text-xs">
           {PIPELINE_ITEMS.map((item) => {
             const status = categories[item.key]?.status ?? 'pending';
             const isSelected = activeCategory === item.key;
@@ -61,14 +61,14 @@ export default function ScanProgressStepper({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectCategory?.(item.key)}
-                className={`flex items-center justify-between px-2 py-1 border text-left cursor-pointer transition rounded-xs ${bgClass} ${
-                  isSelected ? 'ring-1 ring-[var(--accent-primary)] border-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'hover:border-[var(--accent-primary)]'
+                className={`flex items-center justify-between px-2.5 py-1.5 border text-left cursor-pointer transition rounded-lg ${bgClass} ${
+                  isSelected ? 'ring-2 ring-[var(--accent-primary)] border-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'hover:border-[var(--accent-primary)]'
                 }`}
                 title={`Pipeline Stage: ${item.name} (${status})`}
               >
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">[{item.id}]</span>
-                  <span className="font-semibold text-[11px] truncate">{item.name}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0">{item.id}</span>
+                  <span className="font-medium text-xs truncate">{item.name}</span>
                 </div>
                 <span className={`font-bold ${symbolColor} text-xs ml-1 shrink-0`}>{symbol}</span>
               </button>

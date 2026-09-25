@@ -1,24 +1,26 @@
 @import "tailwindcss";
 
-/* ─── Retro Network Intelligence Workstation Theme Tokens ──────────── */
+/* ─── Modern Cyber Defense & Intelligence Design System ────────────── */
 :root {
-  /* LIGHT THEME (Default) */
+  color-scheme: light;
+  /* LIGHT THEME (Clean, High-Contrast Executive SaaS) */
   --bg-canvas: #f8fafc;
   --bg-panel: #ffffff;
-  --bg-panel-subtle: #f0f7ff;
-  --bg-panel-elevated: #f8fafc;
-  --bg-panel-inset: #f1f5f9;
+  --bg-panel-subtle: #f1f5f9;
+  --bg-panel-elevated: #ffffff;
+  --bg-panel-inset: #f8fafc;
   
-  --border-technical: #bae6fd;
+  --border-technical: #cbd5e1;
   --border-muted: #e2e8f0;
   
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-muted: #94a3b8;
   
-  --accent-primary: #0ea5e9;
-  --accent-hover: #0284c7;
-  --accent-active-bg: #e0f2fe;
+  --accent-primary: #0284c7;
+  --accent-hover: #0369a1;
+  --accent-active-bg: rgba(2, 132, 199, 0.08);
+  --accent-glow: 0 0 20px rgba(2, 132, 199, 0.18);
 
   --sev-critical: #dc2626;
   --sev-critical-bg: #fee2e2;
@@ -29,37 +31,43 @@
   --sev-low: #0284c7;
   --sev-low-bg: #e0f2fe;
 
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-card-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --map-tile-filter: none;
 }
 
 [data-theme='dark'] {
-  /* DARK THEME */
-  --bg-canvas: #0b0f10;
-  --bg-panel: #131b1e;
-  --bg-panel-subtle: #162425;
-  --bg-panel-elevated: #1a2528;
-  --bg-panel-inset: #0e1416;
+  color-scheme: dark;
+  /* DARK THEME (Deep Obsidian / Midnight Slate) */
+  --bg-canvas: #090d16;
+  --bg-panel: #0e1526;
+  --bg-panel-subtle: #141c30;
+  --bg-panel-elevated: #162038;
+  --bg-panel-inset: #0a0f1d;
   
-  --border-technical: #1d332e;
-  --border-muted: #1e293b;
+  --border-technical: #1e293b;
+  --border-muted: #172033;
   
-  --text-primary: #e2e8f0;
-  --text-secondary: #8ca39e;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
   --text-muted: #64748b;
   
-  --accent-primary: #2ee59d;
-  --accent-hover: #22c55e;
-  --accent-active-bg: rgba(46, 229, 157, 0.12);
+  --accent-primary: #10b981;
+  --accent-hover: #059669;
+  --accent-active-bg: rgba(16, 185, 129, 0.12);
+  --accent-glow: 0 0 24px rgba(16, 185, 129, 0.22);
 
   --sev-critical: #ef4444;
-  --sev-critical-bg: rgba(239, 68, 68, 0.12);
+  --sev-critical-bg: rgba(239, 68, 68, 0.14);
   --sev-high: #f97316;
-  --sev-high-bg: rgba(249, 115, 22, 0.12);
+  --sev-high-bg: rgba(249, 115, 22, 0.14);
   --sev-medium: #eab308;
-  --sev-medium-bg: rgba(234, 179, 8, 0.12);
+  --sev-medium-bg: rgba(234, 179, 8, 0.14);
   --sev-low: #06b6d4;
-  --sev-low-bg: rgba(6, 182, 212, 0.12);
+  --sev-low-bg: rgba(6, 182, 212, 0.14);
 
+  --shadow-card: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  --shadow-card-elevated: 0 12px 24px -4px rgba(0, 0, 0, 0.55);
   --map-tile-filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%) grayscale(45%);
 }
 
@@ -109,20 +117,23 @@ code, kbd, samp, pre, .font-mono {
 .console-panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-technical);
-  border-radius: 2px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
   position: relative;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .console-panel-elevated {
   background: var(--bg-panel-elevated);
-  border: 1px solid var(--border-muted);
-  border-radius: 2px;
+  border: 1px solid var(--border-technical);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card-elevated);
 }
 
 .console-panel-inset {
   background: var(--bg-panel-inset);
-  border: 1px solid var(--border-technical);
-  border-radius: 2px;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
 }
 
 /* Dossier Section Header */
@@ -130,51 +141,56 @@ code, kbd, samp, pre, .font-mono {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.875rem;
+  padding: 0.75rem 1.25rem;
   background: var(--bg-panel-subtle);
   border-bottom: 1px solid var(--border-technical);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   color: var(--text-primary);
 }
 
 .dossier-header .dossier-num {
+  font-family: 'JetBrains Mono', monospace;
   color: var(--accent-primary);
-  margin-right: 0.5rem;
+  margin-right: 0.625rem;
+  font-weight: 700;
 }
 
-/* ─── Telemetry Grid & Cells (Grafana-style density) ───────────────── */
+/* ─── Telemetry Grid & Cells ───────────────────────────────────────── */
 .telemetry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1px;
   background: var(--border-muted);
   border: 1px solid var(--border-technical);
-  border-radius: 2px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .telemetry-cell {
   background: var(--bg-panel);
-  padding: 0.625rem 0.875rem;
+  padding: 0.875rem 1rem;
   display: flex;
   flex-direction: column;
 }
 
 .telemetry-cell-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.625rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.375rem;
 }
 
 .telemetry-cell-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--text-primary);
@@ -185,68 +201,71 @@ code, kbd, samp, pre, .font-mono {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 2px;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid var(--border-muted);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border-technical);
   background: var(--bg-panel-elevated);
   color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
   user-select: none;
 }
 
 .console-btn:hover:not(:disabled) {
-  background: var(--accent-active-bg);
+  background: var(--bg-panel-subtle);
   border-color: var(--accent-primary);
   color: var(--text-primary);
 }
 
 .console-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .console-btn-primary {
-  background: var(--accent-active-bg);
+  background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: var(--text-primary);
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: var(--accent-glow);
 }
 
 .console-btn-primary:hover:not(:disabled) {
-  background: var(--accent-primary);
-  color: #ffffff;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--accent-glow);
 }
 
 .console-btn-phosphor {
   background: var(--accent-active-bg);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
+  font-weight: 600;
 }
 
 .console-btn-phosphor:hover:not(:disabled) {
   background: var(--accent-primary);
-  color: #0b0f10;
+  color: #ffffff;
 }
 
 /* ─── Compact Status Tags & Pills ──────────────────────────────────── */
 .console-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.125rem 0.4rem;
-  border-radius: 2px;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6875rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   border: 1px solid var(--border-muted);
   background: var(--bg-panel-inset);
   color: var(--text-secondary);
@@ -271,34 +290,34 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .console-tag-cyan {
-  border-color: var(--accent-primary);
-  background: var(--accent-active-bg);
-  color: var(--accent-primary);
+  border-color: var(--sev-low);
+  background: var(--sev-low-bg);
+  color: var(--sev-low);
 }
 
 /* ─── High-Density Technical Table ─────────────────────────────────── */
 .console-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .console-table th {
   text-align: left;
-  padding: 0.5rem 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
+  padding: 0.625rem 1rem;
+  font-family: 'Inter', sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-technical);
-  background: var(--bg-panel-inset);
+  background: var(--bg-panel-subtle);
   white-space: nowrap;
 }
 
 .console-table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--border-muted);
   vertical-align: middle;
 }
@@ -307,26 +326,52 @@ code, kbd, samp, pre, .font-mono {
   background: var(--accent-active-bg);
 }
 
-/* ─── Technical Inputs ─────────────────────────────────────────────── */
+/* ─── Technical Inputs & Native Selects ─────────────────────────────── */
 .console-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 1rem;
   background: var(--bg-panel-inset);
-  border: 1px solid var(--border-muted);
-  border-radius: 2px;
+  border: 1px solid var(--border-technical);
+  border-radius: 6px;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8125rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
   outline: none;
-  transition: border-color 0.1s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .console-input:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-active-bg);
 }
 
 .console-input::placeholder {
   color: var(--text-muted);
+}
+
+/* Global Select & Option Theme Styling (Fixes white-on-white dropdowns) */
+select, .console-select {
+  background-color: var(--bg-panel-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-technical);
+  border-radius: 6px;
+  padding: 0.375rem 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+select:focus, .console-select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-active-bg);
+}
+
+option {
+  background-color: var(--bg-panel-elevated);
+  color: var(--text-primary);
+  padding: 0.5rem;
 }
 
 /* Leaflet Map Styling with CSS Theme Filter */

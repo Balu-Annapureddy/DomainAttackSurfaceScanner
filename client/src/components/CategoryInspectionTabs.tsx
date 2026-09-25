@@ -26,9 +26,9 @@ export default function CategoryInspectionTabs({
   const data = categoryResult?.data as Record<string, unknown> | undefined;
 
   return (
-    <div className="console-panel overflow-hidden space-y-0">
+    <div className="console-panel rounded-xl overflow-hidden shadow-sm">
       {/* ─── Tab Navigation Header ───────────────────────────────────── */}
-      <div className="flex border-b border-[var(--border-muted)] bg-[var(--bg-panel-inset)] overflow-x-auto font-mono text-xs">
+      <div className="flex border-b border-[var(--border-muted)] bg-[var(--bg-panel-inset)] overflow-x-auto font-sans text-xs">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

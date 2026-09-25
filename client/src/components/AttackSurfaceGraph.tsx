@@ -139,76 +139,76 @@ export default function AttackSurfaceGraph({
   };
 
   return (
-    <div className="console-panel overflow-hidden w-full rounded-xs">
+    <div className="console-panel overflow-hidden w-full rounded-xl shadow-md">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
-      <div className="dossier-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3.5 py-2">
+      <div className="dossier-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
-          <span className="font-bold">ATTACK SURFACE RELATIONSHIPS</span>
-          <span className="text-[11px] text-[var(--text-secondary)] ml-2">
-            {visibleRelationships.length} RELATIONSHIPS &bull; {filteredAssets.length} ASSETS
+          <span className="font-bold text-sm">Attack Surface Topology</span>
+          <span className="text-xs text-[var(--text-secondary)] ml-2 hidden sm:inline font-mono">
+            {visibleRelationships.length} relationships • {filteredAssets.length} nodes
           </span>
         </div>
 
-        {/* Controls Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+        {/* Controls Toolbar with Larger, Sleek Controls */}
+        <div className="flex flex-wrap items-center gap-2.5 text-xs font-sans">
           <div className="relative">
-            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
-              placeholder="SEARCH NODE..."
+              placeholder="Search node..."
               value={graphSearch}
               onChange={(e) => setGraphSearch(e.target.value)}
-              className="h-6 w-28 sm:w-36 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-6 pr-1 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-xs"
+              className="h-8 w-32 sm:w-44 border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] pl-8 pr-2 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-md shadow-inner"
             />
           </div>
 
-          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-1.5 h-6 text-[11px] rounded-xs">
-            <Filter size={10} className="text-[var(--text-muted)] mr-1" />
+          <div className="flex items-center border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] px-2 h-8 rounded-md shadow-inner">
+            <Filter size={12} className="text-[var(--text-muted)] mr-1.5" />
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer"
+              className="bg-transparent text-[var(--text-primary)] outline-none cursor-pointer text-xs"
             >
-              <option value="ALL">ALL TYPES</option>
-              <option value="DOMAIN">DOMAINS</option>
-              <option value="SUBDOMAIN">SUBDOMAINS</option>
-              <option value="IP">IP HOSTS</option>
-              <option value="CERTIFICATE">CERTIFICATES</option>
-              <option value="ASN">BGP ASNS</option>
-              <option value="ORGANIZATION">ORGANIZATIONS</option>
-              <option value="GEOLOCATION">GEOLOCATIONS</option>
+              <option value="ALL" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">All Types</option>
+              <option value="DOMAIN" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">Domains</option>
+              <option value="SUBDOMAIN" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">Subdomains</option>
+              <option value="IP" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">IP Hosts</option>
+              <option value="CERTIFICATE" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">Certificates</option>
+              <option value="ASN" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">BGP ASNs</option>
+              <option value="ORGANIZATION" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">Organizations</option>
+              <option value="GEOLOCATION" className="bg-[var(--bg-panel-elevated)] text-[var(--text-primary)]">Geolocations</option>
             </select>
           </div>
 
-          <div className="flex items-center border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] h-6 px-1 gap-1 rounded-xs">
+          <div className="flex items-center border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] h-8 px-2 gap-2 rounded-md shadow-inner">
             <button
               type="button"
               onClick={() => setZoom((z) => Math.max(0.6, z - 0.15))}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
               title="Zoom out"
               aria-label="Zoom out graph"
             >
-              <ZoomOut size={11} />
+              <ZoomOut size={13} />
             </button>
-            <span className="text-[10px] text-[var(--text-muted)]">{Math.round(zoom * 100)}%</span>
+            <span className="text-[11px] font-mono text-[var(--text-muted)] min-w-[32px] text-center">{Math.round(zoom * 100)}%</span>
             <button
               type="button"
               onClick={() => setZoom((z) => Math.min(1.6, z + 0.15))}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
               title="Zoom in"
               aria-label="Zoom in graph"
             >
-              <ZoomIn size={11} />
+              <ZoomIn size={13} />
             </button>
             <button
               type="button"
               onClick={() => setZoom(1)}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] ml-1 pl-1 border-l border-[var(--border-muted)]"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] ml-1 pl-1.5 border-l border-[var(--border-muted)] p-0.5 cursor-pointer"
               title="Reset zoom"
               aria-label="Reset graph zoom"
             >
-              <RotateCcw size={10} />
+              <RotateCcw size={12} />
             </button>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function AttackSurfaceGraph({
       <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)] workstation-grid-bg">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
-          className="h-[520px] sm:h-[580px] w-full select-none transition-transform duration-150"
+          className="h-[560px] sm:h-[640px] w-full select-none transition-transform duration-150"
           style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
         >
           <defs>
