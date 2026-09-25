@@ -128,6 +128,10 @@ export default function LandingPage() {
               <Link to="/terms" className="text-[var(--accent-primary)] hover:underline">
                 Terms of Use
               </Link>
+              <span className="text-[var(--text-muted)]">&bull;</span>
+              <Link to="/privacy" className="text-[var(--accent-primary)] hover:underline">
+                Privacy Policy
+              </Link>
             </div>
           </form>
 

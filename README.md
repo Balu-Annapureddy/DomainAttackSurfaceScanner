@@ -113,7 +113,7 @@ For cloud hosting with PostgreSQL, Cloudflare Pages, Nginx reverse proxy, and en
 ## 5. Automated Testing & Validation
 
 ```bash
-# Run complete automated test suite (64 tests across 4 suites)
+# Run complete automated test suite (67 tests across 4 suites)
 npm test
 
 # Run build verification (Server TypeScript compiler + Client Vite production bundle)

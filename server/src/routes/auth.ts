@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { db } from '../db';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils/crypto';
 import { SESSION_COOKIE_NAME, requireAuth } from '../middleware/auth';
@@ -6,6 +7,15 @@ import { getQuotaStatus } from '../services/quotaService';
 import { config } from '../config';
 
 const router = Router();
+
+// Conservative rate limiting for authentication endpoints to protect against brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: config.nodeEnv === 'test' ? 1000 : 15, // 15 attempts per 15 minutes, relaxed during tests
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts. Please try again later.', code: 'AUTH_RATE_LIMIT' },
+});
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,7 +41,7 @@ function clearSessionCookie(res: import('express').Response) {
 /**
  * Register a new user account
  */
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
@@ -78,7 +88,7 @@ router.post('/register', async (req, res) => {
 /**
  * Log in to an existing account
  */
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 

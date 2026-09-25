@@ -63,6 +63,15 @@ function validateConfig() {
     }
   }
 
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (databaseUrl) {
+    if (!databaseUrl.startsWith('postgres://') && !databaseUrl.startsWith('postgresql://')) {
+      throw new Error('[config] DATABASE_URL must start with postgres:// or postgresql://');
+    }
+  } else if (nodeEnv === 'production' && process.env.REQUIRE_POSTGRES === 'true') {
+    throw new Error('[config] In production with REQUIRE_POSTGRES=true, DATABASE_URL must be provided.');
+  }
+
   const trustProxyEnv = process.env.TRUST_PROXY?.trim();
   const trustProxy = trustProxyEnv
     ? (/^\d+$/.test(trustProxyEnv) ? Number(trustProxyEnv) : trustProxyEnv === 'true' ? true : trustProxyEnv === 'false' ? false : trustProxyEnv)

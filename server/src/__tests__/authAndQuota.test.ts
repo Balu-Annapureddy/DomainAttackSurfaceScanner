@@ -229,4 +229,40 @@ describe('Authentication, Authorization & Quotas', () => {
       expect(checkMe.body.user).toBeNull();
     });
   });
+
+  describe('Operational Health & Readiness Probes', () => {
+    it('GET /api/health returns 200 with process liveness info without leaking secrets', async () => {
+      const res = await request(app).get('/api/health');
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+      expect(typeof res.body.uptime).toBe('number');
+      expect(res.body.version).toBe('1.0.0');
+      expect(res.body.sessionSecret).toBeUndefined();
+      expect(res.body.databaseUrl).toBeUndefined();
+    });
+
+    it('GET /api/health/ready returns 200 when database persistence is ready', async () => {
+      const res = await request(app).get('/api/health/ready');
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ready');
+      expect(typeof res.body.activeScans).toBe('number');
+      expect(res.body.persistence).toBeDefined();
+    });
+
+    it('GET /api/health/ready returns 503 if database probe fails, without leaking credentials', async () => {
+      const originalFind = db.findUserById;
+      db.findUserById = jest.fn().mockRejectedValue(new Error('Simulated DB connection failure: postgres://secret_user:secret_pass@10.0.0.1:5432/dass'));
+      try {
+        const res = await request(app).get('/api/health/ready');
+        expect(res.status).toBe(503);
+        expect(res.body.status).toBe('unready');
+        expect(res.body.error).toBe('Database persistence unavailable');
+        // Ensure sensitive error details/connection strings are sanitized
+        expect(JSON.stringify(res.body)).not.toContain('secret_pass');
+        expect(JSON.stringify(res.body)).not.toContain('postgres://');
+      } finally {
+        db.findUserById = originalFind;
+      }
+    });
+  });
 });

@@ -315,3 +315,41 @@ Verification & Quality Gates:
 - Client Bundle: Vite production build succeeds with 0 errors.
 - Security Headers: Helmet CSP, Permissions-Policy, HSTS, and nosniff verified.
 
+---
+
+## SPRINT: FINAL PRE-DEPLOYMENT HARDENING SPRINT
+Date: 2026-09-25  
+Status: COMPLETED  
+
+Overview:
+Finalized pre-deployment hardening, operational reliability, rate limiting, and production documentation across the entire DomainAttackSurfaceScanner platform. Addressed every remaining deployment constraint without visual disruption: added dedicated authentication brute-force rate limiters, hardened client IP resolution against header spoofing, validated database configuration schemes, linked privacy notices to scan consent forms, automated health and readiness verification tests with secret sanitization checks, and delivered a complete 20-point deployment checklist, disaster recovery procedures, and a 22-step post-deployment smoke test.
+
+Key Implementations & Verifications:
+1. **Authentication Brute-Force Abuse Protection**:
+   - Added `authLimiter` to `server/src/routes/auth.ts` on `POST /api/auth/register` and `POST /api/auth/login`.
+   - Constrained to 15 attempts per 15-minute window in production environments (relaxed in automated test runs) to prevent credential stuffing and registration spam.
+2. **Client IP & Reverse Proxy Resolution Hardening**:
+   - Updated `quotaService.ts` to exclusively rely on Express `req.ip` (which natively honors `app.set('trust proxy', config.trustProxy)`).
+   - Eliminated manual inspection of `X-Forwarded-For` headers when `TRUST_PROXY` is disabled, closing potential quota evasion via client-forged headers.
+3. **Database URL & Production Secret Guard**:
+   - Added validation in `server/src/config.ts` enforcing that `DATABASE_URL` uses `postgres://` or `postgresql://` URI schemes.
+   - Enforced startup failure in `NODE_ENV=production` if `REQUIRE_POSTGRES=true` is set without a valid `DATABASE_URL`.
+   - Documented all production environment variables in `.env.example`.
+4. **Scan Form Consent & Authorized-Use Policy**:
+   - Updated `LandingPage.tsx` scan initiation container: connected the authorization notice to both the Terms of Use (`/terms`) and Privacy Policy (`/privacy`).
+5. **Operational Health & Readiness Automation**:
+   - Added unit tests in `authAndQuota.test.ts` for `GET /api/health` and `GET /api/health/ready`.
+   - Simulated database disconnection failure and asserted that the HTTP 503 response cleanly reports `Database persistence unavailable` without leaking connection URIs, credentials, or internal stack traces.
+6. **Production Deployment & Operations Guide (`docs/DEPLOYMENT.md`)**:
+   - Clear separation between zero-setup Local Development and Production topology.
+   - Standardized 20-point production deployment checklist covering DNS, TLS, Reverse Proxy, CORS, Session Secrets, and Database Backups.
+   - Added Database Backup, Migration & Disaster Recovery guide, clearly categorizing technical controls into IMPLEMENTED, DEPLOYMENT TASK, and FUTURE RECOMMENDATION.
+   - Implemented an actionable 22-step post-deployment smoke test verification suite.
+
+Verification & Quality Gates:
+- Automated Tests: **67/67 passing** across 4 test suites (`scanner.test.ts`, `ssrfSecurity.test.ts`, `authAndQuota.test.ts`, `realDomainE2E.test.ts`).
+- Server Compilation: `tsc` compiles with 0 errors.
+- Client Bundle: Vite production build succeeds with 0 errors.
+- Lint: 0 errors across client and server.
+
+

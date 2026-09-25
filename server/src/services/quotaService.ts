@@ -12,13 +12,9 @@ export function getIdentityKey(req: Request, user?: User | null): { key: string;
     };
   }
 
-  // Fallback to IP-based rate identity for anonymous users
-  const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
-  const ip = Array.isArray(rawIp)
-    ? (rawIp[0] ?? '127.0.0.1')
-    : typeof rawIp === 'string'
-      ? (rawIp.split(',')[0]?.trim() || '127.0.0.1')
-      : '127.0.0.1';
+  // Express req.ip respects app.set('trust proxy', config.trustProxy)
+  // When trust proxy is disabled, Express safely ignores client-supplied X-Forwarded-For.
+  const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
 
   return {
     key: `ip:${ip}`,
