@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { config } from './config';
 import { applySecurity } from './middleware/security';
-import scanRouter from './routes/scan';
+import scanRouter, { getActiveScansCount } from './routes/scan';
 
 const app = express();
 
@@ -14,7 +14,29 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/scan', scanRouter);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    version: '1.0.0',
+  });
+});
+
+app.get('/api/health/ready', (_req, res) => {
+  try {
+    const isReady = typeof config.port === 'number' && typeof config.scanTimeoutMs === 'number';
+    if (!isReady) {
+      res.status(503).json({ status: 'unready', error: 'Service configuration not ready' });
+      return;
+    }
+    res.json({
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      activeScans: getActiveScansCount(),
+    });
+  } catch (err) {
+    res.status(503).json({ status: 'unready', error: err instanceof Error ? err.message : 'Unknown error' });
+  }
 });
 
 if (!config.isDev) {

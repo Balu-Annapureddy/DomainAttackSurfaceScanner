@@ -60,95 +60,112 @@ const categoryRunners: Record<
   exposure: runExposureChecks,
 };
 
+export function getActiveScansCount(): number {
+  return activeScans;
+}
+
 async function runScan(scanId: string): Promise<void> {
   const scan = getScanRecord(scanId);
   if (!scan) {
+    activeScans = Math.max(0, activeScans - 1);
     return;
   }
 
   const budget = new ScanRequestBudget(config.maxExternalRequests);
   logEvent('scan_started', { scanId, domain: scan.domain, maxBudget: config.maxExternalRequests });
 
-  const runCategory = async (category: Exclude<ScanCategory, 'scoring'>): Promise<void> => {
-    updateCategoryStatus(scanId, category, 'running');
-    logEvent('scan_category_started', { scanId, category });
+  try {
+    const runCategory = async (category: Exclude<ScanCategory, 'scoring'>): Promise<void> => {
+      updateCategoryStatus(scanId, category, 'running');
+      logEvent('scan_category_started', { scanId, category });
 
-    const controller = new AbortController();
-    const timeoutHandle = setTimeout(() => {
-      controller.abort(new Error(`Category ${category} timed out after ${config.scanTimeoutMs}ms`));
-    }, config.scanTimeoutMs);
+      const controller = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        controller.abort(new Error(`Category ${category} timed out after ${config.scanTimeoutMs}ms`));
+      }, config.scanTimeoutMs);
+
+      try {
+        const result = await categoryRunners[category](scan.domain, {
+          signal: controller.signal,
+          budget,
+        });
+        clearTimeout(timeoutHandle);
+        updateCategoryStatus(scanId, category, 'completed', result);
+        logEvent('scan_category_completed', { scanId, category });
+      } catch (error) {
+        clearTimeout(timeoutHandle);
+        controller.abort();
+        const message = error instanceof Error ? error.message : 'Request failed';
+        updateCategoryStatus(scanId, category, 'failed', undefined, message);
+        logError('scan_category_failed', error, { scanId, category });
+      }
+    };
+
+    await Promise.all(
+      (Object.keys(categoryRunners) as Array<Exclude<ScanCategory, 'scoring'>>).map(runCategory),
+    );
+
+    const freshScan = getScanRecord(scanId);
+    if (!freshScan) {
+      return;
+    }
+
+    const addresses = (
+      ((freshScan.categories.dns.data as { addresses?: string[]; aaaa?: string[] } | undefined)?.addresses ?? [])
+    ).concat((freshScan.categories.dns.data as { aaaa?: string[] } | undefined)?.aaaa ?? []);
+
+    let ipIntelligence: IpIntelligence[] = [];
+    const intelligenceWarnings: string[] = [];
 
     try {
-      const result = await categoryRunners[category](scan.domain, {
-        signal: controller.signal,
-        budget,
-      });
-      clearTimeout(timeoutHandle);
-      updateCategoryStatus(scanId, category, 'completed', result);
-      logEvent('scan_category_completed', { scanId, category });
+      ipIntelligence = await runIpIntelligence(addresses, { budget });
     } catch (error) {
-      clearTimeout(timeoutHandle);
-      controller.abort();
-      const message = error instanceof Error ? error.message : 'Request failed';
-      updateCategoryStatus(scanId, category, 'failed', undefined, message);
-      logError('scan_category_failed', error, { scanId, category });
+      intelligenceWarnings.push('IP intelligence provider was unavailable.');
+      logError('ip_intelligence_failed', error, { scanId });
     }
-  };
 
-  await Promise.all(
-    (Object.keys(categoryRunners) as Array<Exclude<ScanCategory, 'scoring'>>).map(runCategory),
-  );
+    if (budget.isExhausted()) {
+      intelligenceWarnings.push(`Outbound request budget limit (${config.maxExternalRequests}) was reached.`);
+    }
 
-  const freshScan = getScanRecord(scanId);
-  if (!freshScan) {
-    return;
-  }
+    const normalized = buildNormalizedAssets(freshScan, ipIntelligence);
+    const findings = buildFindings(freshScan);
+    const failedCategories = (Object.entries(freshScan.categories) as Array<[ScanCategory, { status: string }]>)
+      .filter(([category, state]) => category !== 'scoring' && state.status === 'failed')
+      .map(([category]) => `${category} data was unavailable.`);
 
-  const addresses = (
-    ((freshScan.categories.dns.data as { addresses?: string[]; aaaa?: string[] } | undefined)?.addresses ?? [])
-  ).concat((freshScan.categories.dns.data as { aaaa?: string[] } | undefined)?.aaaa ?? []);
+    setScanIntelligence(scanId, {
+      ...normalized,
+      findings,
+      warnings: [...normalized.warnings, ...failedCategories, ...intelligenceWarnings],
+    });
 
-  let ipIntelligence: IpIntelligence[] = [];
-  const intelligenceWarnings: string[] = [];
+    const score = computeExposureScore(freshScan);
+    setScanScore(scanId, score);
+    updateCategoryStatus(scanId, 'scoring', 'completed', {
+      score,
+      formula: 'Observable configuration posture (TLS, HTTPS enforcement, certificates, security headers, and email authentication)',
+    });
 
-  try {
-    ipIntelligence = await runIpIntelligence(addresses, { budget });
+    markScanFinished(scanId);
+    logEvent('scan_completed', {
+      scanId,
+      domain: scan.domain,
+      status: getScanRecord(scanId)?.status,
+      requestsConsumed: budget.consumed(),
+    });
   } catch (error) {
-    intelligenceWarnings.push('IP intelligence provider was unavailable.');
-    logError('ip_intelligence_failed', error, { scanId });
+    logError('scan_failed', error, { scanId, domain: scan.domain });
+    const currentScan = getScanRecord(scanId);
+    if (currentScan && currentScan.status === 'running') {
+      currentScan.status = 'failed';
+      currentScan.warnings.push(
+        `Scan failed unexpectedly: ${error instanceof Error ? error.message : 'Internal error'}`,
+      );
+    }
+  } finally {
+    activeScans = Math.max(0, activeScans - 1);
   }
-
-  if (budget.isExhausted()) {
-    intelligenceWarnings.push(`Outbound request budget limit (${config.maxExternalRequests}) was reached.`);
-  }
-
-  const normalized = buildNormalizedAssets(freshScan, ipIntelligence);
-  const findings = buildFindings(freshScan);
-  const failedCategories = (Object.entries(freshScan.categories) as Array<[ScanCategory, { status: string }]>)
-    .filter(([category, state]) => category !== 'scoring' && state.status === 'failed')
-    .map(([category]) => `${category} data was unavailable.`);
-
-  setScanIntelligence(scanId, {
-    ...normalized,
-    findings,
-    warnings: [...normalized.warnings, ...failedCategories, ...intelligenceWarnings],
-  });
-
-  const score = computeExposureScore(freshScan);
-  setScanScore(scanId, score);
-  updateCategoryStatus(scanId, 'scoring', 'completed', {
-    score,
-    formula: 'Observable configuration posture (TLS, HTTPS enforcement, certificates, security headers, and email authentication)',
-  });
-
-  markScanFinished(scanId);
-  logEvent('scan_completed', {
-    scanId,
-    domain: scan.domain,
-    status: getScanRecord(scanId)?.status,
-    requestsConsumed: budget.consumed(),
-  });
-  activeScans -= 1;
 }
 
 router.post('/', (req, res) => {
@@ -166,10 +183,7 @@ router.post('/', (req, res) => {
     const scan = createScanRecord(domain);
     activeScans += 1;
     lastScanByDomain.set(domain, Date.now());
-    void runScan(scan.scanId).catch((error) => {
-      activeScans -= 1;
-      logError('scan_failed', error, { scanId: scan.scanId, domain });
-    });
+    void runScan(scan.scanId);
 
     res.status(202).json({
       scanId: scan.scanId,

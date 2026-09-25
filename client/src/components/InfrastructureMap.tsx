@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import { MapPin, Info, Globe } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
@@ -29,58 +29,60 @@ export default function InfrastructureMap({
   const mapInstanceRef = useRef<L.Map | null>(null);
 
   // Extract geolocated IP nodes
-  const geoPoints: GeoPoint[] = [];
+  const geoPoints = useMemo<GeoPoint[]>(() => {
+    const points: GeoPoint[] = [];
+    const ipAssets = assets.filter((a) => a.type === 'IP');
+    const geoAssets = assets.filter((a) => a.type === 'GEOLOCATION');
 
-  const ipAssets = assets.filter((a) => a.type === 'IP');
-  const geoAssets = assets.filter((a) => a.type === 'GEOLOCATION');
+    for (const geo of geoAssets) {
+      const lat = typeof geo.metadata?.latitude === 'number' ? geo.metadata.latitude : null;
+      const lng = typeof geo.metadata?.longitude === 'number' ? geo.metadata.longitude : null;
 
-  for (const geo of geoAssets) {
-    const lat = typeof geo.metadata?.latitude === 'number' ? geo.metadata.latitude : null;
-    const lng = typeof geo.metadata?.longitude === 'number' ? geo.metadata.longitude : null;
-
-    if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-      // Find associated IP via relationship
-      const rel = relationships.find(
-        (r) => r.type === 'located_approximately_at' && r.toAssetId === geo.id,
-      );
-      const ipAsset = rel ? ipAssets.find((ip) => ip.id === rel.fromAssetId) : undefined;
-
-      // Also find ASN and Organization if linked to IP
-      let asnName: string | undefined;
-      let orgName: string | undefined;
-
-      if (ipAsset) {
-        const asnRel = relationships.find(
-          (r) => r.type === 'belongs_to_asn' && r.fromAssetId === ipAsset.id,
+      if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+        // Find associated IP via relationship
+        const rel = relationships.find(
+          (r) => r.type === 'located_approximately_at' && r.toAssetId === geo.id,
         );
-        const asnAsset = asnRel ? assets.find((a) => a.id === asnRel.toAssetId) : undefined;
-        asnName = asnAsset?.value;
+        const ipAsset = rel ? ipAssets.find((ip) => ip.id === rel.fromAssetId) : undefined;
 
-        const orgRel = relationships.find(
-          (r) => r.type === 'operated_by' && r.fromAssetId === ipAsset.id,
-        );
-        const orgAsset = orgRel ? assets.find((a) => a.id === orgRel.toAssetId) : undefined;
-        orgName = orgAsset?.value;
+        // Also find ASN and Organization if linked to IP
+        let asnName: string | undefined;
+        let orgName: string | undefined;
+
+        if (ipAsset) {
+          const asnRel = relationships.find(
+            (r) => r.type === 'belongs_to_asn' && r.fromAssetId === ipAsset.id,
+          );
+          const asnAsset = asnRel ? assets.find((a) => a.id === asnRel.toAssetId) : undefined;
+          asnName = asnAsset?.value;
+
+          const orgRel = relationships.find(
+            (r) => r.type === 'operated_by' && r.fromAssetId === ipAsset.id,
+          );
+          const orgAsset = orgRel ? assets.find((a) => a.id === orgRel.toAssetId) : undefined;
+          orgName = orgAsset?.value;
+        }
+
+        const existingCount = points.filter(
+          (p) => Math.abs(p.lat - lat) < 0.001 && Math.abs(p.lng - lng) < 0.001,
+        ).length;
+        const adjustedLat = existingCount > 0 ? lat + (existingCount * 0.008) : lat;
+        const adjustedLng = existingCount > 0 ? lng + (existingCount * 0.008) : lng;
+
+        points.push({
+          ip: ipAsset?.value ?? 'Discovered Host',
+          lat: adjustedLat,
+          lng: adjustedLng,
+          city: typeof geo.metadata?.city === 'string' ? geo.metadata.city : undefined,
+          country: typeof geo.metadata?.country === 'string' ? geo.metadata.country : undefined,
+          asn: asnName,
+          organization: orgName,
+          asset: ipAsset ?? geo,
+        });
       }
-
-      const existingCount = geoPoints.filter(
-        (p) => Math.abs(p.lat - lat) < 0.001 && Math.abs(p.lng - lng) < 0.001,
-      ).length;
-      const adjustedLat = existingCount > 0 ? lat + (existingCount * 0.008) : lat;
-      const adjustedLng = existingCount > 0 ? lng + (existingCount * 0.008) : lng;
-
-      geoPoints.push({
-        ip: ipAsset?.value ?? 'Discovered Host',
-        lat: adjustedLat,
-        lng: adjustedLng,
-        city: typeof geo.metadata?.city === 'string' ? geo.metadata.city : undefined,
-        country: typeof geo.metadata?.country === 'string' ? geo.metadata.country : undefined,
-        asn: asnName,
-        organization: orgName,
-        asset: ipAsset ?? geo,
-      });
     }
-  }
+    return points;
+  }, [assets, relationships]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -177,7 +179,7 @@ export default function InfrastructureMap({
     return () => {
       // Map stays alive across renders unless unmounted
     };
-  }, [geoPoints.length]);
+  }, [geoPoints, onSelectAsset]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-xl">

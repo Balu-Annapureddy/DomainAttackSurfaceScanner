@@ -43,6 +43,15 @@ export async function fetchProviderJson<T = unknown>(
     throw new Error('Provider requests must strictly use HTTPS');
   }
 
+  const defaultAllowedHosts = ['ipapi.co', 'ip-api.com', 'ipwhois.app', 'ipinfo.io'];
+  const customAllowedHosts =
+    process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
+  const allowedProviderHosts = new Set([...defaultAllowedHosts, ...customAllowedHosts]);
+
+  if (!allowedProviderHosts.has(url.hostname.toLowerCase())) {
+    throw new Error(`Provider request rejected: host "${url.hostname}" is not in the allowed intelligence providers list`);
+  }
+
   if (options.budget) {
     options.budget.consume(1, `Provider query: ${url.hostname}`);
   }

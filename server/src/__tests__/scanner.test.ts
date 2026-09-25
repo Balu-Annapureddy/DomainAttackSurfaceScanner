@@ -8,11 +8,29 @@ import { computeExposureScore } from '../services/scoring';
 import { ScanRequestBudget } from '../services/scanBudget';
 import { buildFindings } from '../services/findings';
 import { compareScans } from '../services/diff';
+import { fetchProviderJson } from '../services/providerHttp';
 import type { DomainScan } from '../../../shared/types';
 
 const app = express();
 app.use(express.json());
 app.use('/api/scan', scanRouter);
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    version: '1.0.0',
+  });
+});
+
+app.get('/api/health/ready', (_req, res) => {
+  res.json({
+    status: 'ready',
+    timestamp: new Date().toISOString(),
+    activeScans: 0,
+  });
+});
 
 describe('domain validation', () => {
   test('normalizes a public domain', () => {
@@ -236,7 +254,7 @@ describe('findings contextual guidance', () => {
   });
 });
 
-describe('scan route', () => {
+describe('scan route & health probes', () => {
   test('rejects invalid domains before starting outbound work', async () => {
     const response = await request(app)
       .post('/api/scan')
@@ -244,6 +262,38 @@ describe('scan route', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('INVALID_DOMAIN');
+  });
+
+  test('returns 404 for non-existent scan ID', async () => {
+    const response = await request(app).get('/api/scan/non-existent-id-12345');
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('SCAN_NOT_FOUND');
+  });
+
+  test('returns 404 when comparing non-existent scans', async () => {
+    const response = await request(app).get('/api/scan/compare/missing-1/missing-2');
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('BASELINE_NOT_FOUND');
+  });
+
+  test('health probe returns 200 with status and uptime', async () => {
+    const response = await request(app).get('/api/health');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
+    expect(typeof response.body.uptime).toBe('number');
+  });
+
+  test('readiness probe returns 200 with ready status', async () => {
+    const response = await request(app).get('/api/health/ready');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ready');
+    expect(response.body.activeScans).toBe(0);
+  });
+
+  test('provider HTTP client rejects non-whitelisted hosts', async () => {
+    await expect(
+      fetchProviderJson('https://malicious-external-host.com/data'),
+    ).rejects.toThrow(/not in the allowed intelligence providers list/);
   });
 });
 

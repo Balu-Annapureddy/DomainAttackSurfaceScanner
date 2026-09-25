@@ -123,19 +123,34 @@ npm run dev
 
 Open your browser at `http://localhost:5173`.
 
+### Production Build & Deployment
+For full production deployment instructions, reverse proxy Nginx configurations, environment variables, and health check monitoring, see [Deployment Guide](docs/DEPLOYMENT.md).
+
+```bash
+# Build production bundles for server and client
+npm run build
+
+# Start the compiled production backend server
+npm start
+```
+
 ---
 
 ## 8. Validation & Testing
 
 ```bash
-# Run server test suite (26 unit and integration tests)
+# Run automated test suite (32 unit and integration tests across 2 test suites)
 npm test
 
-# Run client production build
-npm run build --workspace=client
+# Run production build (TypeScript server + Vite client bundle)
+npm run build
 
-# Run root-level linting
+# Run linter across both workspaces (0 errors, 0 warnings)
 npm run lint
+
+# Verify process health and readiness endpoints
+curl http://localhost:3001/api/health
+curl http://localhost:3001/api/health/ready
 ```
 
 ---
