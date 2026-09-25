@@ -13,7 +13,8 @@ import {
   Network,
   Sparkles,
   SlidersHorizontal,
-  LayoutGrid,
+  MapPin,
+  ListTree,
 } from 'lucide-react';
 import { getScan } from '../lib/api';
 import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
@@ -28,14 +29,14 @@ import AssetDetailModal from '../components/AssetDetailModal';
 import AssetChainVisualizer from '../components/AssetChainVisualizer';
 import GlossaryModal from '../components/GlossaryModal';
 
-type ActiveViewTab = 'dossier' | 'graph' | 'chains' | 'inventory' | 'findings' | 'raw';
+type ActiveViewTab = 'graph' | 'map' | 'chains' | 'inventory' | 'findings' | 'raw' | 'all';
 
 export default function ScanPage() {
   const { scanId } = useParams();
   const [scan, setScan] = useState<DomainScan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeViewTab, setActiveViewTab] = useState<ActiveViewTab>('dossier');
+  const [activeViewTab, setActiveViewTab] = useState<ActiveViewTab>('graph');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<ScanCategory>('dns');
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
@@ -166,69 +167,63 @@ export default function ScanPage() {
   if (!scan) return null;
 
   return (
-    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] pb-16 font-sans">
-      {/* ─── Compact Security Workstation Header ────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] px-4 py-2">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
+    <main className="min-h-screen bg-[#080b0f] text-[#e6edf3] pb-12 font-sans w-full">
+      {/* ─── Ultra-Compact Security Workstation Header ──────────────── */}
+      <header className="sticky top-0 z-40 border-b border-[#1e2631] bg-[#10151b] px-3 sm:px-5 py-1.5">
+        <div className="mx-auto flex max-w-[1720px] items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
             <Link
               to="/"
-              className="flex items-center gap-2 font-mono text-xs font-bold text-[#58a6ff] hover:text-[#e6edf3] transition"
+              className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#58a6ff] hover:text-[#e6edf3] transition"
             >
               <span>DAS // WORKSTATION</span>
             </Link>
             <span className="text-[#1e2631] hidden sm:inline">|</span>
             <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-[#8b9bb0]">
-              <span className="text-[#3fb950] font-semibold">SESSION // PASSIVE-EXTERNAL</span>
+              <span className="text-[#3fb950] font-semibold">PASSIVE-EXTERNAL</span>
               <span>•</span>
-              <span className="text-[#576575]">STATUS // ONLINE</span>
+              <span className="text-[#576575]">ONLINE</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs">
-            {/* Guided / Technical Mode Toggle */}
+          <div className="flex items-center gap-1.5 font-mono text-xs">
             <button
               type="button"
               onClick={toggleGuidedMode}
-              className={`console-btn py-0.5 px-2 text-[11px] ${
+              className={`console-btn py-0.5 px-2 text-[10px] ${
                 isGuidedMode ? 'border-[#58a6ff] text-[#58a6ff]' : 'text-[#8b9bb0]'
               }`}
               title="Toggle guided interpretation vs raw technical dossier"
             >
-              <SlidersHorizontal size={11} />
-              <span>{isGuidedMode ? 'GUIDED' : 'TECHNICAL'}</span>
+              <SlidersHorizontal size={10} />
+              <span>{isGuidedMode ? 'GUIDED' : 'TECH'}</span>
             </button>
 
-            {/* Knowledge Guide */}
             <button
               type="button"
               onClick={() => openGlossary('passive_osint')}
-              className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]"
+              className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]"
               title="Open cybersecurity field manual"
             >
-              <BookOpen size={11} className="text-[#58a6ff]" />
+              <BookOpen size={10} className="text-[#58a6ff]" />
               <span className="hidden md:inline">FIELD MANUAL</span>
             </button>
 
-            {/* Report */}
             <Link
               to={`/report/${scan.scanId}`}
-              className="console-btn console-btn-primary py-0.5 px-2.5 text-[11px]"
-              title="Open full printable intelligence dossier"
+              className="console-btn console-btn-primary py-0.5 px-2 text-[10px]"
             >
-              <FileText size={11} />
-              <span>REPORT</span>
+              <FileText size={10} />
+              <span>DOSSIER</span>
             </Link>
 
-            {/* History */}
-            <Link to="/history" className="console-btn py-0.5 px-2 text-[11px] text-[#8b9bb0]">
-              <Clock3 size={11} />
+            <Link to="/history" className="console-btn py-0.5 px-2 text-[10px] text-[#8b9bb0]">
+              <Clock3 size={10} />
               <span className="hidden sm:inline">HISTORY</span>
             </Link>
 
-            {/* New Scan */}
-            <Link to="/" className="console-btn console-btn-phosphor py-0.5 px-2 text-[11px]">
-              <RotateCw size={11} />
+            <Link to="/" className="console-btn console-btn-phosphor py-0.5 px-2 text-[10px]">
+              <RotateCw size={10} />
               <span>NEW SCAN</span>
             </Link>
           </div>
@@ -236,7 +231,7 @@ export default function ScanPage() {
       </header>
 
       {/* ─── Main Workstation Layout ─────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 space-y-4">
+      <div className="mx-auto max-w-[1720px] px-3 sm:px-5 pt-3 space-y-2.5">
         {/* Compact Pipeline Stepper */}
         <ScanProgressStepper
           categories={scan.categories}
@@ -244,27 +239,15 @@ export default function ScanPage() {
           onSelectCategory={handleCategorySelectFromStepper}
         />
 
-        {/* Scan Overview & Telemetry Strip */}
+        {/* Dense Telemetry Strip */}
         <ScanOverviewCard
           scan={scan}
           onOpenGlossary={openGlossary}
           isGuidedMode={isGuidedMode}
         />
 
-        {/* ─── Workstation Dossier View Tabs ───────────────────────────── */}
+        {/* ─── Operational View Tabs ─────────────────────────────────── */}
         <div className="flex border-b border-[#1e2631] gap-1 overflow-x-auto font-mono text-xs pt-1">
-          <button
-            onClick={() => setActiveViewTab('dossier')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
-              activeViewTab === 'dossier'
-                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
-                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
-            }`}
-          >
-            <LayoutGrid size={12} />
-            <span>[DOSSIER OVERVIEW]</span>
-          </button>
-
           <button
             onClick={() => setActiveViewTab('graph')}
             className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
@@ -275,6 +258,18 @@ export default function ScanPage() {
           >
             <GitFork size={12} />
             <span>[RELATIONSHIP GRAPH]</span>
+          </button>
+
+          <button
+            onClick={() => setActiveViewTab('map')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+              activeViewTab === 'map'
+                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
+                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+            }`}
+          >
+            <MapPin size={12} />
+            <span>[INFRASTRUCTURE MAP]</span>
           </button>
 
           <button
@@ -324,43 +319,70 @@ export default function ScanPage() {
             <FileText size={12} />
             <span>[RAW TELEMETRY]</span>
           </button>
+
+          <button
+            onClick={() => setActiveViewTab('all')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border-t border-x cursor-pointer transition ${
+              activeViewTab === 'all'
+                ? 'border-[#1e2631] bg-[#10151b] text-[#58a6ff] font-bold'
+                : 'border-transparent text-[#8b9bb0] hover:text-[#e6edf3] hover:bg-[#10151b]/50'
+            }`}
+          >
+            <ListTree size={12} />
+            <span>[ALL DOSSIER SECTIONS]</span>
+          </button>
         </div>
 
-        {/* ─── View 1: Complete Dossier Overview (Sections [03] to [07]) ── */}
-        {activeViewTab === 'dossier' && (
-          <div className="space-y-4">
-            {/* [03] Attack Surface Relationships Graph */}
+        {/* ─── Primary View 1: Topology Graph (Default) ──────────────── */}
+        {activeViewTab === 'graph' && (
+          <div className="w-full">
             <AttackSurfaceGraph
               sectionNumber="03"
               assets={scan.assets ?? []}
               relationships={scan.relationships ?? []}
               onSelectAsset={(asset) => setSelectedAsset(asset)}
             />
+          </div>
+        )}
 
-            {/* [04] Asset Routing Chains */}
-            <AssetChainVisualizer
+        {/* Primary View 2: Infrastructure Map */}
+        {activeViewTab === 'map' && (
+          <div className="w-full">
+            <InfrastructureMap
               sectionNumber="04"
               assets={scan.assets ?? []}
               relationships={scan.relationships ?? []}
               onSelectAsset={(asset) => setSelectedAsset(asset)}
             />
+          </div>
+        )}
 
-            {/* [05] Infrastructure Distribution (Map + Target Dossier) */}
-            <InfrastructureMap
+        {/* Primary View 3: Routing Chains */}
+        {activeViewTab === 'chains' && (
+          <div className="w-full">
+            <AssetChainVisualizer
               sectionNumber="05"
               assets={scan.assets ?? []}
               relationships={scan.relationships ?? []}
               onSelectAsset={(asset) => setSelectedAsset(asset)}
             />
+          </div>
+        )}
 
-            {/* [06] Normalized Assets Inventory Table */}
+        {/* Primary View 4: Inventory Table */}
+        {activeViewTab === 'inventory' && (
+          <div className="w-full">
             <AssetsInventoryTable
               sectionNumber="06"
               assets={scan.assets ?? []}
               onSelectAsset={(asset) => setSelectedAsset(asset)}
             />
+          </div>
+        )}
 
-            {/* [07] Findings & Anomalies */}
+        {/* Primary View 5: Findings Records */}
+        {activeViewTab === 'findings' && (
+          <div className="w-full">
             <FindingsSection
               sectionNumber="07"
               findings={scan.findings ?? []}
@@ -369,9 +391,19 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* View 2: Focus Graph & Map */}
-        {activeViewTab === 'graph' && (
-          <div className="space-y-4">
+        {/* Primary View 6: Raw Telemetry */}
+        {activeViewTab === 'raw' && (
+          <div className="w-full">
+            <CategoryInspectionTabs
+              scan={scan}
+              defaultCategory={selectedCategoryTab}
+            />
+          </div>
+        )}
+
+        {/* Primary View 7: All Dossier Sections Sequentially */}
+        {activeViewTab === 'all' && (
+          <div className="space-y-4 w-full">
             <AttackSurfaceGraph
               sectionNumber="03"
               assets={scan.assets ?? []}
@@ -384,43 +416,23 @@ export default function ScanPage() {
               relationships={scan.relationships ?? []}
               onSelectAsset={(asset) => setSelectedAsset(asset)}
             />
+            <AssetChainVisualizer
+              sectionNumber="05"
+              assets={scan.assets ?? []}
+              relationships={scan.relationships ?? []}
+              onSelectAsset={(asset) => setSelectedAsset(asset)}
+            />
+            <AssetsInventoryTable
+              sectionNumber="06"
+              assets={scan.assets ?? []}
+              onSelectAsset={(asset) => setSelectedAsset(asset)}
+            />
+            <FindingsSection
+              sectionNumber="07"
+              findings={scan.findings ?? []}
+              onOpenGlossary={openGlossary}
+            />
           </div>
-        )}
-
-        {/* View 3: Routing Chains */}
-        {activeViewTab === 'chains' && (
-          <AssetChainVisualizer
-            sectionNumber="03"
-            assets={scan.assets ?? []}
-            relationships={scan.relationships ?? []}
-            onSelectAsset={(asset) => setSelectedAsset(asset)}
-          />
-        )}
-
-        {/* View 4: Inventory Table */}
-        {activeViewTab === 'inventory' && (
-          <AssetsInventoryTable
-            sectionNumber="03"
-            assets={scan.assets ?? []}
-            onSelectAsset={(asset) => setSelectedAsset(asset)}
-          />
-        )}
-
-        {/* View 5: Findings Records */}
-        {activeViewTab === 'findings' && (
-          <FindingsSection
-            sectionNumber="03"
-            findings={scan.findings ?? []}
-            onOpenGlossary={openGlossary}
-          />
-        )}
-
-        {/* View 6: Raw Telemetry */}
-        {activeViewTab === 'raw' && (
-          <CategoryInspectionTabs
-            scan={scan}
-            defaultCategory={selectedCategoryTab}
-          />
         )}
       </div>
 
