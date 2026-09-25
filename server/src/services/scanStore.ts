@@ -125,6 +125,32 @@ export function setScanIntelligence(
   }
 }
 
+export function evictExpiredScans(): number {
+  const now = Date.now();
+  let evicted = 0;
+  for (const [id, scan] of scanStore.entries()) {
+    if (now > Date.parse(scan.expiresAt)) {
+      scanStore.delete(id);
+      evicted++;
+    }
+  }
+  return evicted;
+}
+
+export function getScanStoreSize(): number {
+  return scanStore.size;
+}
+
 export function clearScanStore(): void {
   scanStore.clear();
+}
+
+// Background sweep running periodically to proactively reclaim expired scans.
+// .unref() ensures this interval does not keep unit test runners or Node processes from exiting.
+const sweepTimer = setInterval(() => {
+  evictExpiredScans();
+}, 15 * 60 * 1000);
+
+if (typeof sweepTimer.unref === 'function') {
+  sweepTimer.unref();
 }

@@ -45,6 +45,11 @@ export interface DatabaseAdapter {
   deleteUser(userId: string): Promise<boolean>;
   getQuota(identityKey: string, windowMs: number): Promise<QuotaRecord>;
   incrementQuota(identityKey: string, windowMs: number): Promise<number>;
+  tryConsumeQuota(
+    identityKey: string,
+    limit: number,
+    windowMs: number,
+  ): Promise<{ allowed: boolean; used: number; remaining: number; resetsInSeconds: number }>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -292,6 +297,47 @@ class LocalJsonAdapter implements DatabaseAdapter {
     this.data.quotas[identityKey] = current;
     this.schedulePersist();
     return current.scanCount;
+  }
+
+  async tryConsumeQuota(
+    identityKey: string,
+    limit: number,
+    windowMs: number,
+  ): Promise<{ allowed: boolean; used: number; remaining: number; resetsInSeconds: number }> {
+    const now = Date.now();
+    let record = this.data.quotas[identityKey];
+
+    if (!record || now - record.windowStart >= windowMs) {
+      record = {
+        identityKey,
+        scanCount: 0,
+        windowStart: now,
+      };
+      this.data.quotas[identityKey] = record;
+    }
+
+    const elapsed = now - record.windowStart;
+    const remainingTimeMs = Math.max(0, windowMs - elapsed);
+    const resetsInSeconds = Math.ceil(remainingTimeMs / 1000);
+
+    if (record.scanCount >= limit) {
+      return {
+        allowed: false,
+        used: record.scanCount,
+        remaining: 0,
+        resetsInSeconds,
+      };
+    }
+
+    record.scanCount += 1;
+    this.schedulePersist();
+
+    return {
+      allowed: true,
+      used: record.scanCount,
+      remaining: Math.max(0, limit - record.scanCount),
+      resetsInSeconds,
+    };
   }
 }
 
@@ -611,6 +657,72 @@ class PostgresAdapter implements DatabaseAdapter {
     `;
     const res = await this.pool.query(query, [identityKey, updatedCount, quota.windowStart || now]);
     return Number(res.rows[0].scan_count);
+  }
+
+  async tryConsumeQuota(
+    identityKey: string,
+    limit: number,
+    windowMs: number,
+  ): Promise<{ allowed: boolean; used: number; remaining: number; resetsInSeconds: number }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const now = Date.now();
+
+      const selectRes = await client.query(
+        `SELECT scan_count, window_start FROM quotas WHERE identity_key = $1 FOR UPDATE`,
+        [identityKey],
+      );
+
+      let scanCount = 0;
+      let windowStart = now;
+
+      if (selectRes.rows.length > 0) {
+        const row = selectRes.rows[0];
+        const existingWindowStart = Number(row.window_start);
+        if (now - existingWindowStart < windowMs) {
+          scanCount = Number(row.scan_count);
+          windowStart = existingWindowStart;
+        }
+      }
+
+      const elapsed = now - windowStart;
+      const remainingTimeMs = Math.max(0, windowMs - elapsed);
+      const resetsInSeconds = Math.ceil(remainingTimeMs / 1000);
+
+      if (scanCount >= limit) {
+        await client.query('COMMIT');
+        return {
+          allowed: false,
+          used: scanCount,
+          remaining: 0,
+          resetsInSeconds,
+        };
+      }
+
+      const newCount = scanCount + 1;
+      await client.query(
+        `INSERT INTO quotas (identity_key, scan_count, window_start)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (identity_key) DO UPDATE SET
+           scan_count = EXCLUDED.scan_count,
+           window_start = EXCLUDED.window_start`,
+        [identityKey, newCount, windowStart],
+      );
+
+      await client.query('COMMIT');
+      return {
+        allowed: true,
+        used: newCount,
+        remaining: Math.max(0, limit - newCount),
+        resetsInSeconds,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 }
 

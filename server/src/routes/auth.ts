@@ -23,7 +23,7 @@ function setSessionCookie(res: import('express').Response, sessionId: string) {
   res.cookie(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
-    sameSite: 'lax',
+    sameSite: config.nodeEnv === 'production' ? 'strict' : 'lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -33,7 +33,7 @@ function clearSessionCookie(res: import('express').Response) {
   res.clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
-    sameSite: 'lax',
+    sameSite: config.nodeEnv === 'production' ? 'strict' : 'lax',
     path: '/',
   });
 }

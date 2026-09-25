@@ -44,20 +44,19 @@ export async function getQuotaStatus(req: Request, user?: User | null): Promise<
 }
 
 export async function consumeScanQuota(req: Request, user?: User | null): Promise<{ allowed: boolean; quota: QuotaInfo }> {
-  const status = await getQuotaStatus(req, user);
-  if (status.used >= status.limit) {
-    return { allowed: false, quota: status };
-  }
+  const { key, isRegistered, limit } = getIdentityKey(req, user);
+  const result = await db.tryConsumeQuota(key, limit, config.scanLimitWindowMs);
 
-  const { key } = getIdentityKey(req, user);
-  const newCount = await db.incrementQuota(key, config.scanLimitWindowMs);
+  const quota: QuotaInfo = {
+    used: result.used,
+    limit,
+    remaining: result.remaining,
+    resetsInSeconds: result.resetsInSeconds,
+    isRegistered,
+  };
 
   return {
-    allowed: true,
-    quota: {
-      ...status,
-      used: newCount,
-      remaining: Math.max(0, status.limit - newCount),
-    },
+    allowed: result.allowed,
+    quota,
   };
 }

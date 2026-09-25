@@ -397,5 +397,38 @@ Verification & Quality Gates:
 - Client Bundle: Vite production build succeeds with 0 errors (`dist/index.html`, `dist/assets/*.css`, `dist/assets/*.js`).
 - Lint: 0 errors across client (`oxlint`) and server (`eslint`).
 
+## 2026-09-25 — Service Reliability, WHOIS Referral & Security Hardening Sprint
+
+### Objectives & Delivered Hardening:
+1. **Authoritative WHOIS Referral Chain (`services/whois.ts`)**:
+   - Querying `whois.iana.org` previously failed to follow referrals, causing TLD registry operator metadata to be misattributed as domain registrant data or missing registrar/expiry/nameserver fields.
+   - Implemented multi-hop referral following (up to 3 hops: IANA -> Registry -> Registrar) following RFC 3912 and ICANN gTLD/ccTLD standard formats.
+   - Added robust regex parsing for Registrar, Creation Date, Expiry Date, Nameservers, Registrant Organization, and privacy proxy redactions.
+   - Added strict SSRF validation via `resolvePublicAddresses` on every referral hostname before establishing outbound port 43 connections.
+2. **Atomic Quota Check-and-Increment (`db/index.ts`, `services/quotaService.ts`)**:
+   - Eliminated check-then-increment race conditions where concurrent scan requests could bypass quota limits.
+   - Added `tryConsumeQuota(identityKey, limit, windowMs)` to `DatabaseAdapter`.
+   - In `PostgresAdapter`, implemented atomic transaction locking with `SELECT ... FOR UPDATE` and upsert.
+   - In `LocalJsonAdapter`, implemented synchronous atomic check-and-increment under the event loop.
+3. **Active In-Memory ScanStore Eviction (`services/scanStore.ts`)**:
+   - Previously scans were only evicted lazily when queried via `getScanRecord`.
+   - Added `evictExpiredScans` and background periodic timer (`setInterval` with `.unref()`) to proactively evict expired anonymous and orphaned scans from memory.
+4. **TLS Certificate Validation & Architecture Documentation (`services/tls.ts`, `services/findings.ts`, `services/safeHttp.ts`)**:
+   - Captured `socket.authorizationError` from Node.js TLS socket alongside `socket.authorized`.
+   - Documented intentional passive scanner design rationale for `rejectUnauthorized: false` across TLS and HTTP probes (enables inspecting peer certificate metadata on unverified/expired targets).
+   - Added high-severity finding in `findings.ts` when TLS certificate chain verification fails (`DEPTH_ZERO_SELF_SIGNED_CERT`, `CERT_HAS_EXPIRED`, etc.).
+5. **Subdomain Provider Hardening & Client CSP Tightening (`services/subdomains.ts`, `middleware/security.ts`, `routes/auth.ts`)**:
+   - Added public IP address validation and strict HTTPS protocol enforcement before querying Certificate Transparency logs.
+   - Removed unused third-party origins (`ipapi.co`, `crt.sh`) from browser client CSP `connectSrc` (backend proxies queries).
+   - Set `SameSite=strict` in production on authentication session cookies for defense-in-depth against CSRF.
+6. **Hardening Test Suite (`__tests__/hardening.test.ts`)**:
+   - Added comprehensive automated unit and integration tests covering referral parsing, loop prevention, concurrent quota consumption race conditions, active eviction, and TLS certificate error findings.
+
+Verification & Quality Gates:
+- Automated Tests: **75/75 passing** across 5 test suites (`scanner.test.ts`, `ssrfSecurity.test.ts`, `authAndQuota.test.ts`, `realDomainE2E.test.ts`, `hardening.test.ts`).
+- Server Compilation: `tsc` compiles with 0 errors.
+- Client Bundle: Vite production build succeeds with 0 errors (`dist/index.html`, `dist/assets/*.css`, `dist/assets/*.js`).
+- Lint: 0 errors across client (`oxlint`) and server (`eslint`).
+
 
 

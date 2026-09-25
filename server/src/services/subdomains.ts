@@ -1,5 +1,6 @@
 import { config } from '../config';
 import type { ScanRequestBudget } from './scanBudget';
+import { resolvePublicAddresses } from './publicResolution';
 
 export interface SubdomainsOptions {
   signal?: AbortSignal;
@@ -7,6 +8,12 @@ export interface SubdomainsOptions {
 }
 
 async function fetchJsonWithTimeout(url: string, externalSignal?: AbortSignal): Promise<unknown> {
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error('CT log requests must strictly use HTTPS');
+  }
+  await resolvePublicAddresses(parsedUrl.hostname);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
 

@@ -103,6 +103,9 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
           }
           callback(null, address, net.isIPv6(address) ? 6 : 4);
         },
+        // Intentional passive recon design: rejectUnauthorized is false so HTTP response headers,
+        // status codes, and redirects can be inspected even if the target has an invalid cert.
+        // Full TLS certificate validity is independently verified and alerted by runTls().
         ...(url.protocol === 'https:' ? { servername: url.hostname, rejectUnauthorized: false } : {}),
       },
       async (response) => {

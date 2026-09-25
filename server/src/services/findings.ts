@@ -58,7 +58,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
     : undefined;
 
   const tls = tlsCategory?.status === 'completed'
-    ? (tlsCategory.data as { available?: boolean; validTo?: string; reason?: string } | undefined)
+    ? (tlsCategory.data as { available?: boolean; validTo?: string; reason?: string; authorized?: boolean; authorizationError?: string } | undefined)
     : undefined;
 
   // 1. HTTPS Enforcement: ONLY flag if HTTP was active (status > 0) AND did NOT redirect to HTTPS
@@ -133,6 +133,29 @@ export function buildFindings(scan: DomainScan): Finding[] {
       recommendation: 'Deploy TLS encryption and migrate web services from plaintext HTTP to HTTPS.',
       evidence: [evidence('TLS handshake', 'No TLS listener responded on port 443 while HTTP port 80 was active', 'medium')],
       confidence: 'medium',
+    });
+  }
+
+  // 3b. TLS Certificate Authorization / Chain Failure
+  if (tls?.available === true && tls.authorized === false) {
+    const errorDetail = (tls as { authorizationError?: string }).authorizationError || 'Certificate chain verification failed';
+    findings.push({
+      id: randomUUID(),
+      title: 'TLS certificate chain is untrusted or invalid',
+      severity: 'high',
+      kind: 'configuration_weakness',
+      category: 'tls',
+      observationStatus: 'observed',
+      description: `The TLS certificate offered on port 443 could not be verified by the standard trust store (${errorDetail}). This typically indicates a self-signed certificate, an expired certificate, a name mismatch, or an incomplete intermediate CA chain.`,
+      whyItMatters: 'Web browsers and automated API clients will block access or display prominent security warnings, and traffic is vulnerable to man-in-the-middle attacks.',
+      investigationSteps: [
+        'Inspect the certificate chain using openssl s_client -connect <target>:443 -servername <target> -showcerts.',
+        'Ensure intermediate CA certificates are properly bundled in the web server configuration.',
+        'Verify that the domain name matches the Common Name (CN) or Subject Alternative Names (SANs).',
+      ],
+      recommendation: 'Install a valid, publicly trusted TLS certificate with complete intermediate certificate chains.',
+      evidence: [evidence('TLS verification', `Certificate authorization error: ${errorDetail}`, 'high')],
+      confidence: 'high',
     });
   }
 

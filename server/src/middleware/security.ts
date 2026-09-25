@@ -15,7 +15,7 @@ export function applySecurity(app: Express): void {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org'],
-        connectSrc: ["'self'", config.clientOrigin, 'https://ipapi.co', 'https://crt.sh'],
+        connectSrc: ["'self'", config.clientOrigin],
         frameAncestors: ["'none'"],
       },
     },

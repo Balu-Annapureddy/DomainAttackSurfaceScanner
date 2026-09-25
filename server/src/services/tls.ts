@@ -15,6 +15,7 @@ export interface TlsResult {
   subjectAltNames?: string[];
   signatureAlgorithm?: string;
   authorized?: boolean;
+  authorizationError?: string;
   fingerprint256?: string;
   serialNumber?: string;
 }
@@ -50,6 +51,10 @@ export async function runTls(domain: string, options: TlsOptions = {}): Promise<
       return;
     }
 
+    // Intentional passive scanner design: rejectUnauthorized is false to permit TLS
+    // handshake completion even if the target has an invalid or self-signed certificate.
+    // This allows inspecting peer certificate details (SANs, expiry, issuer) while recording
+    // socket.authorized and socket.authorizationError as security findings.
     const socket = tls.connect({
       host: domain,
       port: 443,
@@ -105,6 +110,10 @@ export async function runTls(domain: string, options: TlsOptions = {}): Promise<
         fingerprint256 = crypto.createHash('sha256').update(cert.raw).digest('hex');
       }
 
+      const authErr = socket.authorizationError
+        ? (socket.authorizationError instanceof Error ? socket.authorizationError.message : String(socket.authorizationError))
+        : undefined;
+
       resolve({
         available: true,
         subject: cert.subject ? JSON.stringify(cert.subject) : undefined,
@@ -115,6 +124,7 @@ export async function runTls(domain: string, options: TlsOptions = {}): Promise<
         subjectAltNames,
         signatureAlgorithm: typeof certData.signatureAlgorithm === 'string' ? certData.signatureAlgorithm : typeof certData.sigalg === 'string' ? certData.sigalg : undefined,
         authorized: socket.authorized,
+        authorizationError: authErr,
         fingerprint256: fingerprint256 || undefined,
         serialNumber: cert.serialNumber || undefined,
       });
