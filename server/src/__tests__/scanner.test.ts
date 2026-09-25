@@ -210,6 +210,17 @@ describe('exposure posture scoring', () => {
     // -25 for no TLS, -5 for missing SPF, -5 for missing DMARC
     expect(score).toBe(65);
   });
+
+  test('does not penalize failed or inconclusive checks as security weaknesses', () => {
+    const scan = makeScan({
+      tls: { status: 'failed', error: 'TLS handshake timed out' },
+      http: { status: 'failed', error: 'Connection refused' },
+      dns: { status: 'completed', data: { spf: { present: true }, dmarc: { present: true } } },
+    });
+    const score = computeExposureScore(scan);
+    // Failed categories do not deduct points because absence of observation is not evidence of vulnerability
+    expect(score).toBe(100);
+  });
 });
 
 describe('findings contextual guidance', () => {
@@ -409,5 +420,21 @@ describe('scan differencing & change detection', () => {
   test('refuses to compare scans for different domains', () => {
     const mismatched = { ...currentScan, domain: 'another.com' };
     expect(() => compareScans(baseScan, mismatched)).toThrow(/different domains/);
+  });
+});
+
+describe('sample and demo scan endpoint', () => {
+  test('returns a complete, verified demo attack surface scan', async () => {
+    const response = await request(app).get('/api/scan/sample');
+    expect(response.status).toBe(200);
+    expect(response.body.domain).toBe('perimeter-demo.io');
+    expect(response.body.completeness).toBe('complete');
+    expect(response.body.status).toBe('completed');
+    expect(response.body.assets.length).toBeGreaterThan(10);
+    expect(response.body.relationships.length).toBeGreaterThan(10);
+    expect(response.body.findings.length).toBeGreaterThan(0);
+    expect(response.body.findings[0]).toHaveProperty('whyItMatters');
+    expect(response.body.findings[0]).toHaveProperty('investigationSteps');
+    expect(response.body.findings[0]).toHaveProperty('observationStatus');
   });
 });

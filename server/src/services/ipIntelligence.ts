@@ -1,3 +1,4 @@
+import net from 'node:net';
 import { config } from '../config';
 import { fetchProviderJson } from './providerHttp';
 import type { ScanRequestBudget } from './scanBudget';
@@ -33,7 +34,17 @@ export async function runIpIntelligence(
   }
 
   const results: IpIntelligence[] = [];
-  const uniqueAddresses = [...new Set(addresses)];
+  const uniqueAddresses = [
+    ...new Set(
+      addresses.filter(
+        (ip): ip is string => typeof ip === 'string' && ip.trim().length > 0 && net.isIP(ip.trim()) > 0,
+      ),
+    ),
+  ];
+
+  if (uniqueAddresses.length === 0) {
+    return [];
+  }
 
   for (const ip of uniqueAddresses) {
     if (options.budget && options.budget.remaining() <= 0) {

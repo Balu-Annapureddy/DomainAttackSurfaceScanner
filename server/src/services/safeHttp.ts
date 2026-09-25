@@ -70,7 +70,7 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
   }
 
   const addresses = await resolvePublicAddresses(url.hostname);
-  const address = addresses[0];
+  const address = addresses.find((a) => net.isIPv4(a)) ?? addresses[0];
   if (!address || !isPublicAddress(address)) {
     throw new Error('Redirect destination is not public');
   }
@@ -93,7 +93,7 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
         headers: {
           Host: url.host,
           Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
-          'User-Agent': 'DomainAttackSurfaceScanner/1.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (DomainAttackSurfaceScanner/1.0; Passive-Recon)',
         },
         timeout: timeoutMs,
         lookup: (_hostname, _options, callback) => {

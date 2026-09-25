@@ -4,6 +4,8 @@ export type CategoryStatus = 'pending' | 'running' | 'completed' | 'failed';
 export type AssetType = 'DOMAIN' | 'SUBDOMAIN' | 'IP' | 'ASN' | 'ORGANIZATION' | 'NAMESERVER' | 'MAIL_SERVER' | 'CERTIFICATE' | 'TECHNOLOGY' | 'URL' | 'GEOLOCATION';
 export type FindingSeverity = 'informational' | 'low' | 'medium' | 'high';
 export type FindingKind = 'observation' | 'configuration_weakness' | 'recommendation' | 'potential_risk';
+export type ObservationStatus = 'observed' | 'not_observed' | 'check_failed' | 'not_applicable';
+export type ScanCompleteness = 'complete' | 'partially_completed' | 'checks_failed';
 
 export interface Evidence {
   source: string;
@@ -39,6 +41,9 @@ export interface Finding {
   recommendation: string;
   evidence: Evidence[];
   confidence: 'low' | 'medium' | 'high';
+  whyItMatters?: string;
+  investigationSteps?: string[];
+  observationStatus?: ObservationStatus;
 }
 
 export interface ScanCategoryResult {
@@ -58,6 +63,12 @@ export interface DomainScan {
   categories: Record<ScanCategory, ScanCategoryResult>;
   score?: number;
   scoreLabel?: 'External Hygiene Score';
+  completeness?: ScanCompleteness;
+  completenessDetails?: {
+    completed: number;
+    total: number;
+    failed: string[];
+  };
   assets: Asset[];
   relationships: Relationship[];
   findings: Finding[];

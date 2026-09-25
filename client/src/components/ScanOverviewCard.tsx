@@ -6,9 +6,11 @@ import { exportScanJson, exportAssetsCsv, exportFindingsCsv } from '../lib/expor
 
 interface ScanOverviewCardProps {
   scan: DomainScan;
+  onOpenGlossary?: (termKey: string) => void;
+  isGuidedMode?: boolean;
 }
 
-export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
+export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }: ScanOverviewCardProps) {
   const score = scan.score ?? 0;
   const hasScore = scan.score !== undefined && scan.score !== null;
 
@@ -46,6 +48,7 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
     httpsEnforced?: boolean;
     httpRedirectsToHttps?: boolean;
     finalObservedUrl?: string;
+    https?: { headers?: Record<string, string> };
   } | undefined;
 
   const tlsData = scan.categories.tls?.data as {
@@ -53,6 +56,32 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
     validTo?: string;
     protocol?: string;
   } | undefined;
+
+  // Detect edge/CDN provider if present in assets or headers
+  const detectedEdge = useMemo(() => {
+    const orgAsset = scan.assets?.find((a) => a.type === 'ORGANIZATION');
+    const serverHeader = httpData?.https?.headers?.server?.toLowerCase();
+    if (orgAsset?.value?.toLowerCase().includes('cloudflare') || serverHeader?.includes('cloudflare')) {
+      return 'Cloudflare Edge CDN';
+    }
+    if (orgAsset?.value?.toLowerCase().includes('amazon') || orgAsset?.value?.toLowerCase().includes('aws')) {
+      return 'AWS Cloud Infrastructure';
+    }
+    if (orgAsset?.value?.toLowerCase().includes('google')) {
+      return 'Google Cloud Edge';
+    }
+    if (orgAsset?.value?.toLowerCase().includes('fastly')) {
+      return 'Fastly CDN';
+    }
+    return orgAsset?.value ?? 'Direct Public Origin';
+  }, [scan.assets, httpData]);
+
+  const completeness = scan.completeness ?? (scan.status === 'completed' ? 'complete' : scan.status === 'completed_with_warnings' ? 'partially_completed' : 'checks_failed');
+  const completenessDetails = scan.completenessDetails ?? {
+    completed: Object.values(scan.categories).filter((c) => c.status === 'completed').length,
+    total: Object.keys(scan.categories).length - 1,
+    failed: Object.entries(scan.categories).filter(([cat, c]) => cat !== 'scoring' && c.status === 'failed').map(([cat]) => cat),
+  };
 
   const safeFinalUrl = useMemo(() => {
     const raw = httpData?.finalObservedUrl;
@@ -84,18 +113,28 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
                 <Globe size={13} />
                 Target Domain
               </span>
+
+              {/* Completeness Badge */}
               <span
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
-                  scan.status === 'completed'
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                    : scan.status === 'completed_with_warnings'
-                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                    : scan.status === 'running'
-                    ? 'animate-pulse border-cyan-500/40 bg-cyan-500/10 text-cyan-300'
-                    : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wider ${
+                  completeness === 'complete'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                    : completeness === 'partially_completed'
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                    : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
                 }`}
+                title={`Scan Completeness: ${completenessDetails.completed}/${completenessDetails.total} checks completed`}
               >
-                {scan.status.replace(/_/g, ' ')}
+                {completeness === 'complete'
+                  ? `✓ Complete (${completenessDetails.completed}/${completenessDetails.total} checks)`
+                  : completeness === 'partially_completed'
+                  ? `⚠ Partial (${completenessDetails.completed}/${completenessDetails.total} checks)`
+                  : '✕ Checks Inconclusive'}
+              </span>
+
+              {/* Edge Provider Pill */}
+              <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
+                📍 {detectedEdge}
               </span>
             </div>
 
@@ -121,7 +160,7 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
               )}
             </div>
 
-            {/* Export Actions */}
+            {/* Export Actions & Knowledge Link */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Link
                 to={`/report/${scan.scanId}`}
@@ -131,6 +170,17 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
                 <FileText size={12} />
                 View Report / Dossier
               </Link>
+              {onOpenGlossary && (
+                <button
+                  type="button"
+                  onClick={() => onOpenGlossary('attack_surface')}
+                  className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-white"
+                  title="Open How to Read This Scanner glossary"
+                >
+                  <Shield size={12} />
+                  How to Read This
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => exportScanJson(scan)}
@@ -265,6 +315,87 @@ export default function ScanOverviewCard({ scan }: ScanOverviewCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Passive OSINT Epistemology Banner */}
+      <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 via-slate-900/60 to-slate-950 p-4 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-start gap-2.5">
+          <span className="text-base text-cyan-400 shrink-0 mt-0.5">🛡️</span>
+          <div>
+            <span className="font-bold text-cyan-300">The Passive Reconnaissance Rule:</span>{' '}
+            <span className="text-slate-300">
+              <em>“We did not observe X” ≠ “X does not exist.”</em> Our analysis relies strictly on public DNS, certificate transparency logs, and observable network responses without touching private networks or executing invasive exploits.
+            </span>
+          </div>
+        </div>
+        {onOpenGlossary && (
+          <button
+            type="button"
+            onClick={() => onOpenGlossary('passive_osint')}
+            className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition whitespace-nowrap shrink-0"
+          >
+            How it works
+          </button>
+        )}
+      </div>
+
+      {/* Guided Beginner Mode: Technical Term + Short Explanation Cards */}
+      {isGuidedMode && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs text-white">Certificate Transparency (CT)</span>
+              {onOpenGlossary && (
+                <button
+                  type="button"
+                  onClick={() => onOpenGlossary('certificate_transparency')}
+                  className="text-[10px] text-cyan-400 hover:underline"
+                >
+                  Details
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Public cryptographic logs that reveal certificates issued for the domain, identifying subdomains without brute-forcing.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs text-white">BGP ASN & Routing</span>
+              {onOpenGlossary && (
+                <button
+                  type="button"
+                  onClick={() => onOpenGlossary('asn')}
+                  className="text-[10px] text-cyan-400 hover:underline"
+                >
+                  Details
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Autonomous System Numbers reveal which hosting provider (e.g. Cloudflare, AWS, Google) operates the physical network.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs text-white">DNS MX & SPF/DMARC</span>
+              {onOpenGlossary && (
+                <button
+                  type="button"
+                  onClick={() => onOpenGlossary('dmarc')}
+                  className="text-[10px] text-cyan-400 hover:underline"
+                >
+                  Details
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Mail exchanger records determine email routing and whether anti-spoofing policies protect against domain impersonation.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Warnings Banner if present */}
       {scan.warnings && scan.warnings.length > 0 && (

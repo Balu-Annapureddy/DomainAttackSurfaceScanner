@@ -102,13 +102,25 @@ export function markScanFinished(scanId: string): void {
   scan.status = scan.warnings.length ? 'completed_with_warnings' : 'completed';
 }
 
-export function setScanIntelligence(scanId: string, intelligence: Pick<ScanRecord, 'assets' | 'relationships' | 'findings' | 'warnings'>): void {
+export function setScanIntelligence(
+  scanId: string,
+  intelligence: Pick<ScanRecord, 'assets' | 'relationships' | 'findings' | 'warnings'> & {
+    completeness?: DomainScan['completeness'];
+    completenessDetails?: DomainScan['completenessDetails'];
+  },
+): void {
   const scan = getScanRecord(scanId);
   if (!scan) return;
   scan.assets = intelligence.assets;
   scan.relationships = intelligence.relationships;
   scan.findings = intelligence.findings;
   scan.warnings = intelligence.warnings;
+  if (intelligence.completeness) {
+    scan.completeness = intelligence.completeness;
+  }
+  if (intelligence.completenessDetails) {
+    scan.completenessDetails = intelligence.completenessDetails;
+  }
 }
 
 export function clearScanStore(): void {

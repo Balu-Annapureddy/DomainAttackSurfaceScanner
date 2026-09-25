@@ -61,8 +61,47 @@ Tests & Build Verification:
 - Linter: **0 errors, 0 warnings** across client and server.
 - Production build: Both TypeScript backend and Vite frontend compile cleanly with zero errors.
 
+## 2026-09-25 — Final Hardened Sprint: Correctness, Epistemology, UX Redesign & Accessibility Layer
+
+- **Scan Correctness & Provider Edge Failure Hardening**:
+  - Implemented strict IP validation (`net.isIP(ip) > 0`) across `publicResolution.ts`, `dns.ts`, `ipIntelligence.ts`, and `normalization.ts`, completely eliminating the `Invalid IP address: undefined` bug when scanning domains behind Cloudflare or with empty reverse mappings.
+  - Prioritized outbound IPv4 over IPv6 connections in `safeHttp.ts` and `tls.ts` to prevent false probe failures in environments lacking global IPv6 default routes.
+  - Standardized outbound client `User-Agent` to a modern browser string, preventing false block responses from Cloudflare and CDN edge rate limiters.
+  - Hardened Certificate Transparency abort handling in `subdomains.ts` to gracefully differentiate between external cancellation and upstream `crt.sh` provider timeouts without throwing unhandled promise rejections.
+
+- **Epistemology & Hygiene Scoring Overhaul**:
+  - Enforced strict passive OSINT epistemology: *"We did not observe X ≠ X does not exist."*
+  - Added `ObservationStatus` (`'observed' | 'not_observed' | 'check_failed' | 'not_applicable'`) and `ScanCompleteness` ratings (`'complete' | 'partial' | 'inconclusive'`) to shared contracts.
+  - Probes that encounter network reachability or provider timeouts (e.g. port 80 timeout when HTTPS is fully active, or WHOIS provider rate limits) are categorized as `check_failed` and deduct **0 points** from the security hygiene score.
+  - Augmented all findings with structured educational metadata: `whyItMatters`, `investigationSteps`, and exact evidentiary observations.
+
+- **Interactive Asset Routing Chain Visualizer**:
+  - Created `AssetChainVisualizer.tsx` displaying complete end-to-end resolution paths from Domain → Subdomain → IP → ASN → Hosting Organization → Approximate Geolocation.
+  - Included quick search filtering, unresolved host indicators, and direct asset selection inspection.
+
+- **Beginner Accessibility & Plain-English Glossary**:
+  - Created `client/src/lib/glossary.ts` with a comprehensive dictionary of external attack surface terminology (Attack Surface, CT logs, ASN, MX, SPF, DMARC, HSTS, CSP, Geolocation, Passive OSINT).
+  - Built `GlossaryModal.tsx` featuring real-time search, category filters, and 4-pillar structured explainers: *What is this?*, *Why it matters*, *What does it mean in practice?*, and *Recommended next steps*.
+  - Added inline `TermExplainer` trigger buttons throughout the application (Overview, Findings, Header, Landing page).
+
+- **UX Redesign & Guided vs. Technical Modes**:
+  - Added an intuitive toggle switch allowing users to seamlessly transition between **Guided Mode** (plain-English summaries, action cards, context callouts) and **Technical Mode** (raw evidence tables, DNS flags, headers, TLS fingerprints).
+  - Added prominent Scan Completeness indicator badges and Edge / Transit infrastructure pills (e.g. Cloudflare, AWS, Google Cloud).
+  - Redesigned Findings cards with 4-pillar expandable action panels.
+
+- **Sample / Demo Scan Generator**:
+  - Built `server/src/services/sampleScan.ts` generating a verified, realistic perimeter scan (`perimeter-demo.io`) with complete DNS, subdomains, TLS certificates, IP intelligence, and findings.
+  - Exposed via `GET /api/scan/sample` and `GET /api/scan/demo` for instantaneous, zero-quota demonstrations and evaluation.
+  - Added one-click "Explore Sample Scan" button directly on the Landing Page.
+
+Tests & Build Verification:
+- Jest test suite: **34/34 tests passing** across 2 suites (`scanner.test.ts` [33 tests] and `realDomainE2E.test.ts` [1 test]).
+- Linter: **0 errors, 0 warnings** across client and server.
+- Production build: Both TypeScript backend (`tsc`) and Vite frontend (`tsc -b && vite build`) compile cleanly with zero errors.
+
 Known limitations & Roadmap:
 - In-memory scan store with 24-hour TTL (suitable for single-node deployment; migration to PostgreSQL/Redis planned for multi-instance clusters).
 - Rate limits on third-party passive APIs (CT logs, GeoIP) may necessitate external API keys in high-throughput deployments.
 - Scheduled recurring scans and automated drift alert webhooks deferred to post-release roadmap.
+
 

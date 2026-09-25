@@ -4,6 +4,7 @@ import type { Finding, FindingSeverity } from '../../../shared/types';
 
 interface FindingsSectionProps {
   findings: Finding[];
+  onOpenGlossary?: (termKey: string) => void;
 }
 
 const SEVERITY_CONFIG: Record<
@@ -40,7 +41,7 @@ const SEVERITY_CONFIG: Record<
   },
 };
 
-export default function FindingsSection({ findings }: FindingsSectionProps) {
+export default function FindingsSection({ findings, onOpenGlossary }: FindingsSectionProps) {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -68,7 +69,7 @@ export default function FindingsSection({ findings }: FindingsSectionProps) {
           <div>
             <h2 className="text-base font-semibold text-white">Security Hygiene & Configuration Considerations</h2>
             <p className="text-xs text-slate-400">
-              {findings.length} observed configuration signal{findings.length === 1 ? '' : 's'}
+              {findings.length} observed configuration signal{findings.length === 1 ? '' : 's'} • Contextual, non-intrusive takeaways
             </p>
           </div>
         </div>
@@ -91,6 +92,22 @@ export default function FindingsSection({ findings }: FindingsSectionProps) {
         </div>
       </div>
 
+      {/* Passive Observation Notice */}
+      <div className="border-b border-slate-800/60 bg-slate-950/50 px-5 py-2.5 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>
+          💡 <strong>Passive Analysis Rule:</strong> <em>“We did not observe X” ≠ “X does not exist.”</em> Gaps indicate unobserved public headers or records, not confirmed exploitable vulnerabilities.
+        </span>
+        {onOpenGlossary && (
+          <button
+            type="button"
+            onClick={() => onOpenGlossary('passive_osint')}
+            className="text-cyan-400 hover:text-cyan-300 underline font-medium ml-2 shrink-0"
+          >
+            Learn more
+          </button>
+        )}
+      </div>
+
       {/* Findings List */}
       <div className="divide-y divide-slate-800/60 p-4">
         {filteredFindings.length === 0 ? (
@@ -106,6 +123,7 @@ export default function FindingsSection({ findings }: FindingsSectionProps) {
             const isExpanded = expandedIds.has(finding.id);
             const sev = SEVERITY_CONFIG[finding.severity] || SEVERITY_CONFIG.informational;
             const Icon = sev.icon;
+            const obsStatus = finding.observationStatus ?? (finding.title.toLowerCase().includes('missing') || finding.title.toLowerCase().includes('not observed') ? 'not_observed' : 'observed');
 
             return (
               <div
@@ -135,6 +153,19 @@ export default function FindingsSection({ findings }: FindingsSectionProps) {
                         <span className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.2 text-[10px] uppercase tracking-wider text-slate-400">
                           {finding.category}
                         </span>
+                        <span
+                          className={`rounded-md border px-2 py-0.2 text-[10px] font-medium uppercase tracking-wider ${
+                            obsStatus === 'observed'
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                              : obsStatus === 'not_observed'
+                              ? 'border-slate-700 bg-slate-800/60 text-slate-300'
+                              : obsStatus === 'check_failed'
+                              ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                              : 'border-slate-800 bg-slate-900 text-slate-400'
+                          }`}
+                        >
+                          {obsStatus === 'not_observed' ? 'Not Observed' : obsStatus.replace('_', ' ')}
+                        </span>
                       </div>
                       <p className="text-xs text-slate-400 leading-relaxed">
                         {finding.description}
@@ -142,29 +173,62 @@ export default function FindingsSection({ findings }: FindingsSectionProps) {
                     </div>
                   </div>
 
-                  <button className="text-slate-500 hover:text-slate-300 p-1">
+                  <button className="text-slate-500 hover:text-slate-300 p-1 shrink-0">
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                 </div>
 
-                {/* Expanded Details: Recommendation & Evidence */}
+                {/* Expanded Details: 4 Clear Pillars */}
                 {isExpanded && (
-                  <div className="ml-10 mt-3 space-y-3 rounded-xl border border-slate-800/80 bg-slate-950/70 p-4">
-                    {/* Recommendation */}
+                  <div className="ml-10 mt-3 space-y-3.5 rounded-xl border border-slate-800/80 bg-slate-950/70 p-4">
+                    {/* 1. What We Found */}
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                        Recommended Action
+                        1. What Was Observed
                       </span>
-                      <p className="mt-1 text-xs text-slate-300">
-                        {finding.recommendation}
+                      <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                        {finding.description}
                       </p>
                     </div>
 
-                    {/* Evidence */}
+                    {/* 2. Why It Matters */}
+                    {finding.whyItMatters && (
+                      <div className="border-t border-slate-800/60 pt-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                          2. Why It Matters
+                        </span>
+                        <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                          {finding.whyItMatters}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 3. Investigation Steps / Recommendations */}
+                    <div className="border-t border-slate-800/60 pt-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                        3. What You Can Investigate & Remediate
+                      </span>
+                      {finding.investigationSteps && finding.investigationSteps.length > 0 ? (
+                        <ul className="mt-1.5 space-y-1 text-xs text-slate-300">
+                          {finding.investigationSteps.map((step, sIdx) => (
+                            <li key={sIdx} className="flex items-start gap-2">
+                              <span className="text-emerald-400 font-bold">•</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-xs text-slate-300">
+                          {finding.recommendation}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 4. Supporting Evidence */}
                     {finding.evidence && finding.evidence.length > 0 && (
                       <div className="border-t border-slate-800/60 pt-3">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Supporting Observation Evidence
+                          4. Backing Observation Evidence
                         </span>
                         <div className="mt-1.5 space-y-2">
                           {finding.evidence.map((ev, idx) => (

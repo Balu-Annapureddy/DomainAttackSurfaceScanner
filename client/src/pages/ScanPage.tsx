@@ -11,6 +11,10 @@ import {
   AlertTriangle,
   FileText,
   ShieldCheck,
+  BookOpen,
+  Network,
+  Sparkles,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { getScan } from '../lib/api';
 import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
@@ -23,8 +27,10 @@ import AssetsInventoryTable from '../components/AssetsInventoryTable';
 import CategoryInspectionTabs from '../components/CategoryInspectionTabs';
 import AssetDetailModal from '../components/AssetDetailModal';
 import ExecutiveSummary from '../components/ExecutiveSummary';
+import AssetChainVisualizer from '../components/AssetChainVisualizer';
+import GlossaryModal from '../components/GlossaryModal';
 
-type ActiveViewTab = 'surface' | 'summary' | 'inventory' | 'findings' | 'raw';
+type ActiveViewTab = 'surface' | 'chains' | 'summary' | 'inventory' | 'findings' | 'raw';
 
 export default function ScanPage() {
   const { scanId } = useParams();
@@ -34,6 +40,24 @@ export default function ScanPage() {
   const [activeViewTab, setActiveViewTab] = useState<ActiveViewTab>('surface');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<ScanCategory>('dns');
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [glossaryInitialTerm, setGlossaryInitialTerm] = useState<string>('passive_osint');
+  const [isGuidedMode, setIsGuidedMode] = useState<boolean>(() => {
+    return localStorage.getItem('dass_guided_mode') !== 'false';
+  });
+
+  const toggleGuidedMode = () => {
+    setIsGuidedMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('dass_guided_mode', String(next));
+      return next;
+    });
+  };
+
+  const openGlossary = (termKey: string) => {
+    setGlossaryInitialTerm(termKey);
+    setIsGlossaryOpen(true);
+  };
 
   useEffect(() => {
     if (!scanId) return;
@@ -116,12 +140,20 @@ export default function ScanPage() {
           <p className="mt-2 text-xs text-slate-400 leading-relaxed">
             {error ?? 'The requested scan could not be found or has expired.'}
           </p>
-          <Link
-            to="/"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-400"
-          >
-            <ArrowLeft size={14} /> Back to Scanner
-          </Link>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-400"
+            >
+              <ArrowLeft size={14} /> Back to Scanner
+            </Link>
+            <Link
+              to="/scan/sample"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
+            >
+              <Sparkles size={13} className="text-cyan-400" /> View Demo Scan
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -153,14 +185,40 @@ export default function ScanPage() {
             <span>Domain Attack Surface Scanner</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Guided Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleGuidedMode}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                isGuidedMode
+                  ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300'
+                  : 'border-slate-800 bg-slate-900/70 text-slate-400 hover:text-white'
+              }`}
+              title="Toggle beginner-friendly explanations and guided cards"
+            >
+              <SlidersHorizontal size={13} />
+              <span className="hidden sm:inline">Mode:</span> {isGuidedMode ? 'Guided' : 'Technical'}
+            </button>
+
+            {/* Glossary Button */}
+            <button
+              type="button"
+              onClick={() => openGlossary('passive_osint')}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition"
+              title="Open terminology guide and explanations"
+            >
+              <BookOpen size={14} className="text-cyan-400" />
+              <span className="hidden md:inline">Knowledge Guide</span>
+            </button>
+
             <Link
               to={`/report/${scan.scanId}`}
               className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:text-white transition"
               title="Open full printable intelligence report"
             >
               <FileText size={13} />
-              <span>View Report</span>
+              <span>Report</span>
             </Link>
 
             <Link
@@ -168,7 +226,7 @@ export default function ScanPage() {
               className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition"
             >
               <Clock3 size={14} />
-              <span>History</span>
+              <span className="hidden sm:inline">History</span>
             </Link>
 
             <Link
@@ -176,7 +234,7 @@ export default function ScanPage() {
               className="flex items-center gap-1.5 rounded-lg bg-cyan-500 px-3.5 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400 transition shadow-[0_0_12px_rgba(6,182,212,0.3)]"
             >
               <RotateCw size={13} />
-              <span>New Scan</span>
+              <span>New</span>
             </Link>
           </div>
         </div>
@@ -192,7 +250,11 @@ export default function ScanPage() {
         />
 
         {/* Scan Overview Hero Card */}
-        <ScanOverviewCard scan={scan} />
+        <ScanOverviewCard
+          scan={scan}
+          onOpenGlossary={openGlossary}
+          isGuidedMode={isGuidedMode}
+        />
 
         {/* Navigation Tabs for Views */}
         <div className="flex border-b border-slate-800/80 pb-px gap-2 overflow-x-auto">
@@ -206,6 +268,18 @@ export default function ScanPage() {
           >
             <GitFork size={14} />
             <span>Attack Surface Visuals</span>
+          </button>
+
+          <button
+            onClick={() => setActiveViewTab('chains')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition border-t border-x ${
+              activeViewTab === 'chains'
+                ? 'border-slate-700 bg-slate-900 text-cyan-400 shadow-sm'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+            }`}
+          >
+            <Network size={14} />
+            <span>Routing Chains</span>
           </button>
 
           <button
@@ -262,6 +336,15 @@ export default function ScanPage() {
           <ExecutiveSummary scan={scan} />
         )}
 
+        {/* View Tab: Asset Relationship Chains */}
+        {activeViewTab === 'chains' && (
+          <AssetChainVisualizer
+            assets={scan.assets ?? []}
+            relationships={scan.relationships ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        )}
+
         {/* View Tab 1: Attack Surface Visuals (Graph & Map) */}
         {activeViewTab === 'surface' && (
           <div className="space-y-6">
@@ -289,7 +372,10 @@ export default function ScanPage() {
 
         {/* View Tab 3: Security Findings */}
         {activeViewTab === 'findings' && (
-          <FindingsSection findings={scan.findings ?? []} />
+          <FindingsSection
+            findings={scan.findings ?? []}
+            onOpenGlossary={openGlossary}
+          />
         )}
 
         {/* View Tab 4: Raw Category Data */}
@@ -311,6 +397,13 @@ export default function ScanPage() {
           onSelectRelatedAsset={(nextAsset) => setSelectedAsset(nextAsset)}
         />
       )}
+
+      {/* Reusable Glossary Modal */}
+      <GlossaryModal
+        initialTermKey={glossaryInitialTerm}
+        isOpen={isGlossaryOpen}
+        onClose={() => setIsGlossaryOpen(false)}
+      />
     </main>
   );
 }

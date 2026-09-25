@@ -29,11 +29,15 @@ It answers the essential perimeter questions:
 - **Published Exposure Checks**: Non-intrusively verifies presence of `robots.txt`, `sitemap.xml`, and `/.well-known/security.txt`.
 - **Normalized Asset Graph**: Synthesizes all discoveries into strongly typed graph nodes with evidence-backed edges (`resolves_to`, `uses_nameserver`, `delivers_mail_to`, `operated_by`, `belongs_to_asn`, `located_approximately_at`).
 - **Interactive SVG Relationship Visualizer**: Pan, zoom, filter by node type, search, and inspect full node metadata.
-- **Explainable External Hygiene Scoring**: Heuristic 0–100 posture rating reflecting defensive configurations without penalizing ordinary reconnaissance signals.
+- **Interactive Asset Routing Chain Visualizer**: Linear Domain → Subdomain → IP → ASN → Organization → Geolocation chain inspection with quick filtering.
+- **Beginner Accessibility & Plain-English Glossary**: Comprehensive dictionary with 4-pillar breakdowns (*What is this?*, *Why it matters*, *What does it mean?*, *Recommended next steps*) and inline term explainer triggers.
+- **Guided vs. Technical Operating Modes**: Instant toggle between high-level executive cards with plain-English insights and technical security analyst evidence tables.
+- **Explainable External Hygiene Scoring**: Heuristic 0–100 posture rating reflecting defensive configurations without penalizing ordinary reconnaissance signals or unobservable network probes.
 - **Deterministic Historical Differencing**: Compares any two scans of the same domain, computing asset additions/removals, score deltas, certificate rotations, DNS policy drift, and resolved vs new findings.
 - **Historical Intelligence Timeline**: Chronological visualization tracking perimeter evolution and change events across multiple scans.
 - **Executive Intelligence Summary**: Synthesized high-level overview answering what was scanned, discovered, observed, and what requires attention.
 - **Audit-Ready Printable Dossier & PDF Export**: Dedicated report view (`/report/:scanId`) formatted with `@media print` stylesheets for one-click browser PDF generation.
+- **Sample / Demo Mode**: Instant one-click exploration of a complete, realistic perimeter scan without consuming third-party API quotas.
 - **Data Portability**: Full JSON export and CSV spreadsheet downloads for assets and security findings with safe sanitized filenames.
 
 ---
@@ -139,7 +143,7 @@ npm start
 ## 8. Validation & Testing
 
 ```bash
-# Run automated test suite (32 unit and integration tests across 2 test suites)
+# Run automated test suite (34 unit and integration tests across 2 test suites)
 npm test
 
 # Run production build (TypeScript server + Vite client bundle)

@@ -1,4 +1,5 @@
 import dns from 'node:dns/promises';
+import net from 'node:net';
 import { isPublicAddress, resolvePublicAddresses } from './publicResolution';
 import type { ScanRequestBudget } from './scanBudget';
 
@@ -63,9 +64,16 @@ export async function runDns(
     };
   }
 
+  const validAddresses = (addresses.status === 'fulfilled' ? addresses.value : []).filter(
+    (ip): ip is string => typeof ip === 'string' && ip.trim().length > 0 && net.isIP(ip.trim()) > 0,
+  );
+  const validAaaa = (aaaa.status === 'fulfilled' ? aaaa.value : []).filter(
+    (ip): ip is string => typeof ip === 'string' && ip.trim().length > 0 && net.isIP(ip.trim()) > 0,
+  );
+
   return {
-    addresses: addresses.status === 'fulfilled' ? addresses.value : [],
-    aaaa: aaaa.status === 'fulfilled' ? aaaa.value : [],
+    addresses: validAddresses,
+    aaaa: validAaaa,
     mx: mx.status === 'fulfilled' ? mx.value.map((entry) => `${entry.exchange} (${entry.priority})`) : [],
     ns: ns.status === 'fulfilled' ? ns.value : [],
     txt: txt.status === 'fulfilled' ? txt.value.flat() : [],

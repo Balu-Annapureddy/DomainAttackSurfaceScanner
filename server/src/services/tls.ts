@@ -36,7 +36,7 @@ export async function runTls(domain: string, options: TlsOptions = {}): Promise<
   let address: string;
   try {
     const addresses = await resolvePublicAddresses(domain);
-    address = addresses[0] ?? '';
+    address = addresses.find((a) => net.isIPv4(a)) ?? addresses[0] ?? '';
     if (!address) {
       throw new Error('No public address resolved');
     }

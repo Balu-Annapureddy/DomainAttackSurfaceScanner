@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import net from 'node:net';
 import type { Asset, DomainScan, Evidence, Relationship } from '../../../shared/types';
 import type { IpIntelligence } from './ipIntelligence';
 import { config } from '../config';
@@ -53,7 +54,11 @@ export function buildNormalizedAssets(
   const domain = add('DOMAIN', scan.domain, 'User input', 'Validated public scan target', 'high');
   const dns = scan.categories.dns.data as { addresses?: string[]; aaaa?: string[]; ns?: string[]; mx?: string[] } | undefined;
 
-  for (const ip of [...(dns?.addresses ?? []), ...(dns?.aaaa ?? [])]) {
+  const validIps = [...(dns?.addresses ?? []), ...(dns?.aaaa ?? [])].filter(
+    (ip): ip is string => typeof ip === 'string' && ip.trim().length > 0 && net.isIP(ip.trim()) > 0,
+  );
+
+  for (const ip of validIps) {
     const ipAsset = add('IP', ip, 'DNS A/AAAA record', `Observed address for ${scan.domain}`, 'high');
     relationships.push({
       fromAssetId: domain.id,

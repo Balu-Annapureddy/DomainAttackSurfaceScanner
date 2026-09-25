@@ -20,6 +20,9 @@ function inRange(value: bigint, start: bigint, prefixLength: number, bits: numbe
 }
 
 export function isPublicAddress(address: string): boolean {
+  if (!address || typeof address !== 'string') {
+    return false;
+  }
   const normalized = address.toLowerCase().replace(/^::ffff:/, '');
   if (net.isIPv4(normalized)) {
     const value = ipv4ToBigInt(normalized);
@@ -49,7 +52,13 @@ export function isPublicAddress(address: string): boolean {
 
 export async function resolvePublicAddresses(hostname: string): Promise<string[]> {
   const answers = await dns.lookup(hostname, { all: true, verbatim: true });
-  const addresses = [...new Set(answers.map((answer) => answer.address))];
+  const addresses = [
+    ...new Set(
+      answers
+        .map((answer) => answer.address)
+        .filter((addr): addr is string => typeof addr === 'string' && addr.trim().length > 0 && net.isIP(addr.trim()) > 0),
+    ),
+  ];
   if (!addresses.length || addresses.some((address) => !isPublicAddress(address))) {
     throw new Error('Target resolves to a private, reserved, or otherwise non-public address');
   }

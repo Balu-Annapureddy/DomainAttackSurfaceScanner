@@ -1,3 +1,4 @@
+import net from 'node:net';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config';
@@ -22,6 +23,7 @@ import { buildNormalizedAssets } from '../services/normalization';
 import { buildFindings } from '../services/findings';
 import { compareScans } from '../services/diff';
 import { ScanRequestBudget } from '../services/scanBudget';
+import { createSampleScan } from '../services/sampleScan';
 import { logError, logEvent } from '../utils/logger';
 import type { ScanCategory } from '../../../shared/types';
 
@@ -110,9 +112,17 @@ async function runScan(scanId: string): Promise<void> {
       return;
     }
 
-    const addresses = (
+    const rawAddresses = (
       ((freshScan.categories.dns.data as { addresses?: string[]; aaaa?: string[] } | undefined)?.addresses ?? [])
     ).concat((freshScan.categories.dns.data as { aaaa?: string[] } | undefined)?.aaaa ?? []);
+
+    const addresses = [
+      ...new Set(
+        rawAddresses.filter(
+          (ip): ip is string => typeof ip === 'string' && ip.trim().length > 0 && net.isIP(ip.trim()) > 0,
+        ),
+      ),
+    ];
 
     let ipIntelligence: IpIntelligence[] = [];
     const intelligenceWarnings: string[] = [];
@@ -134,10 +144,32 @@ async function runScan(scanId: string): Promise<void> {
       .filter(([category, state]) => category !== 'scoring' && state.status === 'failed')
       .map(([category]) => `${category} data was unavailable.`);
 
+    const nonScoringCategories = (Object.entries(freshScan.categories) as Array<[ScanCategory, { status: string }]>)
+      .filter(([category]) => category !== 'scoring');
+    const failedCategoryKeys = nonScoringCategories
+      .filter(([, state]) => state.status === 'failed')
+      .map(([category]) => category);
+    const completedCount = nonScoringCategories.filter(([, state]) => state.status === 'completed').length;
+
+    let completeness: 'complete' | 'partially_completed' | 'checks_failed' = 'complete';
+    if (failedCategoryKeys.length === 0) {
+      completeness = 'complete';
+    } else if (failedCategoryKeys.includes('dns') && failedCategoryKeys.includes('http')) {
+      completeness = 'checks_failed';
+    } else {
+      completeness = 'partially_completed';
+    }
+
     setScanIntelligence(scanId, {
       ...normalized,
       findings,
       warnings: [...normalized.warnings, ...failedCategories, ...intelligenceWarnings],
+      completeness,
+      completenessDetails: {
+        completed: completedCount,
+        total: nonScoringCategories.length,
+        failed: failedCategoryKeys,
+      },
     });
 
     const score = computeExposureScore(freshScan);
@@ -224,8 +256,22 @@ router.get('/compare/:baselineId/:targetId', (req, res) => {
   }
 });
 
+router.get('/sample', (_req, res) => {
+  res.json(createSampleScan());
+});
+
+router.get('/demo', (_req, res) => {
+  res.json(createSampleScan());
+});
+
 router.get('/:scanId', (req, res) => {
-  const scan = getScanRecord(req.params.scanId);
+  const { scanId } = req.params;
+  if (scanId === 'sample' || scanId === 'demo' || scanId === 'sample-scan-demo-id') {
+    res.json(createSampleScan());
+    return;
+  }
+
+  const scan = getScanRecord(scanId);
   if (!scan) {
     res.status(404).json({ error: 'Scan not found or expired', code: 'SCAN_NOT_FOUND' });
     return;

@@ -92,11 +92,18 @@ export async function runSubdomains(
       subdomains,
     };
   } catch (error) {
+    const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.toLowerCase().includes('abort'));
+    const reason = options.signal?.aborted
+      ? 'Certificate Transparency query cancelled'
+      : isTimeout
+      ? 'Certificate Transparency log provider (crt.sh) timed out'
+      : error instanceof Error ? error.message : 'Certificate Transparency data unavailable';
+
     return {
       available: false,
       total: 0,
       subdomains: [],
-      reason: error instanceof Error ? error.message : 'Certificate Transparency data unavailable',
+      reason,
     };
   }
 }
