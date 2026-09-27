@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { ACCOUNTS_ENABLED } from '../config';
 
 interface WorkstationNavProps {
   onOpenGlossary?: (termKey?: string) => void;
@@ -47,7 +48,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
 
   return (
     <>
-      {user && !user.emailVerified && (
+      {user && !user.emailVerified && ACCOUNTS_ENABLED && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200 font-sans flex items-center justify-center gap-2">
           <AlertTriangle size={13} className="text-amber-500 shrink-0" />
           <span>Account unverified (5 scans/hr guest limit). <strong>Verify your email to unlock 50/hr</strong>.</span>
@@ -137,7 +138,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
               <span className="font-mono text-[11px] font-semibold">
                 {quota.used}/{quota.limit}
               </span>
-              {!quota.isRegistered && (
+              {!quota.isRegistered && ACCOUNTS_ENABLED && (
                 <Link
                   to="/register"
                   className="hidden sm:inline text-[var(--accent-primary)] hover:underline ml-0.5 font-bold text-[10px]"
@@ -166,7 +167,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
                   <span>Logout</span>
                 </button>
               </div>
-            ) : (
+            ) : ACCOUNTS_ENABLED ? (
               <div className="flex items-center gap-1.5">
                 <Link
                   to="/login"
@@ -183,7 +184,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
                   <span>Register</span>
                 </Link>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Theme Toggle Button (Always Visible) */}
@@ -322,7 +323,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
                     <span>Sign Out</span>
                   </button>
                 </div>
-              ) : (
+              ) : ACCOUNTS_ENABLED ? (
                 <div className="space-y-2">
                   <Link
                     to="/login"
@@ -341,7 +342,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
                     <span>Register Free (+50/hr)</span>
                   </Link>
                 </div>
-              )}
+              ) : null}
             </div>
           </aside>
         </div>

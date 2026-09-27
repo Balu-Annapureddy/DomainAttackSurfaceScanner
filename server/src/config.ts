@@ -112,6 +112,7 @@ function validateConfig() {
     anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '5', 1),
     registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '50', 1),
     scanLimitWindowMs: optionalInteger('SCAN_LIMIT_WINDOW_MS', '3600000', 1000), // 1 hour default
+    accountsEnabled: process.env.ACCOUNTS_ENABLED === 'true',
   };
 }
 

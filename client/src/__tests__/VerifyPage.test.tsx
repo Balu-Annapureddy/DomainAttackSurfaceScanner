@@ -7,6 +7,10 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import * as api from '../lib/api';
 
+vi.mock('../config', () => ({
+  ACCOUNTS_ENABLED: true,
+}));
+
 vi.mock('../lib/api', () => ({
   getAuthStatus: vi.fn(),
   loginUser: vi.fn(),

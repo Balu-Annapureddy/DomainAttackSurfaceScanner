@@ -4,7 +4,7 @@ import { config } from '../config';
 import type { QuotaInfo, User } from '../../../shared/types';
 
 export function getIdentityKey(req: Request, user?: User | null): { key: string; isRegistered: boolean; limit: number } {
-  if (user) {
+  if (user && config.accountsEnabled) {
     const isVerified = Boolean(user.emailVerified);
     return {
       key: `user:${user.id}`,

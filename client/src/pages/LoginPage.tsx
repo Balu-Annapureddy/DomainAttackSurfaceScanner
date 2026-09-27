@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { LogIn, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
+import { ACCOUNTS_ENABLED } from '../config';
+import AccountsPausedCard from '../components/AccountsPausedCard';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,6 +20,10 @@ export default function LoginPage() {
 
   const isVerifiedSuccess = searchParams.get('verified') === 'true';
   const isVerifiedError = searchParams.get('verified') === 'false';
+
+  if (!ACCOUNTS_ENABLED) {
+    return <AccountsPausedCard title="Operator Login Paused" />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

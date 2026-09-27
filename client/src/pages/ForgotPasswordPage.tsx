@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { KeyRound, Mail, ArrowLeft, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { forgotPassword } from '../lib/api';
 import WorkstationNav from '../components/WorkstationNav';
+import { ACCOUNTS_ENABLED } from '../config';
+import AccountsPausedCard from '../components/AccountsPausedCard';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +12,10 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!ACCOUNTS_ENABLED) {
+    return <AccountsPausedCard title="Password Recovery Paused" />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

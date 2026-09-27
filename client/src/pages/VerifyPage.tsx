@@ -4,6 +4,8 @@ import { CheckCircle, AlertTriangle, ShieldCheck, ArrowRight, Loader2, Mail } fr
 import { verifyEmailToken, resendVerification } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
+import { ACCOUNTS_ENABLED } from '../config';
+import AccountsPausedCard from '../components/AccountsPausedCard';
 
 export default function VerifyPage() {
   const [searchParams] = useSearchParams();
@@ -25,6 +27,7 @@ export default function VerifyPage() {
   const isNeutral = !isLoading && !isVerified && !isError;
 
   useEffect(() => {
+    if (!ACCOUNTS_ENABLED) return;
     if (token && !statusParam) {
       let isMounted = true;
       verifyEmailToken(token)
@@ -69,6 +72,10 @@ export default function VerifyPage() {
       setResending(false);
     }
   };
+
+  if (!ACCOUNTS_ENABLED) {
+    return <AccountsPausedCard title="Email Verification Paused" />;
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">

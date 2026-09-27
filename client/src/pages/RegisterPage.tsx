@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { UserPlus, Shield, CheckCircle, AlertTriangle, Lock, Eye, EyeOff, Loader2, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
+import { ACCOUNTS_ENABLED } from '../config';
+import AccountsPausedCard from '../components/AccountsPausedCard';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -17,6 +19,10 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+
+  if (!ACCOUNTS_ENABLED) {
+    return <AccountsPausedCard title="Registration Temporarily Paused" />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

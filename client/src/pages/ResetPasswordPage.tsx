@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Lock, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { resetPassword } from '../lib/api';
 import WorkstationNav from '../components/WorkstationNav';
+import { ACCOUNTS_ENABLED } from '../config';
+import AccountsPausedCard from '../components/AccountsPausedCard';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -17,6 +19,10 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  if (!ACCOUNTS_ENABLED) {
+    return <AccountsPausedCard title="Password Reset Paused" />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

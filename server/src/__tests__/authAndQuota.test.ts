@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { app, server } from '../index';
 import { db } from '../db';
+import { config } from '../config';
 
 function extractSessionCookie(res: request.Response): string {
   const header = res.headers['set-cookie'];
@@ -11,6 +12,10 @@ function extractSessionCookie(res: request.Response): string {
 }
 
 describe('Authentication, Authorization & Quotas', () => {
+  beforeAll(() => {
+    config.accountsEnabled = true;
+  });
+
   afterAll(async () => {
     await db.close();
     if (server) {
@@ -21,6 +26,44 @@ describe('Authentication, Authorization & Quotas', () => {
   const testEmail = `analyst-${Date.now()}@security.test`;
   const testPassword = 'StrongPassword123!';
   let authCookie: string;
+
+  describe('Frozen Accounts Mode (ACCOUNTS_ENABLED=false)', () => {
+    beforeAll(() => {
+      config.accountsEnabled = false;
+    });
+
+    afterAll(() => {
+      config.accountsEnabled = true;
+    });
+
+    it('returns 503 on /api/auth/register when accounts are paused', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: testEmail, password: testPassword });
+
+      expect(res.status).toBe(503);
+      expect(res.body.code).toBe('ACCOUNTS_PAUSED');
+      expect(res.body.error).toContain('Accounts are temporarily paused');
+    });
+
+    it('returns 503 on /api/auth/login when accounts are paused', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: testEmail, password: testPassword });
+
+      expect(res.status).toBe(503);
+      expect(res.body.code).toBe('ACCOUNTS_PAUSED');
+      expect(res.body.error).toContain('Accounts are temporarily paused');
+    });
+
+    it('leaves /api/auth/me working normally with anonymous quota when accounts are paused', async () => {
+      const res = await request(app).get('/api/auth/me');
+      expect(res.status).toBe(200);
+      expect(res.body.user).toBeNull();
+      expect(res.body.quota.limit).toBe(config.anonymousScanLimit);
+      expect(res.body.quota.isRegistered).toBe(false);
+    });
+  });
 
   describe('Registration & Password Validation', () => {
     it('rejects registration with invalid email', async () => {

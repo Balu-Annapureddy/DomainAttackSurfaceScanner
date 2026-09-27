@@ -226,6 +226,17 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const lastScan = lastScanByDomain.get(domain);
+    if (lastScan && Date.now() - lastScan < 60_000) {
+      res.status(429).json({ error: 'This domain was scanned recently. Please wait before retrying.', code: 'DOMAIN_COOLDOWN' });
+      return;
+    }
+
+    if (activeScans >= config.maxConcurrentScans) {
+      res.status(429).json({ error: 'The scanner is busy. Please retry shortly.', code: 'SCAN_CONCURRENCY_LIMIT' });
+      return;
+    }
+
     // 2. Quota Enforcement (Anonymous vs Registered)
     const quotaResult = await consumeScanQuota(req, req.user);
     if (!quotaResult.allowed) {
@@ -234,16 +245,6 @@ router.post('/', async (req, res) => {
         code: 'SCAN_QUOTA_EXCEEDED',
         quota: quotaResult.quota,
       });
-      return;
-    }
-
-    if (activeScans >= config.maxConcurrentScans) {
-      res.status(429).json({ error: 'The scanner is busy. Please retry shortly.', code: 'SCAN_CONCURRENCY_LIMIT' });
-      return;
-    }
-    const lastScan = lastScanByDomain.get(domain);
-    if (lastScan && Date.now() - lastScan < 60_000) {
-      res.status(429).json({ error: 'This domain was scanned recently. Please wait before retrying.', code: 'DOMAIN_COOLDOWN' });
       return;
     }
 

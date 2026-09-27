@@ -20,8 +20,10 @@ import {
 import GlossaryModal from '../components/GlossaryModal';
 import WorkstationNav from '../components/WorkstationNav';
 import { createScan } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage() {
+  const { refreshAuth } = useAuth();
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,7 @@ export default function LandingPage() {
 
     try {
       const data = await createScan(cleanDomain);
+      void refreshAuth();
       navigate(`/scan/${encodeURIComponent(data.scanId)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to commence scan');

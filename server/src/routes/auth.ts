@@ -58,10 +58,23 @@ function clearSessionCookie(res: import('express').Response) {
   });
 }
 
+function checkAccountsEnabled(res: import('express').Response): boolean {
+  if (!config.accountsEnabled) {
+    res.status(503).json({
+      error: 'Accounts are temporarily paused while we finish setting up email delivery — check back soon',
+      code: 'ACCOUNTS_PAUSED',
+    });
+    return false;
+  }
+  return true;
+}
+
 /**
  * Register a new user account
  */
 router.post('/register', authLimiter, async (req, res) => {
+  if (!checkAccountsEnabled(res)) return;
+
   try {
     const { email, password } = req.body || {};
 
@@ -123,6 +136,18 @@ router.get('/verify', async (req, res) => {
   const token = typeof req.query.token === 'string' ? req.query.token.trim() : '';
   const wantsJson = req.headers.accept?.includes('application/json');
 
+  if (!config.accountsEnabled) {
+    if (wantsJson) {
+      res.status(503).json({
+        error: 'Accounts are temporarily paused while we finish setting up email delivery — check back soon',
+        code: 'ACCOUNTS_PAUSED',
+      });
+      return;
+    }
+    res.redirect(`${config.clientOrigin}/verify`);
+    return;
+  }
+
   if (!token) {
     if (wantsJson) {
       res.status(400).json({ error: 'Verification token is required', code: 'MISSING_TOKEN' });
@@ -166,6 +191,8 @@ router.get('/verify', async (req, res) => {
  * Resend email verification link (rate-limited)
  */
 router.post('/resend-verification', resendVerificationLimiter, async (req, res) => {
+  if (!checkAccountsEnabled(res)) return;
+
   try {
     const requestedEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : null;
     const targetEmail = req.user?.email || requestedEmail;
@@ -195,6 +222,8 @@ router.post('/resend-verification', resendVerificationLimiter, async (req, res) 
  * Initiate password reset (rate-limited, returns 200 regardless of existence to prevent user enumeration)
  */
 router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
+  if (!checkAccountsEnabled(res)) return;
+
   try {
     const { email } = req.body || {};
 
@@ -224,6 +253,8 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
  * Complete password reset: update password and invalidate ALL existing sessions for this user
  */
 router.post('/reset-password', authLimiter, async (req, res) => {
+  if (!checkAccountsEnabled(res)) return;
+
   try {
     const { token, password } = req.body || {};
 
@@ -265,6 +296,8 @@ router.post('/reset-password', authLimiter, async (req, res) => {
  * Log in to an existing account
  */
 router.post('/login', authLimiter, async (req, res) => {
+  if (!checkAccountsEnabled(res)) return;
+
   try {
     const { email, password } = req.body || {};
 
