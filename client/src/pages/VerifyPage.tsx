@@ -14,8 +14,15 @@ export default function VerifyPage() {
   const [loading, setLoading] = useState(Boolean(token && !statusParam));
   const [verified, setVerified] = useState(statusParam === 'success');
   const [error, setError] = useState<string | null>(statusParam === 'error' ? 'Invalid or expired verification link.' : null);
+  const [inputEmail, setInputEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  const isVerified = statusParam === 'success' || verified;
+  const isError = statusParam === 'error' || (Boolean(token) && Boolean(error));
+  const isLoading = loading && !isVerified && !isError;
+  const isNeutral = !isLoading && !isVerified && !isError;
 
   useEffect(() => {
     if (token && !statusParam) {
@@ -45,13 +52,19 @@ export default function VerifyPage() {
   }, [token, statusParam, refreshAuth]);
 
   const handleResend = async () => {
+    const targetEmail = user?.email || inputEmail.trim();
+    if (!targetEmail) {
+      setResendError('Please enter the email address for your operator account.');
+      return;
+    }
     try {
       setResending(true);
       setResendMessage(null);
-      await resendVerification(user?.email);
+      setResendError(null);
+      await resendVerification(targetEmail);
       setResendMessage('A fresh verification link has been dispatched to your email address.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to resend email');
+      setResendError(err instanceof Error ? err.message : 'Unable to resend email');
     } finally {
       setResending(false);
     }
@@ -63,8 +76,8 @@ export default function VerifyPage() {
 
       <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-[460px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)] text-center">
-          {loading ? (
-            <div className="space-y-4 py-8">
+          {isLoading ? (
+            <div className="space-y-4 py-8" data-testid="verify-loading">
               <Loader2 size={36} className="animate-spin text-[var(--accent-primary)] mx-auto" />
               <h1 className="text-sm font-bold uppercase tracking-wider text-[var(--text-primary)]">
                 VERIFYING OPERATOR CREDENTIALS…
@@ -73,8 +86,8 @@ export default function VerifyPage() {
                 Validating verification cryptographic token against secure registry.
               </p>
             </div>
-          ) : verified ? (
-            <div className="space-y-5">
+          ) : isVerified ? (
+            <div className="space-y-5" data-testid="verify-success">
               <div className="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto border border-emerald-500/20">
                 <CheckCircle size={32} />
               </div>
@@ -113,8 +126,88 @@ export default function VerifyPage() {
                 </Link>
               </div>
             </div>
+          ) : isNeutral ? (
+            <div className="space-y-5" data-testid="verify-neutral">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--accent-primary)]/20">
+                <Mail size={32} />
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-[var(--accent-primary)] uppercase tracking-wider block">
+                  EMAIL VERIFICATION
+                </span>
+                <h1 className="text-lg font-extrabold text-[var(--text-primary)] mt-1">
+                  Confirm Your Email Address
+                </h1>
+                <p className="text-xs text-[var(--text-secondary)] font-sans mt-2 leading-relaxed">
+                  We sent a verification link to your registered email address. Click the link in that email to activate your 50 scans/hour quota allocation.
+                </p>
+              </div>
+
+              {user?.email ? (
+                <div className="p-3 bg-[var(--bg-panel-subtle)] border border-[var(--border-muted)] rounded-lg text-left text-xs font-mono text-[var(--text-secondary)]">
+                  <div className="text-[10px] uppercase text-[var(--text-muted)] font-bold">Active Account</div>
+                  <div className="text-[var(--text-primary)] font-bold truncate mt-0.5">{user.email}</div>
+                  <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">Status: Pending Verification</div>
+                </div>
+              ) : (
+                <div className="text-left space-y-1">
+                  <label htmlFor="verify-email-input" className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase">
+                    Account Email
+                  </label>
+                  <input
+                    id="verify-email-input"
+                    type="email"
+                    placeholder="analyst@organization.com"
+                    value={inputEmail}
+                    onChange={(e) => setInputEmail(e.target.value)}
+                    className="console-input h-10 w-full"
+                  />
+                </div>
+              )}
+
+              {resendMessage && (
+                <div role="status" className="p-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-left text-[11px]">
+                  {resendMessage}
+                </div>
+              )}
+
+              {resendError && (
+                <div role="alert" className="p-3 border border-[#dc2626] dark:border-[#ff4d5e] bg-[#dc2626]/10 text-[#dc2626] dark:text-[#ff4d5e] rounded-lg text-left text-[11px]">
+                  {resendError}
+                </div>
+              )}
+
+              <div className="space-y-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="console-btn console-btn-primary w-full h-[42px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Mail size={13} />
+                  <span>{resending ? 'DISPATCHING LINK…' : 'RESEND VERIFICATION LINK'}</span>
+                </button>
+
+                {user ? (
+                  <Link
+                    to="/history"
+                    className="console-btn w-full h-[40px] text-xs font-semibold flex items-center justify-center gap-2"
+                  >
+                    <span>CONTINUE TO WORKSTATION (5 SCANS/HR)</span>
+                  </Link>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="console-btn w-full h-[40px] text-xs font-semibold flex items-center justify-center gap-2"
+                  >
+                    <span>RETURN TO LOGIN</span>
+                  </Link>
+                )}
+              </div>
+            </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-5" data-testid="verify-error">
               <div className="w-14 h-14 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20">
                 <AlertTriangle size={32} />
               </div>
@@ -131,9 +224,31 @@ export default function VerifyPage() {
                 </p>
               </div>
 
+              {!user && (
+                <div className="text-left space-y-1">
+                  <label htmlFor="resend-error-email" className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase">
+                    Account Email
+                  </label>
+                  <input
+                    id="resend-error-email"
+                    type="email"
+                    placeholder="analyst@organization.com"
+                    value={inputEmail}
+                    onChange={(e) => setInputEmail(e.target.value)}
+                    className="console-input h-10 w-full"
+                  />
+                </div>
+              )}
+
               {resendMessage && (
-                <div className="p-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-left text-[11px]">
+                <div role="status" className="p-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-left text-[11px]">
                   {resendMessage}
+                </div>
+              )}
+
+              {resendError && (
+                <div role="alert" className="p-3 border border-[#dc2626] dark:border-[#ff4d5e] bg-[#dc2626]/10 text-[#dc2626] dark:text-[#ff4d5e] rounded-lg text-left text-[11px]">
+                  {resendError}
                 </div>
               )}
 
@@ -160,7 +275,6 @@ export default function VerifyPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-[var(--border-muted)] py-3 px-4 font-mono text-[11px] text-[var(--text-muted)] text-center bg-[var(--bg-canvas)]">
         <span>DOMAIN ATTACK SURFACE SCANNER &middot; OPERATOR VERIFICATION</span>
       </footer>

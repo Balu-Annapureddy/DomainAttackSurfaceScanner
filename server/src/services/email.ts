@@ -61,11 +61,22 @@ export async function sendTransactionalEmail(payload: SendEmailPayload): Promise
   }
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
  * Send an email verification link
  */
 export async function sendVerificationEmail(to: string, token: string): Promise<EmailResult> {
   const verifyUrl = `${config.clientOrigin}/api/auth/verify?token=${encodeURIComponent(token)}`;
+  const safeVerifyUrl = escapeHtml(verifyUrl);
+  const safeTo = escapeHtml(to);
   const subject = 'Verify your email — Domain Attack Surface Scanner';
   const text = `
 Welcome to Domain Attack Surface Scanner.
@@ -101,10 +112,10 @@ If you did not register for this account, you can safely disregard this email.
     <h1>Verify Your Workstation Account</h1>
     <p>Thank you for registering. Confirming your email unlocks your full registered operator allocation of <strong>50 scans per hour</strong> and enables persistent cloud recon archives.</p>
     <div>
-      <a href="${verifyUrl}" class="button" target="_blank" rel="noopener noreferrer">VERIFY OPERATOR EMAIL</a>
+      <a href="${safeVerifyUrl}" class="button" target="_blank" rel="noopener noreferrer">VERIFY OPERATOR EMAIL</a>
     </div>
     <p>Or paste this verification link into your browser:</p>
-    <div class="url">${verifyUrl}</div>
+    <div class="url">${safeVerifyUrl}</div>
     <div class="footer">
       This link is valid for 24 hours. If you did not create this account, no further action is required.
     </div>
@@ -121,6 +132,8 @@ If you did not register for this account, you can safely disregard this email.
  */
 export async function sendPasswordResetEmail(to: string, token: string): Promise<EmailResult> {
   const resetUrl = `${config.clientOrigin}/reset-password?token=${encodeURIComponent(token)}`;
+  const safeResetUrl = escapeHtml(resetUrl);
+  const safeTo = escapeHtml(to);
   const subject = 'Reset your password — Domain Attack Surface Scanner';
   const text = `
 A password reset was requested for your Domain Attack Surface Scanner account.
@@ -154,12 +167,12 @@ If you did not request this password reset, please ignore this email or review y
   <div class="card">
     <div class="header">Domain Attack Surface Scanner &middot; Account Recovery</div>
     <h1>Password Reset Request</h1>
-    <p>We received a request to reset the password for your operator account (<strong>${to}</strong>). Click the button below to choose a new password:</p>
+    <p>We received a request to reset the password for your operator account (<strong>${safeTo}</strong>). Click the button below to choose a new password:</p>
     <div>
-      <a href="${resetUrl}" class="button" target="_blank" rel="noopener noreferrer">RESET PASSWORD</a>
+      <a href="${safeResetUrl}" class="button" target="_blank" rel="noopener noreferrer">RESET PASSWORD</a>
     </div>
     <p>Or paste this recovery link into your browser:</p>
-    <div class="url">${resetUrl}</div>
+    <div class="url">${safeResetUrl}</div>
     <div class="footer">
       This link is valid for 1 hour. All active workstation sessions will be automatically terminated upon password update. If you did not request this change, you can safely ignore this email.
     </div>

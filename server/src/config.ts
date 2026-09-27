@@ -53,9 +53,13 @@ function validateConfig() {
   }
 
   const sessionSecret = process.env.SESSION_SECRET?.trim() || (nodeEnv !== 'production' ? 'dass_dev_session_secret_local_testing_only' : '');
+  const resendApiKey = process.env.RESEND_API_KEY?.trim() || '';
   if (nodeEnv === 'production') {
     if (!sessionSecret || sessionSecret === 'dass_dev_session_secret_local_testing_only' || sessionSecret === 'dass_production_ready_session_key_secret_2026' || sessionSecret.length < 32) {
       throw new Error('[config] In production, SESSION_SECRET must be set to a dedicated high-entropy secret (>= 32 characters).');
+    }
+    if (!resendApiKey) {
+      throw new Error('[config] In production, RESEND_API_KEY must be set for transactional email delivery.');
     }
     const originUrl = new URL(clientOrigin);
     if (['localhost', '127.0.0.1', '::1'].includes(originUrl.hostname.toLowerCase())) {
@@ -100,6 +104,7 @@ function validateConfig() {
     ipIntelligenceTimeoutMs: optionalInteger('IP_INTELLIGENCE_TIMEOUT_MS', '5000', 100),
     databaseUrl: process.env.DATABASE_URL?.trim(),
     sessionSecret,
+    resendApiKey,
     trustProxy,
     anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '5', 1),
     registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '50', 1),

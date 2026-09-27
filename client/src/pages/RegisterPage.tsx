@@ -1,11 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, Shield, CheckCircle, AlertTriangle, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { UserPlus, Shield, CheckCircle, AlertTriangle, Lock, Eye, EyeOff, Loader2, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +16,7 @@ export default function RegisterPage() {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,13 +49,79 @@ export default function RegisterPage() {
       setLoading(true);
       setError(null);
       await register(email, password);
-      navigate('/history');
+      setRegisteredEmail(email);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
+        <WorkstationNav />
+
+        <main className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-[460px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)] text-center">
+            <div className="space-y-5">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--accent-primary)]/20">
+                <Mail size={32} />
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-[var(--accent-primary)] uppercase tracking-wider block">
+                  REGISTRATION COMPLETE
+                </span>
+                <h1 className="text-lg font-extrabold text-[var(--text-primary)] mt-1">
+                  Check Your Inbox
+                </h1>
+                <p className="text-xs text-[var(--text-secondary)] font-sans mt-2 leading-relaxed">
+                  We sent a verification link to <strong className="text-[var(--text-primary)] font-mono">{registeredEmail}</strong>.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] rounded-lg text-left text-[11px] space-y-1.5 font-sans">
+                <div className="font-bold flex items-center gap-1.5 text-[var(--accent-primary)]">
+                  <Shield size={14} />
+                  <span>UNVERIFIED ACCOUNT STATUS</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  Click the confirmation link in your email to unlock your full registered allocation of <strong>50 scans/hour</strong> and persistent cloud history.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <Link
+                  to="/history"
+                  className="console-btn console-btn-primary w-full h-[44px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2"
+                >
+                  <span>Continue without verifying (5 scans/hr)</span>
+                  <ArrowRight size={14} />
+                </Link>
+
+                <div className="pt-1">
+                  <Link
+                    to="/verify"
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--accent-primary)] underline font-mono"
+                  >
+                    Need another link? Open verification console
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer className="border-t border-[var(--border-muted)] py-3 px-4 font-mono text-[11px] text-[var(--text-muted)] text-center bg-[var(--bg-canvas)]">
+          <span>DOMAIN ATTACK SURFACE SCANNER &middot; </span>
+          <Link to="/privacy" className="hover:text-[var(--accent-primary)]">Privacy Policy</Link>
+          <span> &middot; </span>
+          <Link to="/terms" className="hover:text-[var(--accent-primary)]">Terms of Use</Link>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
