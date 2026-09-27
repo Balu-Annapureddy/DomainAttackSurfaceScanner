@@ -412,7 +412,7 @@ export default function HistoryPage() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-account-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 modal-bottom-sheet"
         >
           <div className="console-panel max-w-lg w-full p-6 space-y-4 border-l-4 border-l-[#ef4444] animate-in fade-in duration-150">
             <div className="flex items-center gap-2 text-[#ef4444] font-bold text-sm">

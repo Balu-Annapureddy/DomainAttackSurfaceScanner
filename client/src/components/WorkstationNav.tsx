@@ -199,7 +199,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden console-btn p-1.5 text-[var(--text-primary)] hover:border-[var(--accent-primary)] cursor-pointer"
+            className="inline-flex md:!hidden console-btn p-1.5 text-[var(--text-primary)] hover:border-[var(--accent-primary)] cursor-pointer"
             aria-label="Toggle navigation drawer"
             aria-expanded={mobileMenuOpen}
           >
