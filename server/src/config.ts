@@ -59,7 +59,10 @@ function validateConfig() {
       throw new Error('[config] In production, SESSION_SECRET must be set to a dedicated high-entropy secret (>= 32 characters).');
     }
     if (!resendApiKey) {
-      throw new Error('[config] In production, RESEND_API_KEY must be set for transactional email delivery.');
+      if (process.env.REQUIRE_RESEND_API_KEY === 'true') {
+        throw new Error('[config] In production with REQUIRE_RESEND_API_KEY=true, RESEND_API_KEY must be set for transactional email delivery.');
+      }
+      console.warn('[config] WARNING: RESEND_API_KEY is not set in production. Outgoing transactional emails (verification, password reset) will be logged to stdout rather than dispatched via HTTP API. Set RESEND_API_KEY in your environment for live email delivery.');
     }
     const originUrl = new URL(clientOrigin);
     if (['localhost', '127.0.0.1', '::1'].includes(originUrl.hostname.toLowerCase())) {
