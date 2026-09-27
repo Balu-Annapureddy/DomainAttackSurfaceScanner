@@ -50,7 +50,7 @@ export default function AssetDetailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="asset-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans modal-bottom-sheet"
     >
       <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col console-panel shadow-2xl overflow-hidden rounded-2xl border border-[var(--border-technical)]">
         {/* Modal Header */}

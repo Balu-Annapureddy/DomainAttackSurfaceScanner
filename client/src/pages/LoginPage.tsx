@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Shield, CheckCircle, AlertTriangle } from 'lucide-react';
+import { LogIn, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
 
@@ -9,15 +9,31 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Please provide your email and password');
-      return;
+    let hasError = false;
+
+    if (!email || !email.includes('@')) {
+      setEmailError('Please enter a valid email address');
+      hasError = true;
+    } else {
+      setEmailError(null);
     }
+
+    if (!password) {
+      setPasswordError('Password cannot be empty');
+      hasError = true;
+    } else {
+      setPasswordError(null);
+    }
+
+    if (hasError) return;
 
     try {
       setLoading(true);
@@ -32,14 +48,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
       <WorkstationNav />
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md console-panel shadow-2xl p-6 font-mono text-xs">
+        <div className="w-full max-w-[420px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)]">
           {/* Header */}
-          <div className="flex items-center gap-2 border-b border-[var(--border-technical)] pb-3 mb-4">
-            <LogIn size={15} className="text-[var(--accent-primary)]" />
+          <div className="flex items-center gap-2 border-b border-[var(--border-technical)] pb-3 mb-5">
+            <LogIn size={16} className="text-[var(--accent-primary)]" />
             <h1 className="text-sm font-bold tracking-wider uppercase text-[var(--text-primary)]">
               OPERATOR AUTHENTICATION
             </h1>
@@ -48,7 +64,7 @@ export default function LoginPage() {
           {error && (
             <div
               role="alert"
-              className="mb-4 p-3 border border-[#ef4444] bg-[#ef4444]/10 text-[#ef4444] flex items-start gap-2 text-xs"
+              className="mb-4 p-3 border border-[#dc2626] dark:border-[#ff4d5e] bg-[#dc2626]/10 dark:bg-[#ff4d5e]/10 text-[#dc2626] dark:text-[#ff4d5e] rounded-lg flex items-start gap-2 text-xs"
             >
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>
@@ -57,7 +73,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="login-email" className="block text-[11px] text-[var(--text-secondary)] mb-1 uppercase">
+              <label htmlFor="login-email" className="block text-[11px] font-bold text-[var(--text-secondary)] mb-1 uppercase">
                 Account Email
               </label>
               <input
@@ -67,34 +83,78 @@ export default function LoginPage() {
                 autoComplete="email"
                 placeholder="analyst@organization.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="console-input"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(null);
+                }}
+                className={`console-input h-10 ${
+                  emailError ? 'border-[#dc2626] focus:border-[#dc2626] ring-1 ring-[#dc2626]' : ''
+                }`}
               />
+              {emailError && (
+                <span className="text-[10px] text-[#dc2626] dark:text-[#ff4d5e] mt-1 block font-mono">
+                  {emailError}
+                </span>
+              )}
             </div>
 
             <div>
-              <label htmlFor="login-password" className="block text-[11px] text-[var(--text-secondary)] mb-1 uppercase">
+              <label htmlFor="login-password" className="block text-[11px] font-bold text-[var(--text-secondary)] mb-1 uppercase">
                 Password
               </label>
-              <input
-                id="login-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="console-input"
-              />
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (passwordError) setPasswordError(null);
+                  }}
+                  className={`console-input h-10 pr-10 ${
+                    passwordError ? 'border-[#dc2626] focus:border-[#dc2626] ring-1 ring-[#dc2626]' : ''
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              {passwordError && (
+                <span className="text-[10px] text-[#dc2626] dark:text-[#ff4d5e] mt-1 block font-mono">
+                  {passwordError}
+                </span>
+              )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="console-btn console-btn-primary w-full py-2 text-xs font-bold"
+              className="console-btn console-btn-primary w-full h-[44px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
-              {loading ? '[AUTHENTICATING…]' : '[SIGN IN TO WORKSTATION]'}
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>AUTHENTICATING…</span>
+                </>
+              ) : (
+                <span>SIGN IN TO WORKSTATION</span>
+              )}
             </button>
+
+            {/* Terms and Privacy persistent link */}
+            <p className="text-center text-[10px] text-[var(--text-muted)] pt-1">
+              By authenticating, you acknowledge our{' '}
+              <Link to="/terms" className="underline hover:text-[var(--accent-primary)]">Terms</Link> and{' '}
+              <Link to="/privacy" className="underline hover:text-[var(--accent-primary)]">Privacy Policy</Link>.
+            </p>
           </form>
 
           {/* Registered Benefits Callout */}
@@ -103,18 +163,18 @@ export default function LoginPage() {
               <Shield size={12} className="text-[var(--accent-primary)]" />
               <span>REGISTERED OPERATOR PRIVILEGES</span>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-1.5 text-[10px]">
               <li className="flex items-center gap-1.5">
-                <CheckCircle size={10} className="text-[var(--accent-primary)]" />
+                <CheckCircle size={11} className="text-[var(--accent-teal)] shrink-0" />
                 <span>50 Scans per hour (vs. 5 for guests)</span>
               </li>
               <li className="flex items-center gap-1.5">
-                <CheckCircle size={10} className="text-[var(--accent-primary)]" />
-                <span>Persistent server-side scan history</span>
+                <CheckCircle size={11} className="text-[var(--accent-teal)] shrink-0" />
+                <span>Persistent server-side scan history &amp; comparison</span>
               </li>
               <li className="flex items-center gap-1.5">
-                <CheckCircle size={10} className="text-[var(--accent-primary)]" />
-                <span>Multi-scan chronological perimeter comparison</span>
+                <CheckCircle size={11} className="text-[var(--accent-teal)] shrink-0" />
+                <span>Encrypted session tokens &amp; telemetry exports</span>
               </li>
             </ul>
           </div>
@@ -130,7 +190,7 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border-muted)] py-3 px-4 font-mono text-[11px] text-[var(--text-muted)] text-center">
+      <footer className="border-t border-[var(--border-muted)] py-3 px-4 font-mono text-[11px] text-[var(--text-muted)] text-center bg-[var(--bg-canvas)]">
         <span>DOMAIN ATTACK SURFACE SCANNER &middot; </span>
         <Link to="/privacy" className="hover:text-[var(--accent-primary)]">Privacy Policy</Link>
         <span> &middot; </span>

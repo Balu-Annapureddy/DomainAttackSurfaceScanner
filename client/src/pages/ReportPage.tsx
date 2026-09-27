@@ -167,40 +167,71 @@ export default function ReportPage() {
         </div>
       </nav>
 
-      {/* ─── Printable Intelligence Dossier (1200-1400px Desktop Width) ── */}
-      <article className="mx-auto max-w-7xl px-4 pt-4 space-y-4 print:p-0 print:space-y-3">
-        {/* ─── Dossier Masthead ───────────────────────────────────────── */}
-        <header className="console-panel p-4 print:border-b print:border-slate-300">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 font-mono">
-            <div>
-              <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">
-                <Shield size={13} />
-                <span>EXTERNAL ATTACK SURFACE INTELLIGENCE DOSSIER</span>
-              </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] print:text-slate-900">
-                {scan.domain}
-              </h1>
-              <p className="mt-0.5 text-xs text-[var(--text-secondary)] print:text-slate-600 font-sans">
-                Passive external intelligence assessment. Authoritative DNS, CT logs, TLS transport, and HTTP security posture.
-              </p>
-            </div>
+      {/* ─── Mobile Sticky Tab Bar ─────────────────────────────────── */}
+      <nav aria-label="Dossier section navigation" className="sticky top-0 z-30 bg-[var(--bg-canvas)]/95 backdrop-blur-sm border-b border-[var(--border-technical)] px-4 py-2 flex items-center gap-2 overflow-x-auto [scroll-snap-type:x_mandatory] lg:hidden print:hidden text-xs font-mono">
+        <a href="#sec-overview" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">01. Overview</a>
+        <a href="#sec-footprint" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">02. Footprint</a>
+        <a href="#sec-transport" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">03. Transport</a>
+        <a href="#sec-mail" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">04. Mail</a>
+        <a href="#sec-hygiene" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">05. Hygiene</a>
+        <a href="#sec-findings" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">06. Findings</a>
+        <a href="#sec-tls" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">07. TLS</a>
+        <a href="#sec-methodology" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">08. Scope</a>
+      </nav>
 
-            <div className="flex flex-col items-start sm:items-end gap-1 text-[11px] text-[var(--text-secondary)] print:text-slate-600">
-              <span className="flex items-center gap-1">
-                <Calendar size={11} /> {new Date(scan.createdAt).toUTCString()}
-              </span>
-              <span className="text-[10px] text-[var(--text-muted)]">
-                SCAN ID: {scan.scanId}
-              </span>
-              <span className="console-tag console-tag-cyan text-[10px]">
-                STATUS // {scan.status.replace(/_/g, ' ').toUpperCase()}
-              </span>
+      {/* ─── Printable Intelligence Dossier Layout (Desktop Sidebar + Main) ── */}
+      <div className="mx-auto max-w-7xl px-4 pt-4 lg:flex lg:gap-6 print:p-0 print:block">
+        {/* Left Anchor-Nav Sidebar (Desktop) */}
+        <aside className="hidden lg:block w-48 shrink-0 print:hidden">
+          <div className="sticky top-4 console-panel p-3 space-y-1 text-xs font-mono">
+            <div className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider px-2 py-1 mb-1 border-b border-[var(--border-muted)]">
+              DOSSIER INDEX
             </div>
+            <a href="#sec-overview" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">01. Overview</a>
+            <a href="#sec-footprint" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">02. Footprint</a>
+            <a href="#sec-transport" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">03. Transport</a>
+            <a href="#sec-mail" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">04. Mail</a>
+            <a href="#sec-hygiene" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">05. Hygiene</a>
+            <a href="#sec-findings" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">06. Findings</a>
+            <a href="#sec-tls" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">07. TLS Dossier</a>
+            <a href="#sec-methodology" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">08. Scope</a>
           </div>
-        </header>
+        </aside>
 
-        {/* ─── [01] Executive Intelligence Telemetry ─────────────────── */}
-        <section className="console-panel">
+        {/* Dossier Content Body */}
+        <article className="flex-1 min-w-0 space-y-4 print:p-0 print:space-y-3">
+          {/* ─── Dossier Masthead ───────────────────────────────────────── */}
+          <header className="console-panel p-4 print:border-b print:border-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 font-mono">
+              <div>
+                <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">
+                  <Shield size={13} />
+                  <span>EXTERNAL ATTACK SURFACE INTELLIGENCE DOSSIER</span>
+                </div>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] print:text-slate-900">
+                  {scan.domain}
+                </h1>
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)] print:text-slate-600 font-sans">
+                  Passive external intelligence assessment. Authoritative DNS, CT logs, TLS transport, and HTTP security posture.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-start sm:items-end gap-1 text-[11px] text-[var(--text-secondary)] print:text-slate-600">
+                <span className="flex items-center gap-1">
+                  <Calendar size={11} /> {new Date(scan.createdAt).toUTCString()}
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  SCAN ID: {scan.scanId}
+                </span>
+                <span className="console-tag console-tag-cyan text-[10px]">
+                  STATUS // {scan.status.replace(/_/g, ' ').toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </header>
+
+          {/* ─── [01] Executive Intelligence Telemetry ─────────────────── */}
+          <section id="sec-overview" className="console-panel scroll-mt-14">
           <div className="dossier-header">
             <div>
               <span className="dossier-num">[01]</span>
@@ -250,7 +281,7 @@ export default function ReportPage() {
           {/* ─── LEFT COLUMN ─── */}
           <div className="space-y-4">
             {/* [02] Surface Footprint */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-footprint" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[02]</span>
@@ -285,7 +316,7 @@ export default function ReportPage() {
             </section>
 
             {/* [03] Transport Security */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-transport" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[03]</span>
@@ -316,7 +347,7 @@ export default function ReportPage() {
             </section>
 
             {/* [04] Mail & Perimeter */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-mail" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[04]</span>
@@ -347,7 +378,7 @@ export default function ReportPage() {
             </section>
 
             {/* [05] Hygiene Observations */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-hygiene" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[05]</span>
@@ -399,7 +430,7 @@ export default function ReportPage() {
             </section>
 
             {/* [07] Findings Dossier */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-findings" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[07]</span>
@@ -434,7 +465,7 @@ export default function ReportPage() {
             </section>
 
             {/* [08] TLS Dossier */}
-            <section className="console-panel font-mono text-xs">
+            <section id="sec-tls" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[08]</span>
@@ -463,7 +494,7 @@ export default function ReportPage() {
             </section>
 
             {/* [09] Methodology */}
-            <section className="console-panel-inset p-3 font-mono text-xs border border-[var(--border-muted)]">
+            <section id="sec-methodology" className="console-panel-inset p-3 font-mono text-xs border border-[var(--border-muted)] scroll-mt-14">
               <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">
                 [09] RECONNAISSANCE METHODOLOGY & SCOPE
               </div>
@@ -491,6 +522,7 @@ export default function ReportPage() {
           <span>COMPILED: {new Date().toUTCString()}</span>
         </footer>
       </article>
+      </div>
     </div>
   );
 }

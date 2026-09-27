@@ -146,8 +146,15 @@ export default function FindingsSection({
               statusLabel = 'NOT APPLICABLE';
             }
 
+            const borderSeverityClass =
+              finding.severity === 'high'
+                ? 'border-l-4 border-l-[var(--sev-critical)]'
+                : finding.severity === 'medium'
+                ? 'border-l-4 border-l-[var(--sev-medium)]'
+                : 'border-l-4 border-l-[var(--sev-low)]';
+
             return (
-              <div key={finding.id} className="p-4 sm:p-5 bg-[var(--bg-panel)] hover:bg-[var(--accent-active-bg)]/30 transition-colors">
+              <div key={finding.id} className={`p-4 sm:p-5 bg-[var(--bg-panel)] hover:bg-[var(--bg-panel-subtle)] transition-colors ${borderSeverityClass}`}>
                 <div
                   onClick={() => toggleExpand(finding.id)}
                   className="cursor-pointer flex items-start justify-between gap-4"

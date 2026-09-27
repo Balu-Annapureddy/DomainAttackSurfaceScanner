@@ -20,6 +20,7 @@ export default function ComparisonPage() {
   const [comparison, setComparison] = useState<ScanComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mobileAssetTab, setMobileAssetTab] = useState<'added' | 'removed'>('added');
 
   useEffect(() => {
     let isCancelled = false;
@@ -302,50 +303,110 @@ export default function ComparisonPage() {
             </div>
 
             {/* ─── Detailed Asset Additions / Deletions ─────────────── */}
-            <div className="console-panel p-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-[var(--border-technical)] pb-2">
-                <span className="font-bold text-[var(--text-primary)]">ASSET DELTA INVENTORY</span>
+            <div className="console-panel p-4 sm:p-5 space-y-4 text-xs">
+              <div className="flex items-center justify-between border-b border-[var(--border-technical)] pb-3">
+                <span className="font-bold text-sm text-[var(--text-primary)]">ASSET DELTA INVENTORY</span>
                 <span className="console-tag">DETERMINISTIC_DIFF</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Added Assets */}
+              {/* Mobile Tab Switcher */}
+              <div className="flex md:hidden border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] p-1 rounded-lg gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMobileAssetTab('added')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
+                    mobileAssetTab === 'added'
+                      ? 'bg-[var(--bg-panel)] text-[var(--accent-teal)] shadow-xs'
+                      : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  + NEW ({comparison.addedAssets.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileAssetTab('removed')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
+                    mobileAssetTab === 'removed'
+                      ? 'bg-[var(--bg-panel)] text-[var(--sev-critical)] shadow-xs'
+                      : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  &minus; REMOVED ({comparison.removedAssets.length})
+                </button>
+              </div>
+
+              {/* Desktop Side-by-Side Grid */}
+              <div className="hidden md:grid md:grid-cols-2 gap-5">
+                {/* Added Assets Column */}
                 <div className="space-y-2">
-                  <span className="text-[10px] text-emerald-500 font-bold block">
-                    + NEWLY DISCOVERED ENTITIES ({comparison.addedAssets.length})
+                  <span className="text-xs font-mono text-[var(--accent-teal)] font-bold flex items-center gap-1.5 pb-1 border-b border-[var(--border-muted)]">
+                    <span>+</span>
+                    <span>NEWLY DISCOVERED ENTITIES ({comparison.addedAssets.length})</span>
                   </span>
                   {comparison.addedAssets.length === 0 ? (
-                    <p className="text-[var(--text-muted)] text-[11px]">No new assets detected.</p>
+                    <p className="text-[var(--text-muted)] text-xs py-3">No new assets detected.</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
                       {comparison.addedAssets.map((a) => (
-                        <div key={a.id} className="console-panel-inset p-2 flex items-center justify-between">
-                          <span className="text-[var(--text-primary)] font-bold truncate max-w-[240px]">{a.value}</span>
-                          <span className="console-tag text-[9px]">{a.type}</span>
+                        <div key={a.id} className="console-panel-inset p-2.5 flex items-center justify-between gap-2 border-l-2 border-l-[var(--accent-teal)]">
+                          <span className="text-[var(--text-primary)] font-bold truncate max-w-[240px] font-mono text-xs">{a.value}</span>
+                          <span className="console-tag console-tag-phosphor text-[9px]">{a.type}</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Removed Assets */}
+                {/* Removed Assets Column */}
                 <div className="space-y-2">
-                  <span className="text-[10px] text-red-500 font-bold block">
-                    - DECOMMISSIONED / UNRESOLVED ENTITIES ({comparison.removedAssets.length})
+                  <span className="text-xs font-mono text-[var(--sev-critical)] font-bold flex items-center gap-1.5 pb-1 border-b border-[var(--border-muted)]">
+                    <span>&minus;</span>
+                    <span>DECOMMISSIONED ENTITIES ({comparison.removedAssets.length})</span>
                   </span>
                   {comparison.removedAssets.length === 0 ? (
-                    <p className="text-[var(--text-muted)] text-[11px]">No decommissioned assets detected.</p>
+                    <p className="text-[var(--text-muted)] text-xs py-3">No decommissioned assets detected.</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
                       {comparison.removedAssets.map((a) => (
-                        <div key={a.id} className="console-panel-inset p-2 flex items-center justify-between">
-                          <span className="text-[var(--text-secondary)] line-through truncate max-w-[240px]">{a.value}</span>
+                        <div key={a.id} className="console-panel-inset p-2.5 flex items-center justify-between gap-2 border-l-2 border-l-[var(--sev-critical)]">
+                          <span className="text-[var(--text-secondary)] line-through truncate max-w-[240px] font-mono text-xs">{a.value}</span>
                           <span className="console-tag text-[9px]">{a.type}</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Mobile Single Tab Active Column */}
+              <div className="md:hidden">
+                {mobileAssetTab === 'added' ? (
+                  <div className="space-y-1.5">
+                    {comparison.addedAssets.length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-xs py-4 text-center">No new assets detected.</p>
+                    ) : (
+                      comparison.addedAssets.map((a) => (
+                        <div key={a.id} className="console-panel-inset p-2.5 flex items-center justify-between gap-2 border-l-2 border-l-[var(--accent-teal)]">
+                          <span className="text-[var(--text-primary)] font-bold truncate max-w-[200px] font-mono text-xs">{a.value}</span>
+                          <span className="console-tag console-tag-phosphor text-[9px]">{a.type}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {comparison.removedAssets.length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-xs py-4 text-center">No decommissioned assets detected.</p>
+                    ) : (
+                      comparison.removedAssets.map((a) => (
+                        <div key={a.id} className="console-panel-inset p-2.5 flex items-center justify-between gap-2 border-l-2 border-l-[var(--sev-critical)]">
+                          <span className="text-[var(--text-secondary)] line-through truncate max-w-[200px] font-mono text-xs">{a.value}</span>
+                          <span className="console-tag text-[9px]">{a.type}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

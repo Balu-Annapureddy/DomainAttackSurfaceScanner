@@ -212,26 +212,62 @@ export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }:
           </div>
         </div>
 
-        {/* Right Tile: Epistemology & Posture Gauge (5 cols) */}
+        {/* Right Tile: Epistemology & Radial Posture Gauge (5 cols) */}
         <div className="lg:col-span-5 bg-[var(--bg-panel)] border border-[var(--border-technical)] p-4 sm:p-5 flex flex-col justify-between rounded-xl shadow-xs">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-[var(--text-primary)] tracking-wide">
-                OBSERVABLE HYGIENE: <span className="text-[var(--accent-primary)] text-sm">{hasScore ? `${score}/100` : 'PENDING'}</span>
-              </span>
-              <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">PASSIVE OSINT</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[var(--text-primary)] tracking-wide">
+              SECURITY POSTURE GAUGE
+            </span>
+            <span className="console-tag">PASSIVE OSINT</span>
+          </div>
+
+          <div className="flex items-center gap-5 my-auto py-2">
+            {/* Radial SVG Gauge */}
+            <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="stroke-[var(--bg-panel-inset)]"
+                  strokeWidth="8"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  stroke={score >= 70 ? 'var(--accent-teal)' : score >= 40 ? '#d97706' : '#dc2626'}
+                  strokeWidth="8"
+                  strokeDasharray={251.2}
+                  strokeDashoffset={251.2 - (251.2 * (hasScore ? Math.min(100, Math.max(0, score)) : 0)) / 100}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className="transition-all duration-700 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center text-center">
+                <span className="text-xl font-black font-mono leading-none text-[var(--text-primary)]">
+                  {hasScore ? score : '—'}
+                </span>
+                <span className="text-[9px] font-mono text-[var(--text-muted)] leading-tight mt-0.5">/ 100</span>
+              </div>
             </div>
-            <div className="h-2.5 w-full bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] overflow-hidden mb-3 rounded-full">
-              <div
-                className={`h-full transition-all duration-300 rounded-full ${
-                  score >= 80 ? 'bg-[#16a34a] dark:bg-[#2ee59d]' : score >= 60 ? 'bg-[var(--accent-primary)]' : score >= 40 ? 'bg-[#d97706] dark:bg-[#f59e0b]' : 'bg-[#dc2626] dark:bg-[#ef4444]'
-                }`}
-                style={{ width: `${hasScore ? Math.min(100, Math.max(5, score)) : 0}%` }}
-              />
+
+            {/* Score interpretation */}
+            <div className="flex-1 space-y-1.5">
+              <div className="text-sm font-bold text-[var(--text-primary)]">
+                {score >= 80 ? 'Robust Defense Posture' : score >= 60 ? 'Standard Hygiene Posture' : score >= 40 ? 'Moderate Exposure Risk' : 'Elevated Attack Surface Risk'}
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] leading-snug">
+                {hasScore
+                  ? `Computed from observable DNS, TLS encryption depth, and HTTP header defenses.`
+                  : 'Awaiting probe evaluation…'}
+              </p>
             </div>
           </div>
 
-          <div className="flex justify-between items-center text-xs bg-[var(--bg-panel-inset)] p-2.5 border border-[var(--border-muted)] rounded-lg font-medium">
+          <div className="flex justify-between items-center text-xs bg-[var(--bg-panel-inset)] p-2.5 border border-[var(--border-muted)] rounded-lg font-medium mt-2">
             <span className="text-[#16a34a] dark:text-[#2ee59d]">✓ OBSERVED: {observedCount}</span>
             <span className="text-[#d97706] dark:text-[#f59e0b]">! UNEXPOSED: {notObservedCount}</span>
             <span className="text-[var(--text-muted)]">? UNVERIFIED: {checkFailedCount}</span>

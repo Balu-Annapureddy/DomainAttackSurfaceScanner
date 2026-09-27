@@ -129,7 +129,43 @@ export default function AssetChainVisualizer({
               key={idx}
               className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-3.5 text-xs rounded-xl shadow-xs transition hover:border-[var(--border-technical)]"
             >
-              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+              {/* Mobile Vertical Indented Tree (sm:hidden) */}
+              <div
+                onClick={() => onSelectAsset?.(chain.domainAsset)}
+                className="sm:hidden space-y-2 py-1 font-mono text-xs cursor-pointer"
+              >
+                <div className="flex items-center gap-2 text-[var(--accent-primary)] font-bold">
+                  <Globe size={13} />
+                  <span className="truncate">{chain.domainAsset.value}</span>
+                </div>
+                {chain.ipAsset && (
+                  <div className="pl-4 flex items-center gap-2 text-[#8b5cf6] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5">
+                    <Server size={12} />
+                    <span>{chain.ipAsset.value}</span>
+                  </div>
+                )}
+                {chain.asnAsset && (
+                  <div className="pl-8 flex items-center gap-2 text-[#16a34a] dark:text-[#2ee59d] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5">
+                    <span className="text-[10px] text-[var(--text-muted)] font-bold">ASN:</span>
+                    <span>{chain.asnAsset.value}</span>
+                  </div>
+                )}
+                {chain.orgAsset && (
+                  <div className="pl-8 flex items-center gap-2 text-[var(--text-secondary)] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5">
+                    <span className="text-[10px] text-[var(--text-muted)] font-bold">ORG:</span>
+                    <span className="truncate">{chain.orgAsset.value}</span>
+                  </div>
+                )}
+                {chain.geoAsset && (
+                  <div className="pl-12 flex items-center gap-1.5 text-[#d97706] dark:text-[#f59e0b] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5">
+                    <MapPin size={11} />
+                    <span>{String(chain.geoAsset.metadata?.city || chain.geoAsset.metadata?.country || chain.geoAsset.value)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Horizontal Sequential Flow (hidden sm:flex) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-2 sm:gap-2.5">
                 {/* 01: Host */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-mono text-[var(--text-muted)] font-bold">01</span>

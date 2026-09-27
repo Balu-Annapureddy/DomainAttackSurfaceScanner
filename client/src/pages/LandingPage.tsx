@@ -15,6 +15,7 @@ import {
   Shield,
   Sparkles,
   ChevronRight,
+  History,
 } from 'lucide-react';
 import GlossaryModal from '../components/GlossaryModal';
 import WorkstationNav from '../components/WorkstationNav';
@@ -25,6 +26,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [glossaryTerm, setGlossaryTerm] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
 
   const handleScan = async (e: FormEvent) => {
@@ -48,48 +50,67 @@ export default function LandingPage() {
     }
   };
 
-  const capabilities = [
+  const handleOpenTerm = (term: string) => {
+    setGlossaryTerm(term);
+    setGlossaryOpen(true);
+  };
+
+  const featureCards = [
     {
       icon: Globe,
-      tag: 'DNS / FOOTPRINT',
-      title: 'DNS & Infrastructure Resolution',
-      desc: 'Authoritative nameservers, MX mail routing, multi-cloud A/AAAA endpoints, and canonical CNAME alias chains mapped without probing.',
+      tag: 'DISCOVERY',
+      title: 'DNS & Perimeter Mapping',
+      desc: 'Authoritative nameservers, mail routing MX, multi-cloud A/AAAA endpoints, and canonical CNAME aliases mapped non-invasively.',
+      term: 'dns_mx',
     },
     {
       icon: FileCode,
-      tag: 'APPEND-ONLY CT',
-      title: 'Certificate Transparency Logs',
-      desc: 'Cryptographic public logs audited passively to discover subdomains, historical hostnames, wildcard records, and SAN expansions.',
+      tag: 'TRANSPARENCY',
+      title: 'Certificate Log Auditing',
+      desc: 'Append-only public CT logs harvested to discover historical hostnames, wildcards, and hidden subdomains.',
+      term: 'certificate_transparency',
     },
     {
-      icon: Lock,
-      tag: 'CRYPTOGRAPHY',
-      title: 'TLS & Transport Encryption',
-      desc: 'Certificate validity horizon, intermediate authority chains, protocol suites, and automated detection of expired or untrusted certs.',
+      icon: Network,
+      tag: 'INFRASTRUCTURE',
+      title: 'BGP Routing & Topology',
+      desc: 'IP geolocation, Autonomous System Numbers (ASNs), and transit providers correlated into a unified topology graph.',
+      term: 'autonomous_system',
     },
     {
       icon: Server,
-      tag: 'HTTP POSTURE',
-      title: 'Web Perimeter Hygiene',
-      desc: 'Observation of HTTP-to-HTTPS redirect enforcement, strict HSTS max-age, CSP, X-Frame-Options, and server technology signatures.',
+      tag: 'HYGIENE',
+      title: 'Security Header Posture',
+      desc: 'Passive evaluation of strict HSTS policies, CSP configurations, TLS cipher suites, and modern redirect chains.',
+      term: 'hsts',
     },
     {
       icon: Mail,
       tag: 'EMAIL AUTH',
       title: 'Email Spoofing Defense',
-      desc: 'Verification of SPF policy directives (~all / -all), DMARC alignment records (p=none/quarantine/reject), and mail gateway exposure.',
-    },
-    {
-      icon: Network,
-      tag: 'TOPOLOGY',
-      title: 'BGP & ASN Infrastructure',
-      desc: 'Correlating IP endpoints with Autonomous System Numbers (ASNs), transit carriers, hosting providers, and geographic points of presence.',
+      desc: 'Evaluation of SPF policy directives (~all / -all) and DMARC enforcement alignment records across mail gateways.',
+      term: 'spf',
     },
     {
       icon: Radio,
-      tag: 'OBSERVABLE OSINT',
-      title: 'Attack Surface Graph Mapping',
-      desc: 'Bidirectional relationship graph linking domains, hostnames, IP endpoints, certificates, and organizations into an actionable model.',
+      tag: 'INTELLIGENCE',
+      title: 'Attack Surface Graph',
+      desc: 'Interactive relationship network linking assets, IP hosts, cryptographic certificates, and cloud vendors.',
+      term: 'attack_surface',
+    },
+    {
+      icon: History,
+      tag: 'TIMELINE',
+      title: 'Drift & History Tracking',
+      desc: 'Differential comparison across historical scans to detect newly discovered perimeter endpoints or retired hosts.',
+      term: 'passive_osint',
+    },
+    {
+      icon: Lock,
+      tag: 'COMPLIANCE',
+      title: 'Regulated Target Safety',
+      desc: 'Guaranteed 100% passive observation. Safe for production environments, financial institutions, and regulated entities.',
+      term: 'passive_osint',
     },
   ];
 
@@ -104,170 +125,153 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col transition-colors duration-150">
-      <WorkstationNav onOpenGlossary={() => setGlossaryOpen(true)} />
+      <WorkstationNav onOpenGlossary={(term) => { setGlossaryTerm(term); setGlossaryOpen(true); }} />
 
-      {/* ─── Main Content ─────────────────────────────────────────────── */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex flex-col gap-14 sm:gap-18">
+      {/* ─── Hero Section with Subtle Workstation Grid Texture ───────── */}
+      <section className="relative border-b border-[var(--border-muted)] bg-[var(--bg-canvas)] workstation-grid-bg py-20 sm:py-28 overflow-hidden">
+        {/* Ambient atmospheric glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-[var(--accent-primary)] opacity-[0.06] rounded-full blur-3xl pointer-events-none" />
 
-        {/* ─── Hero & Target Submission Module ──────────────────────── */}
-        <section className="console-panel p-7 sm:p-12 bg-[var(--bg-panel)] relative overflow-hidden">
-          {/* Accent glow backdrops */}
-          <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-[var(--accent-primary)] opacity-[0.04] rounded-full blur-3xl pointer-events-none -mr-24 -mt-24" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-[var(--accent-primary)] opacity-[0.025] rounded-full blur-2xl pointer-events-none" />
-
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pb-8 border-b border-[var(--border-technical)]">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--accent-active-bg)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-30 mb-4">
-                <Shield className="w-3.5 h-3.5" />
-                <span>NON-INTRUSIVE PASSIVE OSINT PLATFORM</span>
-              </div>
-              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[var(--text-primary)] leading-tight">
-                Domain Attack<br className="hidden sm:block" /> Surface Scanner
-              </h1>
-              <p className="text-sm sm:text-base text-[var(--text-secondary)] mt-3 leading-relaxed max-w-2xl">
-                Observe public perimeter infrastructure, cryptographic certificates, DNS topologies, and configuration hygiene without invasive probes or active port scanning.
-              </p>
-            </div>
-
-            <div className="shrink-0 flex items-center gap-2">
-              <Link
-                to="/scan/sample"
-                id="demo-report-btn"
-                className="console-btn console-btn-phosphor text-xs py-2.5 px-4 flex items-center gap-2"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>TRY DEMO REPORT</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+          {/* Eyebrow Pill */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[var(--accent-active-bg)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-30 mb-6 shadow-xs animate-fade-in">
+            <Shield className="w-3.5 h-3.5" />
+            <span className="font-mono tracking-wide uppercase text-[11px]">Passive External Attack Surface Reconnaissance</span>
           </div>
 
-          {/* Search Bar Form */}
-          <form onSubmit={handleScan} className="mt-8 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <label htmlFor="target-domain-input" className="sr-only">
-                  Target Domain Name (e.g. example.com)
-                </label>
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2.5 pointer-events-none">
-                  <Globe className="w-5 h-5 text-[var(--accent-primary)]" />
-                  <span className="text-xs font-mono font-bold text-[var(--text-muted)] hidden sm:inline tracking-widest">
-                    TARGET:
-                  </span>
-                </div>
-                <input
-                  id="target-domain-input"
-                  type="text"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  placeholder="example.com"
-                  className="console-input pl-12 sm:pl-32 py-4 text-base font-mono bg-[var(--bg-panel-inset)] rounded-lg shadow-inner"
-                  disabled={loading}
-                  autoFocus
-                  aria-describedby="auth-notice"
-                />
+          {/* Headline */}
+          <h1 className="font-hero tracking-tight text-[var(--text-primary)] max-w-4xl">
+            Domain Attack Surface Scanner
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-base sm:text-lg text-[var(--text-secondary)] mt-4 mb-10 max-w-2xl leading-relaxed">
+            Continuously observe public infrastructure perimeter, DNS records, TLS certificates, and security hygiene without sending invasive probes.
+          </p>
+
+          {/* Single Joined Pill Search Control */}
+          <form onSubmit={handleScan} className="w-full max-w-2xl">
+            <div className="hero-search-pill">
+              <div className="flex items-center gap-2 pl-2 text-[var(--accent-primary)] shrink-0">
+                <Globe className="w-5 h-5" />
+                <span className="font-mono text-xs font-bold text-[var(--text-muted)] hidden sm:inline tracking-wider">
+                  DOMAIN:
+                </span>
               </div>
+
+              <input
+                id="target-domain-input"
+                type="text"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="example.com"
+                className="flex-1 bg-transparent border-none outline-none font-mono text-sm sm:text-base px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:ring-0"
+                disabled={loading}
+                autoFocus
+                aria-label="Target domain name"
+              />
 
               <button
                 type="submit"
                 id="start-scan-btn"
                 disabled={loading || !domain.trim()}
-                className="console-btn console-btn-primary px-10 py-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2.5 transition-all shadow-lg cursor-pointer shrink-0"
+                className="console-btn-primary rounded-full px-6 sm:px-8 py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
                 aria-label="Start Passive Attack Surface Scan"
               >
                 {loading ? (
                   <>
-                    <span className="inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    <span>SCANNING...</span>
+                    <span className="btn-spinner" />
+                    <span>SCANNING…</span>
                   </>
                 ) : (
                   <>
                     <Search className="w-4 h-4" />
                     <span>START SCAN</span>
-                    <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </div>
 
-            {/* Authorization Notice */}
-            <div id="auth-notice" className="text-xs text-[var(--text-secondary)] flex flex-wrap items-center gap-2">
-              <span className="text-[var(--sev-medium)] font-semibold inline-flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>AUTHORIZATION:</span>
-              </span>
-              <span>By initiating a scan, you confirm that you own or are explicitly authorized to assess the target domain.</span>
-              <span className="text-[var(--text-muted)]">•</span>
-              <Link to="/terms" className="text-[var(--accent-primary)] hover:underline font-medium">
-                Terms of Use
-              </Link>
-              <span className="text-[var(--text-muted)]">•</span>
-              <Link to="/privacy" className="text-[var(--accent-primary)] hover:underline font-medium">
-                Privacy Policy
+            {/* Error Message */}
+            {error && (
+              <div className="mt-4 p-3 bg-[var(--sev-critical-bg)] border border-[var(--sev-critical)] text-[var(--sev-critical)] text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 max-w-md mx-auto">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Disclaimer & Demo Link */}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-xs text-[var(--text-muted)]">
+              <span>Non-intrusive &middot; Non-disruptive &middot; Safe for regulated targets</span>
+              <span>&bull;</span>
+              <Link
+                to="/scan/sample"
+                id="demo-report-btn"
+                className="text-[var(--accent-primary)] font-semibold hover:underline flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Try Demo Report</span>
+                <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
           </form>
+        </div>
+      </section>
 
-          {error && (
-            <div className="mt-5 p-4 bg-[var(--sev-critical-bg)] border border-[var(--sev-critical)] text-[var(--sev-critical)] text-xs sm:text-sm rounded-lg flex items-center gap-2.5">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-        </section>
+      {/* ─── Main Body: Feature Cards Grid & Pipeline ────────────────── */}
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 flex flex-col gap-16 sm:gap-20">
 
-        {/* ─── 7 System Capabilities — Large Prominent Cards ──────────── */}
-        <section className="flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        {/* ─── Core Capability Vectors (4-col desktop → 2-col tablet → 1-col mobile) ── */}
+        <section className="flex flex-col gap-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 border-b border-[var(--border-muted)] pb-4">
             <div>
-              <div className="flex items-center gap-2.5 mb-2">
-                <span className="font-mono text-sm font-bold text-[var(--accent-primary)]">[01]</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-xs font-bold text-[var(--accent-primary)]">[01]</span>
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-                  System Capabilities
+                  Passive Reconnaissance Capabilities
                 </h2>
               </div>
               <p className="text-sm text-[var(--text-secondary)]">
-                Seven passive reconnaissance vectors evaluated during perimeter analysis
+                Eight observable perimeter intelligence vectors analyzed without intrusive probing
               </p>
             </div>
             <span className="text-xs font-mono text-[var(--text-muted)] tracking-widest uppercase shrink-0">
-              OBSERVABLE VECTORS ×7
+              OBSERVABLE VECTORS &times; 8
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {capabilities.map((cap, i) => {
-              const IconComp = cap.icon;
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featureCards.map((card, i) => {
+              const IconComp = card.icon;
               return (
                 <div
                   key={i}
-                  id={`capability-card-${i}`}
-                  className="capability-card animate-fade-in-up group"
+                  id={`feature-card-${i}`}
+                  className="console-panel p-6 rounded-xl flex flex-col justify-between hover:border-[var(--accent-primary)] transition-all group cursor-pointer bg-[var(--bg-panel)]"
+                  onClick={() => handleOpenTerm(card.term)}
                 >
-                  {/* Top row: icon + tag */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="capability-icon">
-                      <IconComp className="w-6 h-6" />
-                    </div>
-                    <span className="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] text-[var(--text-muted)] border border-[var(--border-muted)] shrink-0 mt-1">
-                      {cap.tag}
-                    </span>
-                  </div>
-
-                  {/* Title + description */}
                   <div>
-                    <h3 className="text-base font-bold text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-primary)] transition-colors leading-snug">
-                      {cap.title}
+                    {/* Icon in soft circle */}
+                    <div className="flex items-start justify-between gap-3 mb-5">
+                      <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center border border-[var(--border-technical)] group-hover:scale-105 transition-transform">
+                        <IconComp className="w-5 h-5" />
+                      </div>
+                      <span className="console-tag">
+                        {card.tag}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-primary)] transition-colors">
+                      {card.title}
                     </h3>
-                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                      {cap.desc}
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+                      {card.desc}
                     </p>
                   </div>
 
-                  {/* Bottom accent line */}
-                  <div className="flex items-center gap-2 mt-auto pt-3 border-t border-[var(--border-muted)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] opacity-60" />
-                    <span className="text-[10px] font-mono text-[var(--text-muted)]">PASSIVE DETECTION</span>
+                  <div className="mt-5 pt-3 border-t border-[var(--border-muted)] flex items-center justify-between text-xs text-[var(--accent-primary)] font-semibold">
+                    <span className="opacity-90 group-hover:underline">Learn more in Field Manual</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               );
@@ -276,8 +280,8 @@ export default function LandingPage() {
         </section>
 
         {/* ─── How the System Works: Methodological Pipeline ─────────── */}
-        <section className="console-panel overflow-hidden">
-          <div className="dossier-header">
+        <section className="console-panel overflow-hidden rounded-xl">
+          <div className="dossier-header px-6 py-4">
             <div className="flex items-center gap-2.5">
               <span className="dossier-num">[02]</span>
               <span>HOW THE SYSTEM WORKS</span>
@@ -287,16 +291,16 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <div className="p-6 sm:p-8 bg-[var(--bg-panel)]">
+          <div className="p-6 sm:p-8 bg-[var(--bg-panel-subtle)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               {pipelineStages.map((stage, i) => (
                 <div
                   key={stage.step}
                   id={`pipeline-stage-${i}`}
-                  className="pipeline-stage"
+                  className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-4 rounded-xl flex flex-col justify-between gap-3 shadow-xs hover:border-[var(--accent-primary)] transition-all"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="pipeline-step-label">
+                    <span className="font-mono text-xs font-bold text-[var(--accent-primary)]">
                       STAGE {stage.step}
                     </span>
                     <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] opacity-50" />
@@ -318,14 +322,14 @@ export default function LandingPage() {
         {/* ─── Passive Reconnaissance Guarantee ─────────────────────────── */}
         <section className="console-panel p-6 sm:p-8 bg-[var(--bg-panel-subtle)] border border-[var(--border-technical)] rounded-xl">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-            <div className="flex items-start gap-5">
+            <div className="flex items-start gap-4 sm:gap-5">
               <div className="w-12 h-12 rounded-xl bg-[var(--accent-active-bg)] text-[var(--accent-primary)] flex items-center justify-center shrink-0 border border-[var(--accent-primary)] border-opacity-30">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-sm font-bold text-[var(--text-primary)] flex flex-wrap items-center gap-2 mb-2">
+                <div className="text-sm sm:text-base font-bold text-[var(--text-primary)] flex flex-wrap items-center gap-2 mb-1.5">
                   <span>Passive Reconnaissance Guarantee</span>
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-mono bg-[var(--sev-low-bg)] text-[var(--sev-low)] font-bold border border-[var(--sev-low)] border-opacity-30">
+                  <span className="console-tag console-tag-phosphor">
                     NON-INVASIVE
                   </span>
                 </div>
@@ -335,7 +339,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] border border-[var(--border-muted)] px-4 py-2 rounded-lg bg-[var(--bg-panel)]">
+            <div className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] border border-[var(--border-muted)] px-3.5 py-1.5 rounded-lg bg-[var(--bg-panel)] shadow-xs">
               SAFE FOR REGULATED TARGETS
             </div>
           </div>
@@ -343,36 +347,31 @@ export default function LandingPage() {
       </main>
 
       {/* ─── Footer ─────────────────────────────────────────────────── */}
-      <footer className="border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-4 py-5 mt-auto">
+      <footer className="border-t border-[var(--border-muted)] bg-[var(--bg-panel)] px-4 py-6 mt-auto">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[var(--text-muted)]">
           <div className="font-mono tracking-wider">
-            DOMAIN ATTACK SURFACE SCANNER • PASSIVE RECONNAISSANCE
+            DOMAIN ATTACK SURFACE SCANNER &bull; PASSIVE RECONNAISSANCE
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <Link to="/privacy" className="hover:text-[var(--text-primary)] transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-[var(--text-primary)] transition-colors">Terms of Use</Link>
-            <Link to="/cookies" className="hover:text-[var(--text-primary)] transition-colors">Cookie Policy</Link>
-            <Link to="/billing" className="hover:text-[var(--text-primary)] transition-colors">Billing &amp; Refunds</Link>
-            <Link to="/security" className="hover:text-[var(--text-primary)] transition-colors">Security Disclosure</Link>
-            <button
-              onClick={() => setGlossaryOpen(true)}
-              className="hover:text-[var(--text-primary)] cursor-pointer transition-colors font-semibold text-[var(--accent-primary)]"
-            >
-              Field Manual
-            </button>
-            <a
-              href="https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-[var(--text-primary)] transition-colors"
-            >
-              GitHub
-            </a>
+            <Link to="/privacy" className="hover:text-[var(--accent-primary)] transition-colors">Privacy Policy</Link>
+            <span>&bull;</span>
+            <Link to="/terms" className="hover:text-[var(--accent-primary)] transition-colors">Terms of Use</Link>
+            <span>&bull;</span>
+            <Link to="/cookies" className="hover:text-[var(--accent-primary)] transition-colors">Cookie Policy</Link>
+            <span>&bull;</span>
+            <Link to="/security" className="hover:text-[var(--accent-primary)] transition-colors">Security Disclosure</Link>
+            <span>&bull;</span>
+            <Link to="/billing" className="hover:text-[var(--accent-primary)] transition-colors">Billing</Link>
           </div>
         </div>
       </footer>
 
-      {glossaryOpen && <GlossaryModal isOpen={glossaryOpen} onClose={() => setGlossaryOpen(false)} />}
+      {/* Field Manual Glossary Modal */}
+      <GlossaryModal
+        isOpen={glossaryOpen}
+        initialTermKey={glossaryTerm}
+        onClose={() => setGlossaryOpen(false)}
+      />
     </div>
   );
 }

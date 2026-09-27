@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Filter, Search, X, Info } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Filter, Search, X, Info, List, Network } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 
 interface AttackSurfaceGraphProps {
@@ -30,6 +30,7 @@ export default function AttackSurfaceGraph({
   sectionNumber = '03',
 }: AttackSurfaceGraphProps) {
   const [zoom, setZoom] = useState(1);
+  const [viewMode, setViewMode] = useState<'graph' | 'list'>('graph');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [graphSearch, setGraphSearch] = useState<string>('');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -211,10 +212,65 @@ export default function AttackSurfaceGraph({
               <RotateCcw size={12} />
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'graph' ? 'list' : 'graph')}
+            className="console-btn py-1 px-2.5 text-xs font-semibold flex items-center gap-1.5"
+            title="Toggle between Interactive Graph and Categorized List"
+          >
+            {viewMode === 'graph' ? <List size={13} /> : <Network size={13} />}
+            <span>{viewMode === 'graph' ? 'List View' : 'Graph View'}</span>
+          </button>
         </div>
       </div>
 
-      {/* ─── Full-Width Canvas Container with Floating Overlay Inspector ─ */}
+      {viewMode === 'list' ? (
+        <div className="p-4 sm:p-6 bg-[var(--bg-panel)] divide-y divide-[var(--border-muted)] max-h-[680px] overflow-y-auto">
+          {filteredAssets.length === 0 ? (
+            <div className="py-12 text-center text-xs text-[var(--text-muted)] font-mono">
+              NO ASSETS MATCH CURRENT SEARCH
+            </div>
+          ) : (
+            filteredAssets.map((asset) => {
+              const style = TYPE_COLORS[asset.type] || TYPE_COLORS.DOMAIN;
+              const connectedRels = relationships.filter(
+                (r) => r.fromAssetId === asset.id || r.toAssetId === asset.id
+              );
+              return (
+                <div
+                  key={asset.id}
+                  onClick={() => handleNodeClick(asset)}
+                  className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-[var(--accent-active-bg)] rounded-lg transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: style.border }}
+                    />
+                    <span className="console-tag font-bold">{asset.type}</span>
+                    <span className="font-mono text-xs sm:text-sm font-semibold text-[var(--text-primary)] truncate select-all">
+                      {asset.value}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs shrink-0 pl-5 sm:pl-0">
+                    <span className="text-[var(--text-secondary)] font-mono">
+                      {connectedRels.length} connection{connectedRels.length !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-[var(--accent-primary)] font-bold hover:underline"
+                    >
+                      INSPECT
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+      /* ─── Full-Width Canvas Container with Floating Overlay Inspector ─ */
       <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)] workstation-grid-bg">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
@@ -395,6 +451,7 @@ export default function AttackSurfaceGraph({
           </div>
         )}
       </div>
+      )}
 
       {/* ─── Legend Bar ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-3.5 py-1.5 font-mono text-[10px]">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import L from 'leaflet';
 import type { Asset, Relationship } from '../../../shared/types';
 
@@ -29,6 +30,7 @@ export default function InfrastructureMap({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [tileError, setTileError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Extract geolocated IP nodes
   const geoPoints = useMemo<GeoPoint[]>(() => {
@@ -200,20 +202,54 @@ export default function InfrastructureMap({
   return (
     <div className="console-panel rounded-xl overflow-hidden shadow-sm">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
-      <div className="dossier-header px-4 py-3">
+      <div className="dossier-header px-4 sm:px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
           <span className="font-bold tracking-wide">INFRASTRUCTURE DISTRIBUTION</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-          <span className="font-semibold">{geoPoints.length} GEOLOCATED ENDPOINT{geoPoints.length !== 1 ? 'S' : ''}</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-[var(--text-secondary)] font-semibold hidden sm:inline">{geoPoints.length} ENDPOINTS</span>
           <span className="console-tag">REGISTRY_GEOIP</span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsFullscreen(!isFullscreen);
+              setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
+            }}
+            className="console-btn py-1 px-2.5 text-xs flex items-center gap-1 cursor-pointer ml-1"
+            title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen Map'}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Minimize' : 'Fullscreen'}</span>
+          </button>
         </div>
       </div>
 
       {/* ─── Map Canvas ─────────────────────────────────────────────── */}
-      <div className="relative">
-        <div ref={mapContainerRef} className="h-96 sm:h-[520px] w-full bg-[var(--bg-canvas)]" />
+      <div className={`relative ${isFullscreen ? 'fixed inset-0 z-50 p-4 bg-black/80 flex flex-col justify-center backdrop-blur-sm' : ''}`}>
+        {isFullscreen && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => {
+                setIsFullscreen(false);
+                setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
+              }}
+              className="console-btn-primary py-1 px-3 text-xs font-bold rounded-lg cursor-pointer"
+            >
+              Close Fullscreen &times;
+            </button>
+          </div>
+        )}
+        <div
+          ref={mapContainerRef}
+          className={`${isFullscreen ? 'h-[80vh] w-full rounded-xl border border-[var(--border-technical)]' : 'h-[260px] sm:h-[460px] md:h-[520px] w-full'} bg-[var(--bg-canvas)] transition-all`}
+        />
+
+        {/* Marker Legend Pill */}
+        <div className="absolute top-3 left-3 z-[400] bg-[var(--bg-panel)]/90 backdrop-blur-xs border border-[var(--border-technical)] px-3 py-1.5 rounded-lg shadow-sm text-xs font-mono flex items-center gap-2 text-[var(--text-secondary)]">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] border border-[#60a5fa]" />
+          <span>IP Host Endpoint</span>
+        </div>
 
         {/* Graceful Fallback Overlay if no IPs discovered */}
         {geoPoints.length === 0 && (

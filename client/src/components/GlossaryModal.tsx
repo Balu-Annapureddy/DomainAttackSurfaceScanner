@@ -47,7 +47,7 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
       role="dialog"
       aria-modal="true"
       aria-labelledby="glossary-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm font-sans"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm font-sans modal-bottom-sheet"
     >
       <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col bg-[var(--bg-panel)] border border-[var(--border-technical)] shadow-2xl overflow-hidden rounded-2xl">
         {/* ─── Workstation Dossier Header ─────────────────────────────── */}

@@ -27,8 +27,8 @@ export default function CategoryInspectionTabs({
 
   return (
     <div className="console-panel rounded-xl overflow-hidden shadow-sm">
-      {/* ─── Tab Navigation Header ───────────────────────────────────── */}
-      <div className="flex border-b border-[var(--border-muted)] bg-[var(--bg-panel-inset)] overflow-x-auto font-sans text-xs">
+      {/* ─── Tab Navigation Header with Mobile Snap-Scroll ─────────── */}
+      <div className="flex border-b border-[var(--border-muted)] bg-[var(--bg-panel-inset)] overflow-x-auto font-sans text-xs p-1.5 gap-1.5 [scroll-snap-type:x_mandatory] scroll-smooth">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -38,16 +38,16 @@ export default function CategoryInspectionTabs({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 whitespace-nowrap transition border-b-2 cursor-pointer ${
+              className={`[scroll-snap-align:start] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-lg whitespace-nowrap transition cursor-pointer font-medium ${
                 isActive
-                  ? 'border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--bg-panel)] font-bold'
-                  : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-active-bg)]'
+                  ? 'bg-[var(--accent-active-bg)] text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)] shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel)]'
               }`}
             >
-              <Icon size={13} className={isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'} />
+              <Icon size={14} className={isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'} />
               <span>{tab.label}</span>
               <span
-                className={`ml-1 h-1.5 w-1.5 rounded-full ${
+                className={`ml-1 h-2 w-2 rounded-full ${
                   status === 'completed'
                     ? 'bg-[#16a34a] dark:bg-[#2ee59d]'
                     : status === 'running'

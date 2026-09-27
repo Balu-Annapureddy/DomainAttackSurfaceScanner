@@ -26,14 +26,21 @@ export default function ScanProgressStepper({
   onSelectCategory,
 }: ScanProgressStepperProps) {
   return (
-    <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-3 sm:p-3.5 overflow-x-auto rounded-xl shadow-xs">
-      <div className="flex items-center min-w-[720px] gap-3">
-        <div className="font-mono text-xs font-bold text-[var(--text-secondary)] uppercase pr-3 border-r border-[var(--border-muted)] shrink-0 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-          <span>PIPELINE</span>
+    <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-3 sm:p-4 rounded-xl shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        {/* Pipeline Label */}
+        <div className="font-mono text-xs font-bold text-[var(--text-secondary)] uppercase lg:pr-3 lg:border-r border-[var(--border-muted)] shrink-0 flex items-center justify-between sm:justify-start gap-2">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+            <span>PIPELINE STAGES</span>
+          </div>
+          <span className="lg:hidden text-[10px] font-mono text-[var(--text-muted)]">
+            TAP STAGE TO INSPECT
+          </span>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 flex-1 text-xs">
+        {/* Responsive Grid: 2-col on mobile, 4-col on tablet, 7-col on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 flex-1 text-xs">
           {PIPELINE_ITEMS.map((item) => {
             const status = categories[item.key]?.status ?? 'pending';
             const isSelected = activeCategory === item.key;
@@ -61,14 +68,14 @@ export default function ScanProgressStepper({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectCategory?.(item.key)}
-                className={`flex items-center justify-between px-2.5 py-1.5 border text-left cursor-pointer transition rounded-lg ${bgClass} ${
+                className={`flex items-center justify-between px-3 py-2 border text-left cursor-pointer transition rounded-lg ${bgClass} ${
                   isSelected ? 'ring-2 ring-[var(--accent-primary)] border-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'hover:border-[var(--accent-primary)]'
                 }`}
                 title={`Pipeline Stage: ${item.name} (${status})`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0">{item.id}</span>
-                  <span className="font-medium text-xs truncate">{item.name}</span>
+                  <span className="font-semibold text-xs truncate">{item.name}</span>
                 </div>
                 <span className={`font-bold ${symbolColor} text-xs ml-1 shrink-0`}>{symbol}</span>
               </button>

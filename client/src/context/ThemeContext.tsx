@@ -15,10 +15,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       const saved = localStorage.getItem('dass_theme');
       if (saved === 'light' || saved === 'dark') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
     } catch {
       // ignore
     }
-    return 'dark'; // Default workstation theme
+    return 'dark';
   });
 
   useEffect(() => {
