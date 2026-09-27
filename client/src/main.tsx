@@ -21,6 +21,9 @@ const TermsPage = lazy(() => import('./pages/TermsPage'));
 const SecurityPage = lazy(() => import('./pages/SecurityPage'));
 const CookiePage = lazy(() => import('./pages/CookiePage'));
 const BillingPage = lazy(() => import('./pages/BillingPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyPage = lazy(() => import('./pages/VerifyPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteLoadingFallback() {
@@ -51,6 +54,9 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/compare/:baseId/:targetId" element={<ComparisonPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/verify" element={<VerifyPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/cookies" element={<CookiePage />} />

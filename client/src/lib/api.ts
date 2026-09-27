@@ -180,3 +180,45 @@ export async function deleteAccount(): Promise<{ success: boolean; message: stri
     message: data.message ?? 'Account deleted successfully',
   };
 }
+
+export async function resendVerification(email?: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/auth/resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email }),
+  });
+
+  return parseApiResponse<{ success: boolean; message: string }>(response, 'Unable to resend verification email');
+}
+
+export async function verifyEmailToken(token: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/auth/verify?token=${encodeURIComponent(token)}`, {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  return parseApiResponse<{ success: boolean; message: string }>(response, 'Unable to verify email');
+}
+
+export async function forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email }),
+  });
+
+  return parseApiResponse<{ success: boolean; message: string }>(response, 'Unable to submit password reset request');
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ token, password }),
+  });
+
+  return parseApiResponse<{ success: boolean; message: string }>(response, 'Unable to reset password');
+}

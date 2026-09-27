@@ -5,10 +5,11 @@ import type { QuotaInfo, User } from '../../../shared/types';
 
 export function getIdentityKey(req: Request, user?: User | null): { key: string; isRegistered: boolean; limit: number } {
   if (user) {
+    const isVerified = Boolean(user.emailVerified);
     return {
       key: `user:${user.id}`,
       isRegistered: true,
-      limit: config.registeredScanLimit,
+      limit: isVerified ? config.registeredScanLimit : config.anonymousScanLimit,
     };
   }
 

@@ -12,6 +12,7 @@ import {
   BookOpen,
   Menu,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -45,10 +46,21 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
   }, [mobileMenuOpen]);
 
   return (
-    <nav
-      aria-label="Workstation Top Navigation"
-      className="border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-4 sm:px-6 py-2.5 font-sans text-xs transition-colors duration-150 sticky top-0 z-50 shadow-xs"
-    >
+    <>
+      {user && !user.emailVerified && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200 font-sans flex items-center justify-center gap-2">
+          <AlertTriangle size={13} className="text-amber-500 shrink-0" />
+          <span>Account unverified (5 scans/hr guest limit). <strong>Verify your email to unlock 50/hr</strong>.</span>
+          <Link to="/verify" className="underline font-bold text-[var(--accent-primary)] hover:text-[var(--accent-hover)] ml-1">
+            Verify email &rarr;
+          </Link>
+        </div>
+      )}
+
+      <nav
+        aria-label="Workstation Top Navigation"
+        className="border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-4 sm:px-6 py-2.5 font-sans text-xs transition-colors duration-150 sticky top-0 z-50 shadow-xs"
+      >
       <div className="mx-auto max-w-7xl flex items-center justify-between gap-3">
         {/* Brand & Workstation Status Identifier */}
         <div className="flex items-center gap-3">
@@ -199,7 +211,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="inline-flex md:!hidden console-btn p-1.5 text-[var(--text-primary)] hover:border-[var(--accent-primary)] cursor-pointer"
+            className="md:hidden console-btn p-1.5 text-[var(--text-primary)] hover:border-[var(--accent-primary)] cursor-pointer"
             aria-label="Toggle navigation drawer"
             aria-expanded={mobileMenuOpen}
           >
@@ -335,5 +347,6 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
         </div>
       )}
     </nav>
+    </>
   );
 }

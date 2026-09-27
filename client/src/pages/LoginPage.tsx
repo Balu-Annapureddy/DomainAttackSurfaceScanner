@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { LogIn, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import WorkstationNav from '../components/WorkstationNav';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,9 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isVerifiedSuccess = searchParams.get('verified') === 'true';
+  const isVerifiedError = searchParams.get('verified') === 'false';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,6 +65,26 @@ export default function LoginPage() {
             </h1>
           </div>
 
+          {isVerifiedSuccess && (
+            <div
+              role="status"
+              className="mb-4 p-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-start gap-2 text-xs"
+            >
+              <CheckCircle size={14} className="shrink-0 mt-0.5" />
+              <span>Email verified successfully! You can now log in to access your 50 scans/hr quota allocation.</span>
+            </div>
+          )}
+
+          {isVerifiedError && (
+            <div
+              role="alert"
+              className="mb-4 p-3 border border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg flex items-start gap-2 text-xs"
+            >
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+              <span>Verification link is invalid or has expired. You can sign in and request a new verification email.</span>
+            </div>
+          )}
+
           {error && (
             <div
               role="alert"
@@ -99,9 +123,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="login-password" className="block text-[11px] font-bold text-[var(--text-secondary)] mb-1 uppercase">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="login-password" className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-[10px] text-[var(--accent-primary)] hover:underline font-mono"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   id="login-password"

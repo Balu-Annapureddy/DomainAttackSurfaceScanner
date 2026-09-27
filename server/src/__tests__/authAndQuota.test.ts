@@ -105,6 +105,146 @@ describe('Authentication, Authorization & Quotas', () => {
     });
   });
 
+  describe('Email Verification Flow & Quota Gating', () => {
+    it('gates unverified user quota to anonymous limit (5) and marks emailVerified false', async () => {
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', authCookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.emailVerified).toBe(false);
+      expect(res.body.quota.limit).toBe(5); // Gated behind verification
+    });
+
+    it('rejects GET /api/auth/verify with invalid token', async () => {
+      const res = await request(app)
+        .get('/api/auth/verify?token=invalid_token_123')
+        .set('Accept', 'application/json');
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('INVALID_TOKEN');
+    });
+
+    it('redirects to login error page when browser visits invalid token', async () => {
+      const res = await request(app)
+        .get('/api/auth/verify?token=invalid_token_123');
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('verified=false');
+    });
+
+    it('resends verification email and updates token via POST /api/auth/resend-verification', async () => {
+      const res = await request(app)
+        .post('/api/auth/resend-verification')
+        .set('Cookie', authCookie)
+        .send();
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const record = await db.findUserByEmail(testEmail);
+      expect(record?.verificationToken).toBeDefined();
+    });
+
+    it('verifies user email and unlocks 50 scans/hr allocation via GET /api/auth/verify', async () => {
+      const record = await db.findUserByEmail(testEmail);
+      expect(record?.verificationToken).toBeDefined();
+
+      const verifyRes = await request(app)
+        .get(`/api/auth/verify?token=${record!.verificationToken}`)
+        .set('Accept', 'application/json');
+
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.success).toBe(true);
+
+      // Check /me now reports emailVerified = true and 50 scans/hr quota
+      const meRes = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', authCookie);
+
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.user.emailVerified).toBe(true);
+      expect(meRes.body.quota.limit).toBe(50);
+    });
+  });
+
+  describe('Password Reset Flow & Session Invalidation', () => {
+    it('always returns 200 for POST /api/auth/forgot-password (anti-enumeration)', async () => {
+      // 1. Non-existent email returns 200
+      const ghostRes = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'ghost-user@nonexistent.domain' });
+
+      expect(ghostRes.status).toBe(200);
+      expect(ghostRes.body.success).toBe(true);
+
+      // 2. Existing email returns 200
+      const existingRes = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: testEmail });
+
+      expect(existingRes.status).toBe(200);
+      expect(existingRes.body.success).toBe(true);
+
+      const record = await db.findUserByEmail(testEmail);
+      expect(record?.resetToken).toBeDefined();
+      expect(record?.resetTokenExpiresAt).toBeDefined();
+    });
+
+    it('rejects POST /api/auth/reset-password with invalid token', async () => {
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'nonexistent-reset-token', password: 'NewValidPassword123!' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('INVALID_RESET_TOKEN');
+    });
+
+    it('rejects POST /api/auth/reset-password with weak password', async () => {
+      const record = await db.findUserByEmail(testEmail);
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: record!.resetToken, password: 'short' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('WEAK_PASSWORD');
+    });
+
+    it('successfully resets password and invalidates all previous sessions', async () => {
+      const newPassword = 'BrandNewPassword456!';
+      const record = await db.findUserByEmail(testEmail);
+
+      const resetRes = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: record!.resetToken, password: newPassword });
+
+      expect(resetRes.status).toBe(200);
+      expect(resetRes.body.success).toBe(true);
+
+      // Previous session cookie must now be invalid
+      const checkPrevSession = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', authCookie);
+      expect(checkPrevSession.body.user).toBeNull();
+
+      // Old password must fail login
+      const oldLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: testEmail, password: testPassword });
+      expect(oldLogin.status).toBe(401);
+
+      // New password must succeed
+      const newLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: testEmail, password: newPassword });
+      expect(newLogin.status).toBe(200);
+      expect(newLogin.body.user.email).toBe(testEmail.toLowerCase());
+
+      // Update authCookie for any subsequent tests
+      authCookie = extractSessionCookie(newLogin);
+    });
+  });
+
   describe('Authorization & Resource Ownership', () => {
     it('prevents User B from accessing User A private scan', async () => {
       // 1. User A creates a scan

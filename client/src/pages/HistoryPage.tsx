@@ -10,6 +10,7 @@ import {
   Database,
   User,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 import IntelligenceTimeline, { type HistoryItem } from '../components/IntelligenceTimeline';
 import WorkstationNav from '../components/WorkstationNav';
@@ -183,6 +184,27 @@ export default function HistoryPage() {
             </Link>
           </div>
         </div>
+
+        {/* Verification Gating Banner */}
+        {user && !user.emailVerified && (
+          <div className="console-panel p-5 bg-amber-500/10 border-l-4 border-l-amber-500 border border-amber-500/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
+                <AlertTriangle size={15} className="text-amber-500" />
+                <span>Verification Required — Quota Gated</span>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-2xl">
+                Please verify your email to unlock 50/hr and full persistent cloud synchronization. Unverified accounts remain at 5 scans/hour.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link to="/verify" className="console-btn-primary py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                <span>VERIFY EMAIL (UNLOCK 50/HR)</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Guest Mode Informational Banner */}
         {!user && (

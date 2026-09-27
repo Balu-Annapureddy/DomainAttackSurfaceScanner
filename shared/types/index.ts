@@ -81,6 +81,7 @@ export interface User {
   id: string;
   email: string;
   createdAt: string;
+  emailVerified: boolean;
 }
 
 export interface AuthResponse {

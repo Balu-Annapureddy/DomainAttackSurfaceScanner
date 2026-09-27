@@ -9,6 +9,11 @@ export interface UserRecord {
   id: string;
   email: string;
   passwordHash: string;
+  emailVerified: boolean;
+  verificationToken?: string | null;
+  verificationTokenExpiresAt?: string | null;
+  resetToken?: string | null;
+  resetTokenExpiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,12 +36,24 @@ export interface QuotaRecord {
 export interface DatabaseAdapter {
   init(): Promise<void>;
   close(): Promise<void>;
-  createUser(email: string, passwordHash: string): Promise<User>;
+  createUser(
+    email: string,
+    passwordHash: string,
+    verificationToken?: string | null,
+    verificationTokenExpiresAt?: string | null,
+  ): Promise<User>;
   findUserByEmail(email: string): Promise<UserRecord | null>;
   findUserById(id: string): Promise<User | null>;
+  findUserByVerificationToken(token: string): Promise<UserRecord | null>;
+  verifyUserEmail(userId: string): Promise<boolean>;
+  setVerificationToken(userId: string, token: string, expiresAt: string): Promise<void>;
+  findUserByResetToken(token: string): Promise<UserRecord | null>;
+  setResetToken(userId: string, token: string, expiresAt: string): Promise<void>;
+  resetPassword(userId: string, newPasswordHash: string): Promise<void>;
   createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<SessionRecord>;
   getSession(sessionId: string): Promise<{ session: SessionRecord; user: User } | null>;
   deleteSession(sessionId: string): Promise<void>;
+  deleteAllUserSessions(userId: string): Promise<void>;
   deleteExpiredSessions(): Promise<void>;
   saveScan(scan: DomainScan, userId?: string | null, isSaved?: boolean): Promise<void>;
   getScan(scanId: string): Promise<{ scan: DomainScan; userId: string | null } | null>;
@@ -115,7 +132,12 @@ class LocalJsonAdapter implements DatabaseAdapter {
     }
   }
 
-  async createUser(email: string, passwordHash: string): Promise<User> {
+  async createUser(
+    email: string,
+    passwordHash: string,
+    verificationToken?: string | null,
+    verificationTokenExpiresAt?: string | null,
+  ): Promise<User> {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = await this.findUserByEmail(normalizedEmail);
     if (existing) {
@@ -128,13 +150,18 @@ class LocalJsonAdapter implements DatabaseAdapter {
       id,
       email: normalizedEmail,
       passwordHash,
+      emailVerified: false,
+      verificationToken: verificationToken || null,
+      verificationTokenExpiresAt: verificationTokenExpiresAt || null,
+      resetToken: null,
+      resetTokenExpiresAt: null,
       createdAt: now,
       updatedAt: now,
     };
 
     this.data.users[id] = user;
     this.schedulePersist();
-    return { id: user.id, email: user.email, createdAt: user.createdAt };
+    return { id: user.id, email: user.email, createdAt: user.createdAt, emailVerified: user.emailVerified };
   }
 
   async findUserByEmail(email: string): Promise<UserRecord | null> {
@@ -150,7 +177,66 @@ class LocalJsonAdapter implements DatabaseAdapter {
   async findUserById(id: string): Promise<User | null> {
     const user = this.data.users[id];
     if (!user) return null;
-    return { id: user.id, email: user.email, createdAt: user.createdAt };
+    return { id: user.id, email: user.email, createdAt: user.createdAt, emailVerified: Boolean(user.emailVerified) };
+  }
+
+  async findUserByVerificationToken(token: string): Promise<UserRecord | null> {
+    if (!token) return null;
+    for (const user of Object.values(this.data.users)) {
+      if (user.verificationToken === token) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  async verifyUserEmail(userId: string): Promise<boolean> {
+    const user = this.data.users[userId];
+    if (!user) return false;
+    user.emailVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpiresAt = null;
+    user.updatedAt = new Date().toISOString();
+    this.schedulePersist();
+    return true;
+  }
+
+  async setVerificationToken(userId: string, token: string, expiresAt: string): Promise<void> {
+    const user = this.data.users[userId];
+    if (!user) return;
+    user.verificationToken = token;
+    user.verificationTokenExpiresAt = expiresAt;
+    user.updatedAt = new Date().toISOString();
+    this.schedulePersist();
+  }
+
+  async findUserByResetToken(token: string): Promise<UserRecord | null> {
+    if (!token) return null;
+    for (const user of Object.values(this.data.users)) {
+      if (user.resetToken === token) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  async setResetToken(userId: string, token: string, expiresAt: string): Promise<void> {
+    const user = this.data.users[userId];
+    if (!user) return;
+    user.resetToken = token;
+    user.resetTokenExpiresAt = expiresAt;
+    user.updatedAt = new Date().toISOString();
+    this.schedulePersist();
+  }
+
+  async resetPassword(userId: string, newPasswordHash: string): Promise<void> {
+    const user = this.data.users[userId];
+    if (!user) return;
+    user.passwordHash = newPasswordHash;
+    user.resetToken = null;
+    user.resetTokenExpiresAt = null;
+    user.updatedAt = new Date().toISOString();
+    this.schedulePersist();
   }
 
   async createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<SessionRecord> {
@@ -191,6 +277,19 @@ class LocalJsonAdapter implements DatabaseAdapter {
   async deleteSession(sessionId: string): Promise<void> {
     if (this.data.sessions[sessionId]) {
       delete this.data.sessions[sessionId];
+      this.schedulePersist();
+    }
+  }
+
+  async deleteAllUserSessions(userId: string): Promise<void> {
+    let modified = false;
+    for (const [id, session] of Object.entries(this.data.sessions)) {
+      if (session.userId === userId) {
+        delete this.data.sessions[id];
+        modified = true;
+      }
+    }
+    if (modified) {
       this.schedulePersist();
     }
   }
@@ -372,18 +471,34 @@ class PostgresAdapter implements DatabaseAdapter {
     await this.pool.end();
   }
 
-  async createUser(email: string, passwordHash: string): Promise<User> {
+  async createUser(
+    email: string,
+    passwordHash: string,
+    verificationToken?: string | null,
+    verificationTokenExpiresAt?: string | null,
+  ): Promise<User> {
     const normalizedEmail = email.trim().toLowerCase();
     const id = crypto.randomUUID();
     const query = `
-      INSERT INTO users (id, email, password_hash)
-      VALUES ($1, $2, $3)
-      RETURNING id, email, created_at
+      INSERT INTO users (id, email, password_hash, email_verified, verification_token, verification_token_expires_at)
+      VALUES ($1, $2, $3, false, $4, $5)
+      RETURNING id, email, created_at, email_verified
     `;
     try {
-      const res = await this.pool.query(query, [id, normalizedEmail, passwordHash]);
+      const res = await this.pool.query(query, [
+        id,
+        normalizedEmail,
+        passwordHash,
+        verificationToken || null,
+        verificationTokenExpiresAt || null,
+      ]);
       const row = res.rows[0];
-      return { id: row.id, email: row.email, createdAt: row.created_at.toISOString() };
+      return {
+        id: row.id,
+        email: row.email,
+        createdAt: row.created_at.toISOString(),
+        emailVerified: Boolean(row.email_verified),
+      };
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'code' in err && err.code === '23505') {
         throw new Error('An account with this email already exists');
@@ -394,7 +509,10 @@ class PostgresAdapter implements DatabaseAdapter {
 
   async findUserByEmail(email: string): Promise<UserRecord | null> {
     const normalizedEmail = email.trim().toLowerCase();
-    const query = `SELECT id, email, password_hash, created_at, updated_at FROM users WHERE email = $1`;
+    const query = `
+      SELECT id, email, password_hash, email_verified, verification_token, verification_token_expires_at, reset_token, reset_token_expires_at, created_at, updated_at
+      FROM users WHERE email = $1
+    `;
     const res = await this.pool.query(query, [normalizedEmail]);
     if (!res.rows.length) return null;
     const row = res.rows[0];
@@ -402,17 +520,110 @@ class PostgresAdapter implements DatabaseAdapter {
       id: row.id,
       email: row.email,
       passwordHash: row.password_hash,
+      emailVerified: Boolean(row.email_verified),
+      verificationToken: row.verification_token,
+      verificationTokenExpiresAt: row.verification_token_expires_at ? row.verification_token_expires_at.toISOString() : null,
+      resetToken: row.reset_token,
+      resetTokenExpiresAt: row.reset_token_expires_at ? row.reset_token_expires_at.toISOString() : null,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     };
   }
 
   async findUserById(id: string): Promise<User | null> {
-    const query = `SELECT id, email, created_at FROM users WHERE id = $1`;
+    const query = `SELECT id, email, created_at, email_verified FROM users WHERE id = $1`;
     const res = await this.pool.query(query, [id]);
     if (!res.rows.length) return null;
     const row = res.rows[0];
-    return { id: row.id, email: row.email, createdAt: row.created_at.toISOString() };
+    return {
+      id: row.id,
+      email: row.email,
+      createdAt: row.created_at.toISOString(),
+      emailVerified: Boolean(row.email_verified),
+    };
+  }
+
+  async findUserByVerificationToken(token: string): Promise<UserRecord | null> {
+    if (!token) return null;
+    const query = `
+      SELECT id, email, password_hash, email_verified, verification_token, verification_token_expires_at, reset_token, reset_token_expires_at, created_at, updated_at
+      FROM users WHERE verification_token = $1
+    `;
+    const res = await this.pool.query(query, [token]);
+    if (!res.rows.length) return null;
+    const row = res.rows[0];
+    return {
+      id: row.id,
+      email: row.email,
+      passwordHash: row.password_hash,
+      emailVerified: Boolean(row.email_verified),
+      verificationToken: row.verification_token,
+      verificationTokenExpiresAt: row.verification_token_expires_at ? row.verification_token_expires_at.toISOString() : null,
+      resetToken: row.reset_token,
+      resetTokenExpiresAt: row.reset_token_expires_at ? row.reset_token_expires_at.toISOString() : null,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    };
+  }
+
+  async verifyUserEmail(userId: string): Promise<boolean> {
+    const query = `
+      UPDATE users
+      SET email_verified = true, verification_token = NULL, verification_token_expires_at = NULL, updated_at = NOW()
+      WHERE id = $1
+    `;
+    const res = await this.pool.query(query, [userId]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async setVerificationToken(userId: string, token: string, expiresAt: string): Promise<void> {
+    const query = `
+      UPDATE users
+      SET verification_token = $2, verification_token_expires_at = $3, updated_at = NOW()
+      WHERE id = $1
+    `;
+    await this.pool.query(query, [userId, token, expiresAt]);
+  }
+
+  async findUserByResetToken(token: string): Promise<UserRecord | null> {
+    if (!token) return null;
+    const query = `
+      SELECT id, email, password_hash, email_verified, verification_token, verification_token_expires_at, reset_token, reset_token_expires_at, created_at, updated_at
+      FROM users WHERE reset_token = $1
+    `;
+    const res = await this.pool.query(query, [token]);
+    if (!res.rows.length) return null;
+    const row = res.rows[0];
+    return {
+      id: row.id,
+      email: row.email,
+      passwordHash: row.password_hash,
+      emailVerified: Boolean(row.email_verified),
+      verificationToken: row.verification_token,
+      verificationTokenExpiresAt: row.verification_token_expires_at ? row.verification_token_expires_at.toISOString() : null,
+      resetToken: row.reset_token,
+      resetTokenExpiresAt: row.reset_token_expires_at ? row.reset_token_expires_at.toISOString() : null,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    };
+  }
+
+  async setResetToken(userId: string, token: string, expiresAt: string): Promise<void> {
+    const query = `
+      UPDATE users
+      SET reset_token = $2, reset_token_expires_at = $3, updated_at = NOW()
+      WHERE id = $1
+    `;
+    await this.pool.query(query, [userId, token, expiresAt]);
+  }
+
+  async resetPassword(userId: string, newPasswordHash: string): Promise<void> {
+    const query = `
+      UPDATE users
+      SET password_hash = $2, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW()
+      WHERE id = $1
+    `;
+    await this.pool.query(query, [userId, newPasswordHash]);
   }
 
   async createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<SessionRecord> {
@@ -439,7 +650,7 @@ class PostgresAdapter implements DatabaseAdapter {
   async getSession(sessionId: string): Promise<{ session: SessionRecord; user: User } | null> {
     const query = `
       SELECT s.id, s.user_id, s.created_at as session_created_at, s.expires_at, s.ip_address, s.user_agent,
-             u.email, u.created_at as user_created_at
+             u.email, u.created_at as user_created_at, u.email_verified
       FROM sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.id = $1
@@ -466,12 +677,17 @@ class PostgresAdapter implements DatabaseAdapter {
         id: row.user_id,
         email: row.email,
         createdAt: row.user_created_at.toISOString(),
+        emailVerified: Boolean(row.email_verified),
       },
     };
   }
 
   async deleteSession(sessionId: string): Promise<void> {
     await this.pool.query(`DELETE FROM sessions WHERE id = $1`, [sessionId]);
+  }
+
+  async deleteAllUserSessions(userId: string): Promise<void> {
+    await this.pool.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
   }
 
   async deleteExpiredSessions(): Promise<void> {
