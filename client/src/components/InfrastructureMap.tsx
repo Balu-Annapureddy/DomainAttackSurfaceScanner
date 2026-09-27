@@ -97,10 +97,11 @@ export default function InfrastructureMap({
       const map = L.map(mapContainerRef.current, {
         center: initialCenter,
         zoom: initialZoom,
-        minZoom: 2,
+        minZoom: 3,
         maxZoom: 16,
         zoomControl: false,
         attributionControl: false,
+        worldCopyJump: false,
         maxBounds: [
           [-85, -180],
           [85, 180],
@@ -182,8 +183,18 @@ export default function InfrastructureMap({
     });
 
     if (geoPoints.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
+      const first = geoPoints[0];
+      if (first && bounds.getNorthEast().equals(bounds.getSouthWest())) {
+        map.setView([first.lat, first.lng], 5);
+      } else {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
+      }
     }
+
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [geoPoints, onSelectAsset]);
 
   return (
@@ -202,7 +213,7 @@ export default function InfrastructureMap({
 
       {/* ─── Map Canvas ─────────────────────────────────────────────── */}
       <div className="relative">
-        <div ref={mapContainerRef} className="h-80 sm:h-[420px] w-full bg-[var(--bg-canvas)]" />
+        <div ref={mapContainerRef} className="h-96 sm:h-[520px] w-full bg-[var(--bg-canvas)]" />
 
         {/* Graceful Fallback Overlay if no IPs discovered */}
         {geoPoints.length === 0 && (

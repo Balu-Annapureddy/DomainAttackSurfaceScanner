@@ -364,30 +364,31 @@ export default function HistoryPage() {
         )}
 
         {/* Authenticated Account Privacy & Erasure Control */}
-        <div className="pt-8 border-t border-[var(--border-muted)] mt-12">
+        {/* Authenticated Account Privacy & Erasure Control */}
         {user && (
-          <div className="console-panel p-4 border-l-2 border-l-[var(--border-technical)] space-y-2 mt-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-[var(--text-primary)] block">
-                  ACCOUNT DATA MANAGEMENT &amp; PRIVACY RIGHTS (GDPR / DPDP)
-                </span>
-                <span className="text-[11px] text-[var(--text-secondary)]">
-                  Logged in as <span className="text-[var(--text-primary)] font-semibold">{user.email}</span> &middot; ID: {user.id}
-                </span>
+          <div className="pt-8 border-t border-[var(--border-muted)] mt-12">
+            <div className="console-panel p-5 border-l-2 border-l-[var(--border-technical)] space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-[var(--text-primary)] block">
+                    ACCOUNT DATA MANAGEMENT &amp; PRIVACY RIGHTS (GDPR / DPDP)
+                  </span>
+                  <span className="text-[11px] text-[var(--text-secondary)]">
+                    Logged in as <span className="text-[var(--text-primary)] font-semibold">{user.email}</span> &middot; ID: {user.id}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="console-btn py-1.5 px-3 text-[11px] text-[#ef4444] border-[#ef4444]/40 hover:bg-[#ef4444]/10 transition cursor-pointer"
+                >
+                  <Trash2 size={12} className="inline mr-1.5" />
+                  DELETE ACCOUNT &amp; ALL DATA
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className="console-btn py-1 px-3 text-[11px] text-[#ef4444] border-[#ef4444]/40 hover:bg-[#ef4444]/10 transition"
-              >
-                <Trash2 size={12} className="inline mr-1" />
-                DELETE ACCOUNT &amp; ALL DATA
-              </button>
             </div>
           </div>
         )}
-        </div>
       </main>
 
       {/* Legal Footer */}

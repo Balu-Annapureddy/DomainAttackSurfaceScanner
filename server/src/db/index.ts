@@ -734,7 +734,20 @@ export const db: DatabaseAdapter = databaseUrl
   ? new PostgresAdapter(databaseUrl)
   : new LocalJsonAdapter();
 
-// Initialize the database connection asynchronously
-void db.init().catch((err) => {
-  console.error('[database] Initialization warning:', err instanceof Error ? err.message : err);
-});
+/**
+ * isDbReady is set to true once initDb() completes successfully.
+ * Exposed so health/readiness probes can check it without re-querying.
+ */
+export let isDbReady = false;
+
+/**
+ * initDb() must be awaited by the server entrypoint before starting
+ * the HTTP listener.  Callers decide how to handle failures.
+ *
+ * Tests import db directly without calling initDb() — the LocalJsonAdapter
+ * init() is a no-op in the test environment so there is no double-init.
+ */
+export async function initDb(): Promise<void> {
+  await db.init();
+  isDbReady = true;
+}

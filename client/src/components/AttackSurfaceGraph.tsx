@@ -47,12 +47,12 @@ export default function AttackSurfaceGraph({
     return result;
   }, [assets, selectedType, graphSearch]);
 
-  // Centered, balanced radial node coordinates across the entire 1300px canvas
+  // Centered, balanced radial node coordinates across the entire 1400px canvas
   const layout = useMemo(() => {
-    const width = 1300;
-    const height = 580;
-    const centerX = 650;
-    const centerY = 290;
+    const width = 1400;
+    const height = 680;
+    const centerX = 700;
+    const centerY = 340;
     const nodeCoords = new Map<string, { x: number; y: number }>();
 
     // Central Target Domain
@@ -218,7 +218,7 @@ export default function AttackSurfaceGraph({
       <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)] workstation-grid-bg">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
-          className="h-[560px] sm:h-[640px] w-full select-none transition-transform duration-150"
+          className="h-[680px] sm:h-[760px] w-full select-none transition-transform duration-150"
           style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
         >
           <defs>
@@ -272,8 +272,8 @@ export default function AttackSurfaceGraph({
             const isHovered = hoveredNodeId === asset.id;
             const isSelected = activeAsset?.id === asset.id;
             const isTargetDomain = asset.type === 'DOMAIN';
-            const radius = isTargetDomain ? 24 : 14;
-            const label = asset.value.length > 22 ? `${asset.value.slice(0, 20)}…` : asset.value;
+            const radius = isTargetDomain ? 28 : 17;
+            const label = asset.value.length > 24 ? `${asset.value.slice(0, 22)}…` : asset.value;
 
             return (
               <g
@@ -284,9 +284,20 @@ export default function AttackSurfaceGraph({
                 onMouseEnter={() => setHoveredNodeId(asset.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
               >
+                {(isSelected || isHovered) && (
+                  <circle
+                    r={radius + 6}
+                    fill="none"
+                    stroke={isSelected ? 'var(--accent-primary)' : style.border}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 2"
+                    opacity={0.8}
+                  />
+                )}
+
                 <circle
                   r={radius}
-                  className="fill-[var(--bg-panel)] transition-colors"
+                  className="fill-[var(--bg-panel-elevated)] transition-colors"
                   stroke={isSelected ? 'var(--accent-primary)' : isHovered ? 'var(--text-primary)' : style.border}
                   strokeWidth={isSelected ? 3 : isHovered ? 2.5 : 1.5}
                 />
@@ -294,10 +305,10 @@ export default function AttackSurfaceGraph({
                 {/* Node Label */}
                 <text
                   textAnchor="middle"
-                  dy={isTargetDomain ? -28 : -18}
+                  dy={isTargetDomain ? -34 : -22}
                   fill={isSelected ? 'var(--accent-primary)' : isHovered ? 'var(--text-primary)' : style.text}
-                  fontSize={isTargetDomain ? 11 : 9}
-                  fontWeight={isTargetDomain ? 700 : 600}
+                  fontSize={isTargetDomain ? 12 : 10}
+                  fontWeight={isTargetDomain ? 800 : 600}
                   className="pointer-events-none font-mono"
                 >
                   {label}
@@ -306,9 +317,9 @@ export default function AttackSurfaceGraph({
                 {/* Type Code inside node */}
                 <text
                   textAnchor="middle"
-                  dy={3.5}
+                  dy={4}
                   fill={style.border}
-                  fontSize={isTargetDomain ? 9 : 7}
+                  fontSize={isTargetDomain ? 10 : 8}
                   fontWeight={800}
                   className="pointer-events-none font-mono tracking-wider uppercase"
                 >

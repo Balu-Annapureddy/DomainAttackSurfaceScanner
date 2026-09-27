@@ -212,10 +212,21 @@ async function runScan(scanId: string): Promise<void> {
 }
 
 router.post('/', async (req, res) => {
+  // Step 1: Validate domain — must happen before any async calls so validation
+  // errors are classified as 400 INVALID_DOMAIN, not 500 SERVER_ERROR.
+  let domain: string;
   try {
-    const domain = validateDomain(req.body?.domain);
+    domain = validateDomain(req.body?.domain);
+  } catch (validationError) {
+    res.status(400).json({
+      error: validationError instanceof Error ? validationError.message : 'Invalid domain',
+      code: 'INVALID_DOMAIN',
+    });
+    return;
+  }
 
-    // 1. Quota Enforcement (Anonymous vs Registered)
+  try {
+    // 2. Quota Enforcement (Anonymous vs Registered)
     const quotaResult = await consumeScanQuota(req, req.user);
     if (!quotaResult.allowed) {
       res.status(429).json({
@@ -251,9 +262,23 @@ router.post('/', async (req, res) => {
       quota: quotaResult.quota,
     });
   } catch (error) {
-    res.status(400).json({
-      error: error instanceof Error ? error.message : 'Invalid domain',
-      code: 'INVALID_DOMAIN',
+    // Internal failures (DB down, quota service failure, etc.) → 500/503
+    logError('scan_request_failed', error, { domain, userId: req.user?.id });
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    // Classify DB / infrastructure errors
+    const code = typeof (error as { code?: string }).code === 'string'
+      ? (error as { code: string }).code
+      : undefined;
+    const isDbError = message.toLowerCase().includes('database') ||
+      message.toLowerCase().includes('postgres') ||
+      message.toLowerCase().includes('connect') ||
+      (code !== undefined && ['ECONNREFUSED', 'ECONNRESET', '08006', '08001', '57P01'].includes(code));
+
+    res.status(isDbError ? 503 : 500).json({
+      error: isDbError
+        ? 'Scanner service is temporarily unavailable. Please try again.'
+        : 'An internal error occurred while processing the scan request.',
+      code: isDbError ? 'SERVICE_UNAVAILABLE' : 'SERVER_ERROR',
     });
   }
 });

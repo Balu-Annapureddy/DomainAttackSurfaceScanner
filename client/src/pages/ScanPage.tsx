@@ -219,7 +219,7 @@ export default function ScanPage() {
       </div>
 
       {/* ─── Main Workstation Layout ─────────────────────────────────── */}
-      <div className="mx-auto max-w-[1720px] px-4 sm:px-8 pt-6 space-y-8 sm:space-y-10">
+      <div className="mx-auto max-w-[1720px] px-4 sm:px-8 pt-8 space-y-10 sm:space-y-14 pb-4">
         {/* Compact Pipeline Stepper */}
         <ScanProgressStepper
           categories={scan.categories}
@@ -401,7 +401,7 @@ export default function ScanPage() {
 
         {/* Primary View 7: All Dossier Sections Sequentially */}
         {activeViewTab === 'all' && (
-          <div className="space-y-10 sm:space-y-12 w-full">
+          <div className="space-y-12 sm:space-y-16 w-full">
             <AttackSurfaceGraph
               sectionNumber="03"
               assets={scan.assets ?? []}

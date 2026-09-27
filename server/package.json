@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-schema.mjs",
     "start": "node dist/server/src/index.js",
     "test": "jest --forceExit",
     "lint": "eslint src --ext .ts"
