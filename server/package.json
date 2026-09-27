@@ -2,6 +2,8 @@
   "name": "server",
   "version": "1.0.0",
   "private": true,
+  "author": "Balu Annapureddy",
+  "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && node scripts/copy-schema.mjs",

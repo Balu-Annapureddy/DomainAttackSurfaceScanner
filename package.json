@@ -2,7 +2,24 @@
   "name": "domain-attack-surface-scanner",
   "version": "1.0.0",
   "private": true,
-  "description": "Passive public-domain attack surface scanner",
+  "description": "Passive public-domain attack surface scanner & external perimeter reconnaissance workstation",
+  "author": "Balu Annapureddy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Balu-Annapureddy/DomainAttackSurfaceScanner.git"
+  },
+  "keywords": [
+    "attack-surface",
+    "osint",
+    "cybersecurity",
+    "domain-scanner",
+    "reconnaissance",
+    "dns-security",
+    "tls-auditing",
+    "subdomain-enumeration",
+    "vulnerability-scanner"
+  ],
   "scripts": {
     "dev": "concurrently --kill-others-on-fail \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "npm run dev --workspace=server",
