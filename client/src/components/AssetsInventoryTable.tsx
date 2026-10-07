@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight, ArrowUpRight, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import type { Asset } from '../../../shared/types';
+import { explainAsset } from '../../../shared/assetExplanation';
 
 interface AssetsInventoryTableProps {
   assets: Asset[];
@@ -16,6 +17,7 @@ export default function AssetsInventoryTable({
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(1);
+  const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null);
   const pageSize = 15;
 
   const filteredAssets = useMemo(() => {
@@ -86,11 +88,12 @@ export default function AssetsInventoryTable({
         </div>
       </div>
 
-      {/* ─── Desktop View: Sticky Header + Zebra Striped Table ─────── */}
-      <div className="hidden md:block overflow-x-auto max-h-[620px] overflow-y-auto">
+      {/* ─── Desktop View: Sticky Header + Expandable Rows ─────── */}
+      <div className="hidden md:block overflow-x-auto max-h-[640px] overflow-y-auto">
         <table className="console-table w-full">
           <thead className="sticky top-0 z-10 bg-[var(--bg-panel-subtle)] backdrop-blur-xs border-b border-[var(--border-technical)]">
             <tr>
+              <th className="w-10"></th>
               <th className="w-32">TYPE</th>
               <th>VALUE / IDENTIFIER</th>
               <th className="w-32">STATUS</th>
@@ -101,7 +104,7 @@ export default function AssetsInventoryTable({
           <tbody>
             {paginatedAssets.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-[var(--text-muted)] text-sm">
+                <td colSpan={6} className="py-12 text-center text-[var(--text-muted)] text-sm">
                   No asset records match the current filter query
                 </td>
               </tr>
@@ -115,47 +118,139 @@ export default function AssetsInventoryTable({
                 
                 const uniqueSources = Array.from(new Set(asset.evidence.map((e) => e.source).filter(Boolean)));
                 const sources = uniqueSources.length > 0 ? uniqueSources.join(' • ') : 'DNS / CT Logs';
+                const isExpanded = expandedAssetId === asset.id;
+                const explanation = explainAsset(asset);
 
                 return (
-                  <tr
-                    key={asset.id}
-                    onClick={() => onSelectAsset?.(asset)}
-                    className={`cursor-pointer transition-colors hover:bg-[var(--accent-active-bg)] ${
-                      idx % 2 === 1 ? 'bg-[var(--bg-panel-subtle)]/40' : ''
-                    }`}
-                  >
-                    <td>
-                      <span className="console-tag console-tag-phosphor">
-                        {asset.type}
-                      </span>
-                    </td>
-                    <td className="text-[var(--text-primary)] font-medium">
-                      <span className="truncate block max-w-sm lg:max-w-md font-mono text-xs select-all" title={asset.value}>
-                        {asset.value}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
-                        {statusLabel}
-                      </span>
-                    </td>
-                    <td className="text-[var(--text-secondary)] text-xs truncate max-w-xs lg:max-w-sm">
-                      {sources}
-                    </td>
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectAsset?.(asset);
-                        }}
-                        className="text-[var(--accent-primary)] hover:underline text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>INSPECT</span>
-                        <ArrowUpRight size={12} />
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr
+                      key={asset.id}
+                      onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
+                      className={`cursor-pointer transition-colors hover:bg-[var(--accent-active-bg)] ${
+                        idx % 2 === 1 ? 'bg-[var(--bg-panel-subtle)]/40' : ''
+                      } ${isExpanded ? 'bg-[var(--accent-active-bg)]/60' : ''}`}
+                    >
+                      <td className="text-center pl-3 pr-1">
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? 'Collapse explanation' : 'Expand explanation'}
+                          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                        >
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                      </td>
+                      <td>
+                        <span className="console-tag console-tag-phosphor">
+                          {asset.type}
+                        </span>
+                      </td>
+                      <td className="text-[var(--text-primary)] font-medium">
+                        <span className="truncate block max-w-sm lg:max-w-md font-mono text-xs select-all" title={asset.value}>
+                          {asset.value}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td className="text-[var(--text-secondary)] text-xs truncate max-w-xs lg:max-w-sm">
+                        {sources}
+                      </td>
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectAsset?.(asset);
+                          }}
+                          className="text-[var(--accent-primary)] hover:underline text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>INSPECT</span>
+                          <ArrowUpRight size={12} />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Inline Expandable Explanation Row (Phase 2.3) */}
+                    {isExpanded && (
+                      <tr key={`${asset.id}-expanded`} className="bg-[var(--bg-panel-inset)] border-b border-[var(--border-technical)]">
+                        <td colSpan={6} className="p-4 sm:p-5">
+                          <div className="space-y-3.5 bg-[var(--bg-panel)] p-4 rounded-xl border border-[var(--border-technical)] shadow-sm">
+                            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-muted)] pb-2.5">
+                              <span className="font-mono text-xs font-bold text-[var(--accent-primary)] flex items-center gap-1.5">
+                                <Info size={13} />
+                                <span>[ASSET EXPLANATION &amp; CONTEXT]</span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {explanation.isHighRisk && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
+                                    HIGH RISK
+                                  </span>
+                                )}
+                                <span className="console-tag text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                  {explanation.confidence.toUpperCase()}_CONFIDENCE
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+                              <div className="space-y-1">
+                                <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                                  WHAT IS THIS
+                                </span>
+                                <p className="text-[var(--text-primary)] leading-relaxed font-medium">
+                                  {explanation.whatIsThis}
+                                </p>
+                              </div>
+
+                              <div className="space-y-1">
+                                <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                                  HOW WE FOUND IT / SOURCE
+                                </span>
+                                <p className="text-[var(--accent-primary)] font-mono font-bold">
+                                  {explanation.source}
+                                </p>
+                              </div>
+
+                              <div className="space-y-1">
+                                <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                                  WHY IT MATTERS
+                                </span>
+                                <p className="text-[var(--text-secondary)] leading-relaxed">
+                                  {explanation.whyItMatters}
+                                </p>
+                              </div>
+                            </div>
+
+                            {explanation.recommendedAction && (
+                              <div className="pt-2.5 border-t border-[var(--border-muted)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                                <div className="leading-relaxed">
+                                  <span className="font-mono text-[10px] uppercase font-bold text-[#16a34a] dark:text-[#2ee59d] mr-1.5">
+                                    DEFENSIVE ACTION:
+                                  </span>
+                                  <span className="text-[var(--text-primary)] font-medium">
+                                    {explanation.recommendedAction}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectAsset?.(asset);
+                                  }}
+                                  className="console-btn py-1 px-3 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span>TOPOLOGY MODAL</span>
+                                  <ArrowUpRight size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })
             )}
@@ -163,7 +258,7 @@ export default function AssetsInventoryTable({
         </table>
       </div>
 
-      {/* ─── Mobile View: High-Impact Stacked Cards (No Side-Scroll!) ── */}
+      {/* ─── Mobile View: High-Impact Stacked Cards ── */}
       <div className="md:hidden divide-y divide-[var(--border-muted)] bg-[var(--bg-panel)]">
         {paginatedAssets.length === 0 ? (
           <div className="py-12 text-center text-[var(--text-muted)] text-sm px-4">
@@ -179,25 +274,41 @@ export default function AssetsInventoryTable({
 
             const uniqueSources = Array.from(new Set(asset.evidence.map((e) => e.source).filter(Boolean)));
             const sources = uniqueSources.length > 0 ? uniqueSources.join(' • ') : 'DNS / CT Logs';
+            const isExpanded = expandedAssetId === asset.id;
+            const explanation = explainAsset(asset);
 
             return (
               <div
                 key={asset.id}
-                onClick={() => onSelectAsset?.(asset)}
-                className="p-4 space-y-2.5 active:bg-[var(--accent-active-bg)] transition-colors cursor-pointer"
+                className="p-4 space-y-2.5 transition-colors"
               >
-                {/* Header row: Type badge + Status badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="console-tag console-tag-phosphor">
-                    {asset.type}
-                  </span>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
-                    {statusLabel}
-                  </span>
+                {/* Header row: Type badge + Status badge + Expand chevron */}
+                <div
+                  className="flex items-center justify-between gap-2 cursor-pointer"
+                  onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="console-tag console-tag-phosphor">
+                      {asset.type}
+                    </span>
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Toggle explanation"
+                    className="text-[var(--text-muted)] p-1"
+                  >
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
                 </div>
 
                 {/* Main identifier */}
-                <div className="font-mono text-sm font-bold text-[var(--text-primary)] break-all select-all">
+                <div
+                  onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
+                  className="font-mono text-sm font-bold text-[var(--text-primary)] break-all select-all cursor-pointer"
+                >
                   {asset.value}
                 </div>
 
@@ -218,6 +329,40 @@ export default function AssetsInventoryTable({
                     <ArrowUpRight size={12} />
                   </button>
                 </div>
+
+                {/* Mobile Inline Explanation */}
+                {isExpanded && (
+                  <div className="pt-3 space-y-2.5 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-3 rounded-lg text-xs">
+                    <div className="space-y-0.5">
+                      <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                        WHAT IS THIS
+                      </span>
+                      <p className="text-[var(--text-primary)] leading-relaxed font-medium">
+                        {explanation.whatIsThis}
+                      </p>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                        WHY IT MATTERS
+                      </span>
+                      <p className="text-[var(--text-secondary)] leading-relaxed">
+                        {explanation.whyItMatters}
+                      </p>
+                    </div>
+
+                    {explanation.recommendedAction && (
+                      <div className="space-y-0.5 pt-1 border-t border-[var(--border-muted)]">
+                        <span className="font-mono text-[10px] uppercase font-bold text-[#16a34a] dark:text-[#2ee59d] block">
+                          ACTION
+                        </span>
+                        <p className="text-[var(--text-primary)]">
+                          {explanation.recommendedAction}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })

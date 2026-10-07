@@ -167,6 +167,34 @@ export default function CategoryInspectionTabs({
                     )}
                   </div>
                 </div>
+
+                <div className="console-panel-inset p-3.5 space-y-2 rounded-xs col-span-1 md:col-span-2 border border-[var(--border-muted)]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-primary)] block">
+                    DNSSEC Cryptographic Chain (DNSKEY / DS)
+                  </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-[var(--text-secondary)] block">Validation Status:</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">
+                        {(data.dnssec as { note?: string })?.note || 'Inferred via public validating DNS resolvers'}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md border self-start sm:self-auto ${
+                        (data.dnssec as { observed?: boolean })?.observed
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      }`}
+                    >
+                      {(data.dnssec as { observed?: boolean })?.observed ? '✓ SIGNED (DNSSEC ACTIVE)' : 'NOT SIGNED (UNSIGNED ZONE)'}
+                    </span>
+                  </div>
+                  {(data.dnssec as { record?: string })?.record && (
+                    <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-panel)] p-2 rounded-xs border border-[var(--border-muted)] break-all font-mono">
+                      {(data.dnssec as { record?: string }).record}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -328,24 +356,100 @@ export default function CategoryInspectionTabs({
 
             {/* Public Exposure Tab */}
             {activeTab === 'exposure' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="console-panel-inset p-3 space-y-1 rounded-xs">
-                  <span className="text-[10px] text-[var(--text-secondary)] block">ROBOTS.TXT</span>
-                  <span className={data.robotsTxtObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
-                    {data.robotsTxtObserved ? 'OBSERVED' : 'NOT OBSERVED'}
-                  </span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="console-panel-inset p-3 space-y-1 rounded-xs">
+                    <span className="text-[10px] text-[var(--text-secondary)] block">ROBOTS.TXT</span>
+                    <span className={data.robotsTxtObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
+                      {data.robotsTxtObserved ? 'OBSERVED' : 'NOT OBSERVED'}
+                    </span>
+                  </div>
+                  <div className="console-panel-inset p-3 space-y-1 rounded-xs">
+                    <span className="text-[10px] text-[var(--text-secondary)] block">SITEMAP.XML</span>
+                    <span className={data.sitemapXmlObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
+                      {data.sitemapXmlObserved ? 'OBSERVED' : 'NOT OBSERVED'}
+                    </span>
+                  </div>
+                  <div className="console-panel-inset p-3 space-y-1 rounded-xs">
+                    <span className="text-[10px] text-[var(--text-secondary)] block">SECURITY.TXT</span>
+                    <span className={data.securityTxtObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
+                      {data.securityTxtObserved ? 'OBSERVED' : 'NOT OBSERVED'}
+                    </span>
+                  </div>
                 </div>
-                <div className="console-panel-inset p-3 space-y-1 rounded-xs">
-                  <span className="text-[10px] text-[var(--text-secondary)] block">SITEMAP.XML</span>
-                  <span className={data.sitemapXmlObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
-                    {data.sitemapXmlObserved ? 'OBSERVED' : 'NOT OBSERVED'}
-                  </span>
-                </div>
-                <div className="console-panel-inset p-3 space-y-1 rounded-xs">
-                  <span className="text-[10px] text-[var(--text-secondary)] block">SECURITY.TXT</span>
-                  <span className={data.securityTxtObserved ? 'text-[#16a34a] dark:text-[#2ee59d] font-bold' : 'text-[var(--text-muted)]'}>
-                    {data.securityTxtObserved ? 'OBSERVED' : 'NOT OBSERVED'}
-                  </span>
+
+                {/* Shodan InternetDB Intelligence */}
+                <div className="console-panel-inset p-4 space-y-3 rounded-xs border border-[var(--border-muted)]">
+                  <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-primary)] block">
+                      Shodan InternetDB (Passive Perimeter Intelligence)
+                    </span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                      KEYLESS OSINT
+                    </span>
+                  </div>
+
+                  {Array.isArray(data.shodan) && (data.shodan as Array<Record<string, unknown>>).length > 0 ? (
+                    <div className="space-y-3">
+                      {(data.shodan as Array<{
+                        ip: string;
+                        ports?: number[];
+                        cpes?: string[];
+                        vulns?: string[];
+                        tags?: string[];
+                        hasData?: boolean;
+                      }>).map((host, idx) => (
+                        <div key={idx} className="bg-[var(--bg-panel)] p-3 rounded-lg border border-[var(--border-muted)] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-[var(--text-primary)]">{host.ip}</span>
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${host.hasData ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>
+                              {host.hasData ? 'SHODAN DATA PRESENT' : 'NO SHODAN RECORDS (404)'}
+                            </span>
+                          </div>
+
+                          {host.ports && host.ports.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-[var(--text-secondary)] block">OPEN PORTS:</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {host.ports.map((p) => {
+                                  const isRisky = [21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017].includes(p);
+                                  return (
+                                    <span
+                                      key={p}
+                                      className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
+                                        isRisky
+                                          ? 'bg-red-500/20 text-red-500 border-red-500/40'
+                                          : 'bg-[var(--bg-panel-inset)] text-[var(--text-primary)] border-[var(--border-muted)]'
+                                      }`}
+                                    >
+                                      {p} {isRisky ? '(!)' : ''}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {host.vulns && host.vulns.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-[var(--border-muted)]">
+                              <span className="text-[10px] text-red-500 font-bold block">CONFIRMED VULNERABILITIES (CVEs):</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {host.vulns.map((cve) => (
+                                  <span key={cve} className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-red-500/10 text-red-500 border border-red-500/30">
+                                    {cve}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-[var(--text-muted)] font-mono">
+                      No external Shodan records indexed for the discovered IP infrastructure.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

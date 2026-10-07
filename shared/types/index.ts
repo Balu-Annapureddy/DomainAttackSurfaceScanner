@@ -163,6 +163,8 @@ export interface ScoreBreakdown {
     httpsEnforcement: DimensionScore;
     webSecurityHeaders: DimensionScore;
     emailSecurity: DimensionScore;
+    dnssecHygiene?: DimensionScore;
+    networkExposure?: DimensionScore;
   };
 }
 
@@ -268,3 +270,5 @@ export interface ScanComparison {
   certificateDiff: CertificateDiff;
   dnsDiff: DnsDiff;
 }
+
+export * from '../assetExplanation';

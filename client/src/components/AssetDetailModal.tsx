@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
+import { explainAsset } from '../../../shared/assetExplanation';
 
 interface AssetDetailModalProps {
   asset: Asset | null;
@@ -29,6 +30,8 @@ export default function AssetDetailModal({
   }, [asset, onClose]);
 
   if (!asset) return null;
+
+  const explanation = explainAsset(asset);
 
   // Find incoming & outgoing relationships
   const outgoing = relationships
@@ -76,6 +79,62 @@ export default function AssetDetailModal({
 
         {/* Modal Scrollable Body */}
         <div className="overflow-y-auto p-5 space-y-5 text-sm bg-[var(--bg-panel)]">
+          {/* ── Asset Explanation Layer (v2) ───────────────────────── */}
+          <div className="console-panel-inset p-4 space-y-3.5 rounded-xl border border-[var(--border-technical)] bg-[var(--bg-panel-inset)]">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-muted)] pb-2.5">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent-primary)] flex items-center gap-1.5">
+                <span>[EXPLANATION &amp; CONTEXT]</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {explanation.isHighRisk && (
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
+                    HIGH RISK EXPOSURE
+                  </span>
+                )}
+                <span className="console-tag text-[10px] font-bold px-2 py-0.5 rounded-md">
+                  {explanation.confidence.toUpperCase()}_CONFIDENCE
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono font-bold uppercase text-[var(--text-muted)] block">
+                WHAT IS THIS
+              </span>
+              <p className="text-xs text-[var(--text-primary)] leading-relaxed font-medium">
+                {explanation.whatIsThis}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono font-bold uppercase text-[var(--text-muted)] block">
+                HOW WE FOUND IT / SOURCE
+              </span>
+              <p className="text-xs text-[var(--accent-primary)] font-mono font-bold">
+                {explanation.source}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono font-bold uppercase text-[var(--text-muted)] block">
+                WHY IT MATTERS
+              </span>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                {explanation.whyItMatters}
+              </p>
+            </div>
+
+            {explanation.recommendedAction && (
+              <div className="space-y-1 pt-1 border-t border-[var(--border-muted)]">
+                <span className="text-[11px] font-mono font-bold uppercase text-[#16a34a] dark:text-[#2ee59d] block">
+                  RECOMMENDED DEFENSIVE ACTION
+                </span>
+                <p className="text-xs text-[var(--text-primary)] leading-relaxed">
+                  {explanation.recommendedAction}
+                </p>
+              </div>
+            )}
+          </div>
           {/* Metadata Section if available */}
           {asset.metadata && Object.keys(asset.metadata).length > 0 && (
             <div className="console-panel-inset p-4 space-y-2.5 rounded-xl border border-[var(--border-muted)]">

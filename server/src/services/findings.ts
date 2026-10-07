@@ -282,6 +282,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
     ? (dnsCategory.data as {
         spf?: { present?: boolean; policy?: string };
         dmarc?: { present?: boolean; policy?: string; record?: string };
+        dnssec?: { observed?: boolean; note?: string; record?: string };
         mx?: string[];
         addresses?: string[];
       } | undefined)
@@ -307,6 +308,15 @@ export function buildFindings(scan: DomainScan): Finding[] {
   const exposure = exposureCategory?.status === 'completed'
     ? (exposureCategory.data as {
         checks?: Array<{ path: string; status: number; present: boolean }>;
+        shodan?: Array<{
+          ip: string;
+          ports: number[];
+          cpes: string[];
+          vulns: string[];
+          tags: string[];
+          available: boolean;
+          hasData: boolean;
+        }>;
       } | undefined)
     : undefined;
 
@@ -1105,6 +1115,145 @@ export function buildFindings(scan: DomainScan): Finding[] {
         ],
       },
     }));
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FINDING 21: DNSSEC not observed
+  // ════════════════════════════════════════════════════════════════════════════
+
+  if (dns && dns.dnssec && dns.dnssec.observed === false) {
+    findings.push(finding({
+      title: 'DNSSEC (DNS Security Extensions) not observed',
+      severity: 'low',
+      kind: 'configuration_weakness',
+      category: 'dns',
+      description: `No DNSKEY or DS records were observed for ${domain}. The domain's DNS responses are not cryptographically signed, meaning DNS resolvers cannot mathematically verify that responses have not been altered or spoofed in transit.`,
+      recommendation: 'Enable DNSSEC signing with your authoritative DNS provider and publish the Delegation Signer (DS) record with your domain registrar.',
+      confidence: 'high',
+      observationStatus: 'not_observed',
+      evidence: [
+        ev('DNS query', dns.dnssec.note || 'No DNSKEY or DS records observed in public DNS.'),
+      ],
+      analysis: {
+        whatIsThis: 'DNSSEC (DNS Security Extensions) adds cryptographic digital signatures to DNS records using public-key cryptography. This allows validating resolvers to verify that DNS responses are authentic and have not been forged or altered in transit.',
+        whatWasObserved: `No active DNSKEY or DS records were observed for ${domain}.`,
+        howDiscovered: 'DASS performed passive DNSSEC queries inspecting DNSKEY and parent DS records via public validating resolvers.',
+        technicalExplanation: 'Standard DNS queries are transmitted unauthenticated over UDP. An attacker on the network path (such as compromised Wi-Fi, malicious ISP, or cache-poisoned upstream resolver) can forge DNS responses (DNS spoofing/cache poisoning) and redirect users to imposter servers without warning.',
+        whyItMatters: 'Without DNSSEC, applications and visitors relying on standard DNS lookups have no cryptographic guarantee that the IP address returned for your domain is legitimate.',
+        securityImpact: 'Low to moderate depending on threat model. Allows network-level attackers to theoretically poison resolver caches, though HTTPS with trusted certificates provides an independent verification layer.',
+        potentialAbuse: 'An adversary capable of spoofing DNS packets or poisoning local resolver caches could redirect traffic destined for the domain to a fraudulent server.',
+        remediation: 'Log in to your DNS provider (e.g. Cloudflare, Route 53) and enable DNSSEC signing. Then copy the resulting DS record (Key Tag, Algorithm, Digest) to your domain registrar\'s DNSSEC management console.',
+        safeValidation: 'Verify DNSSEC validation status using online diagnostic tools such as https://dnssec-analyzer.verisignlabs.com/ or run dig +dnssec ' + domain + '.',
+        references: [
+          'https://www.rfc-editor.org/rfc/rfc4033',
+          'https://www.icann.org/resources/pages/dnssec-what-is-it-why-important-2019-03-05-en',
+          'https://developers.cloudflare.com/dns/dnssec/',
+        ],
+      },
+    }));
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FINDINGS 22 & 23: Shodan InternetDB Risky Ports and CVEs
+  // ════════════════════════════════════════════════════════════════════════════
+
+  if (exposure?.shodan) {
+    const DATABASE_PORTS: Record<number, string> = {
+      1433: 'MSSQL',
+      1521: 'Oracle Database',
+      3306: 'MySQL / MariaDB',
+      5432: 'PostgreSQL',
+      6379: 'Redis',
+      8086: 'InfluxDB',
+      9200: 'Elasticsearch',
+      27017: 'MongoDB',
+    };
+
+    const MANAGEMENT_PORTS: Record<number, string> = {
+      21: 'FTP',
+      23: 'Telnet',
+      445: 'SMB',
+      3389: 'RDP (Remote Desktop)',
+      5900: 'VNC',
+    };
+
+    for (const host of exposure.shodan) {
+      if (!host.hasData) continue;
+
+      // Check risky open ports
+      for (const port of host.ports) {
+        const dbName = DATABASE_PORTS[port];
+        const mgmtName = MANAGEMENT_PORTS[port];
+
+        if (dbName || mgmtName) {
+          const serviceName = dbName ?? mgmtName ?? `Port ${port}`;
+          const isDatabase = Boolean(dbName);
+          const severity = isDatabase || port === 3389 || port === 445 ? 'high' : 'medium';
+
+          findings.push(finding({
+            title: `Exposed ${serviceName} service on port ${port} observed at ${host.ip}`,
+            severity,
+            kind: 'potential_risk',
+            category: 'exposure',
+            description: `The ${serviceName} service on port ${port} was observed open to the public internet on host ${host.ip}. ${isDatabase ? 'Database' : 'Administrative'} services should never be directly accessible from the public internet without network-level access controls.`,
+            recommendation: `Restrict port ${port} immediately using firewall rules, security groups, or network ACLs. Isolate the service behind a VPN, bastion host, or private VPC subnet.`,
+            confidence: 'high',
+            observationStatus: 'observed',
+            evidence: [
+              ev('Shodan InternetDB', `Port ${port} (${serviceName}) observed open on host ${host.ip} in passive scan records.`),
+            ],
+            analysis: {
+              whatIsThis: `${serviceName} (listening on port ${port}) is a network service typically used for internal ${isDatabase ? 'data storage and querying' : 'management and administration'}.`,
+              whatWasObserved: `Port ${port} on ${host.ip} was recorded as open and accepting inbound connections in Shodan's internet-wide scan database.`,
+              howDiscovered: `DASS queried Shodan InternetDB's passive scan cache for IP ${host.ip}. No active port scanning was performed against the host.`,
+              technicalExplanation: `When ${serviceName} listens on a public IP, anyone on the internet can initiate connections to the service daemon. Attackers can attempt credential brute-forcing, exploit authentication bypass vulnerabilities, or target known daemon zero-days.`,
+              whyItMatters: `${isDatabase ? 'Direct database exposure frequently leads to catastrophic data breaches, ransomware extortion, and unauthorized data exfiltration.' : 'Public administrative interfaces allow unauthorized parties to attempt unauthorized remote access into your infrastructure.'}`,
+              securityImpact: `High risk of automated credential stuffing, brute-force attacks, or remote compromise if default credentials or software vulnerabilities exist in the daemon.`,
+              potentialAbuse: `An attacker connects directly to port ${port} on ${host.ip} to attempt brute-force login attacks, exploit unpatched service vulnerabilities, or exfiltrate sensitive data.`,
+              remediation: `1. Reconfigure the service daemon to bind strictly to localhost (127.0.0.1) or an internal private interface.\n2. Configure firewall rules (e.g. AWS Security Groups, iptables, ufw) to deny inbound traffic to port ${port} from 0.0.0.0/0.\n3. Require developers and administrators to connect via VPN or SSH bastion tunnels.`,
+              safeValidation: `From an external network, attempt to connect: nc -zv -w 3 ${host.ip} ${port}. The connection should time out or be actively refused.`,
+              references: [
+                'https://internetdb.shodan.io/',
+                'https://owasp.org/www-project-top-ten/2017/A6_2017-Security_Misconfiguration',
+                'https://csrc.nist.gov/publications/detail/sp/800-41/rev-1/final',
+              ],
+            },
+          }));
+        }
+      }
+
+      // Check known CVEs
+      for (const cve of host.vulns) {
+        findings.push(finding({
+          title: `Known vulnerability ${cve} observed on ${host.ip}`,
+          severity: 'high',
+          kind: 'potential_risk',
+          category: 'exposure',
+          description: `Software running on host ${host.ip} was identified as vulnerable to ${cve} in Shodan's passive vulnerability correlation database.`,
+          recommendation: `Identify the software component running on ${host.ip} associated with ${cve} and apply vendor security patches or upgrade to the latest stable release.`,
+          confidence: 'high',
+          observationStatus: 'observed',
+          evidence: [
+            ev('Shodan InternetDB', `CVE ${cve} recorded against host ${host.ip} in passive scan database.`),
+          ],
+          analysis: {
+            whatIsThis: `${cve} is a publicly documented security flaw catalogued in the National Vulnerability Database (NVD) with known exploitation vectors.`,
+            whatWasObserved: `Host ${host.ip} was correlated with ${cve} in Shodan's internet database based on software banner and version fingerprinting.`,
+            howDiscovered: `DASS performed a passive lookup against Shodan InternetDB for ${host.ip} without active scanning.`,
+            technicalExplanation: `Software versions with public CVEs have publicly available technical descriptions of how their defenses can be circumvented, and in many cases exploit proof-of-concepts (PoCs) exist. Automated exploitation frameworks continuously scan the internet for hosts matching these signatures.`,
+            whyItMatters: `Known unpatched CVEs on internet-facing assets are the single most common entry point for opportunistic ransomware groups and automated threat actors.`,
+            securityImpact: `Depending on the vulnerability's specific CVSS vector, exploitation may lead to remote code execution (RCE), information disclosure, privilege escalation, or denial of service.`,
+            potentialAbuse: `Threat actors search Shodan or run automated vulnerability scanners targeting ${cve} to locate vulnerable hosts and deploy exploit payloads.`,
+            remediation: `1. Identify the package and version installed on ${host.ip}.\n2. Consult the CVE advisory at https://nvd.nist.gov/vuln/detail/${cve}.\n3. Upgrade the software to the patched version designated by the vendor.`,
+            safeValidation: `After patching, verify the running software version: run package manager or service status commands on the host to confirm the installed version is >= the patched release.`,
+            references: [
+              `https://nvd.nist.gov/vuln/detail/${cve}`,
+              `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${cve}`,
+            ],
+          },
+        }));
+      }
+    }
   }
 
   return findings;

@@ -96,6 +96,36 @@ export function computeExposureScore(scan: DomainScan): number {
     if (dns.dmarc && !dns.dmarc.present) {
       score -= 5;
     }
+    // DNSSEC missing: modest 3-point deduction. Absence leaves DNS unauthenticated.
+    if ((dns as { dnssec?: { observed?: boolean } }).dnssec?.observed === false) {
+      score -= 3;
+    }
+  }
+
+  // 5. Network perimeter exposure & known CVEs (Shodan InternetDB passive records)
+  const exposureCategory = scan.categories.exposure;
+  const exposure = exposureCategory?.status === 'completed'
+    ? (exposureCategory.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined)
+    : undefined;
+
+  if (exposureCategory?.status === 'completed' && exposure?.shodan) {
+    const riskyPorts = new Set([21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017]);
+    let hasRiskyPort = false;
+    let hasVuln = false;
+
+    for (const host of exposure.shodan) {
+      if (host.ports && host.ports.some((p) => riskyPorts.has(p))) hasRiskyPort = true;
+      if (host.vulns && host.vulns.length > 0) hasVuln = true;
+    }
+
+    // Risky service exposure: 10-point deduction for publicly exposed databases/remote management
+    if (hasRiskyPort) {
+      score -= 10;
+    }
+    // Confirmed known CVE: 10-point deduction for documented unpatched vulnerabilities on perimeter
+    if (hasVuln) {
+      score -= 10;
+    }
   }
 
   return clamp(Math.round(score), 0, 100);
@@ -107,13 +137,14 @@ export function computeExposureScore(scan: DomainScan): number {
  * the same algorithm as named dimensions so the user can see exactly
  * why their score is what it is.
  *
- * Dimension max deductions: TLS(25) + HTTPS(20) + Headers(25) + Email(10) = 80.
+ * Dimension max deductions: TLS(25) + HTTPS(20) + Headers(25) + Email(10) + DNSSEC(3) + Exposure(20).
  * A domain with no issues receives a score of 100 (no deductions).
  */
 export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
   const tlsCategory = scan.categories.tls;
   const httpCategory = scan.categories.http;
   const dnsCategory = scan.categories.dns;
+  const exposureCategory = scan.categories.exposure;
 
   const tls = tlsCategory?.status === 'completed'
     ? (tlsCategory.data as { available?: boolean; validTo?: string | null } | undefined)
@@ -131,7 +162,12 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
     ? (dnsCategory.data as {
         spf?: { present?: boolean };
         dmarc?: { present?: boolean };
+        dnssec?: { observed?: boolean };
       } | undefined)
+    : undefined;
+
+  const exposure = exposureCategory?.status === 'completed'
+    ? (exposureCategory.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined)
     : undefined;
 
   // ── TLS Hygiene (max deduction: 25) ───────────────────────────────────────
@@ -176,12 +212,52 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
     }
   }
 
+  // ── DNSSEC Hygiene (max deduction: 3) ─────────────────────────────────────
+  const dnssecObservations: ScoreObservation[] = [];
+  if (dnsCategory?.status === 'completed' && dns?.dnssec?.observed === false) {
+    dnssecObservations.push({ description: 'No DNSSEC (DNSKEY/DS) records observed in DNS', pointsDeducted: 3 });
+  }
+
+  // ── Network Exposure (max deduction: 20) ──────────────────────────────────
+  const exposureObservations: ScoreObservation[] = [];
+  if (exposureCategory?.status === 'completed' && exposure?.shodan) {
+    const riskyPorts = new Set([21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017]);
+    let hasRiskyPort = false;
+    let hasVuln = false;
+
+    for (const host of exposure.shodan) {
+      if (host.ports && host.ports.some((p) => riskyPorts.has(p))) hasRiskyPort = true;
+      if (host.vulns && host.vulns.length > 0) hasVuln = true;
+    }
+
+    if (hasRiskyPort) {
+      exposureObservations.push({
+        description: 'Potentially risky database or remote management service port exposed to public internet',
+        pointsDeducted: 10,
+      });
+    }
+    if (hasVuln) {
+      exposureObservations.push({
+        description: 'Host running software version with confirmed CVE vulnerability in Shodan records',
+        pointsDeducted: 10,
+      });
+    }
+  }
+
   const tlsDim = dim('TLS Hygiene', 25, tlsObservations);
   const httpsDim = dim('HTTPS Enforcement', 20, httpsObservations);
   const headersDim = dim('Web Security Headers', 25, headerObservations);
   const emailDim = dim('Email Security', 10, emailObservations);
+  const dnssecDim = dim('DNSSEC Hygiene', 3, dnssecObservations);
+  const exposureDim = dim('Network Exposure', 20, exposureObservations);
 
-  const totalDeducted = tlsDim.deducted + httpsDim.deducted + headersDim.deducted + emailDim.deducted;
+  const totalDeducted =
+    tlsDim.deducted +
+    httpsDim.deducted +
+    headersDim.deducted +
+    emailDim.deducted +
+    dnssecDim.deducted +
+    exposureDim.deducted;
   const total = clamp(100 - totalDeducted, 0, 100);
 
   return {
@@ -192,6 +268,8 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
       httpsEnforcement: httpsDim,
       webSecurityHeaders: headersDim,
       emailSecurity: emailDim,
+      dnssecHygiene: dnssecDim,
+      networkExposure: exposureDim,
     },
   };
 }
