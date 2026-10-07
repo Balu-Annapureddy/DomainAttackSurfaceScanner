@@ -233,6 +233,39 @@ export function explainAsset(asset: Asset): AssetExplanation {
         isHighRisk: false,
       };
 
+    case 'CLOUD_STORAGE':
+      return {
+        whatIsThis: `Public cloud storage bucket endpoint (${asset.value}) matching organizational naming conventions.`,
+        source: 'Passive cloud storage namespace probe (HEAD request only)',
+        whyItMatters: 'Public cloud buckets can inadvertently expose internal assets, backups, or static data. Accessible bucket namespaces should be audited to ensure proper access control policies (ACLs/IAM) are enforced.',
+        confidence: 'high',
+        technicalContext: `Target bucket: ${asset.value}. Verified strictly via non-invasive HTTP HEAD existence checks without inspecting bucket objects.`,
+        recommendedAction: 'Verify bucket access permissions in the cloud provider console. Enforce "Block Public Access" unless intentionally public for static website hosting.',
+        isHighRisk: asset.metadata?.publiclyAccessible === true,
+      };
+
+    case 'DOCUMENT_METADATA':
+      return {
+        whatIsThis: `Embedded document metadata extracted from publicly linked document (${asset.value}).`,
+        source: 'Publicly referenced document inspection',
+        whyItMatters: 'Public documents frequently embed internal software versions, creator tools, or operating system paths that aid threat actors in passive fingerprinting.',
+        confidence: 'medium',
+        technicalContext: `Document: ${asset.value}. Extracted from public document links discovered on the target web surface.`,
+        recommendedAction: 'Implement document sanitization or metadata scrubbing before publishing files externally.',
+        isHighRisk: false,
+      };
+
+    case 'BREACH_EXPOSURE':
+      return {
+        whatIsThis: `Historical security incident presence record (${asset.value}) aggregated by public breach disclosure intelligence.`,
+        source: 'HaveIBeenPwned public breach index',
+        whyItMatters: 'Historical corporate breaches indicate previous perimeter compromise or third-party service credential exposure. Correlating breach occurrences aids in proactive credential hygiene.',
+        confidence: 'high',
+        technicalContext: `Public record: ${asset.value}. Tracks breach metadata, count, and disclosure date only—never individual credentials.`,
+        recommendedAction: 'Enforce organization-wide multi-factor authentication (MFA/FIDO2) and mandate periodic credential rotation.',
+        isHighRisk: false,
+      };
+
     default:
       return {
         whatIsThis: 'An observable infrastructure asset identified during passive attack surface reconnaissance.',

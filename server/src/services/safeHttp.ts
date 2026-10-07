@@ -18,6 +18,7 @@ export interface SafeHttpOptions {
   signal?: AbortSignal;
   budget?: ScanRequestBudget;
   timeoutMs?: number;
+  method?: 'GET' | 'HEAD';
 }
 
 function readBody(response: http.IncomingMessage, signal?: AbortSignal): Promise<string> {
@@ -83,13 +84,14 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
 
     const transport = url.protocol === 'https:' ? https : http;
     const timeoutMs = options.timeoutMs ?? 8000;
+    const method = options.method ?? 'GET';
 
     const request = transport.request(
       {
         hostname: url.hostname,
         port: url.port || undefined,
         path: `${url.pathname}${url.search}`,
-        method: 'GET',
+        method,
         headers: {
           Host: url.host,
           Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
@@ -114,7 +116,7 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
           for (const [key, value] of Object.entries(response.headers)) {
             headers[key] = Array.isArray(value) ? value.join(', ') : value ?? '';
           }
-          const body = await readBody(response, options.signal);
+          const body = method === 'HEAD' ? '' : await readBody(response, options.signal);
           resolve({
             url: url.toString(),
             status: response.statusCode ?? 0,
@@ -177,4 +179,8 @@ export async function safeGet(startUrl: string, options: SafeHttpOptions = {}): 
   }
 
   throw new Error('Maximum redirect count exceeded');
+}
+
+export async function safeHead(startUrl: string, options: SafeHttpOptions = {}): Promise<SafeHttpResponse> {
+  return safeGet(startUrl, { ...options, method: 'HEAD' });
 }

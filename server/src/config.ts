@@ -55,6 +55,9 @@ function validateConfig() {
     'api.bgpview.io',
     'dns.google',
     'cloudflare-dns.com',
+    'www.wikidata.org',
+    'services.nvd.nist.gov',
+    'haveibeenpwned.com',
   ];
   const customAllowedHosts = process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
   const allowedProviderHosts = new Set([...defaultAllowedHosts, ...customAllowedHosts]);
@@ -119,8 +122,8 @@ function validateConfig() {
     sessionSecret,
     resendApiKey,
     trustProxy,
-    anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '5', 1),
-    registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '50', 1),
+    anonymousScanLimit: optionalInteger('ANONYMOUS_SCAN_LIMIT', '15', 1),
+    registeredScanLimit: optionalInteger('REGISTERED_SCAN_LIMIT', '60', 1),
     scanLimitWindowMs: optionalInteger('SCAN_LIMIT_WINDOW_MS', '3600000', 1000), // 1 hour default
     accountsEnabled: process.env.ACCOUNTS_ENABLED === 'true',
   };

@@ -45,16 +45,24 @@ export default function FindingsSection({
   sectionNumber = '07',
 }: FindingsSectionProps) {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [selectedDetailFinding, setSelectedDetailFinding] = useState<Finding | null>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => {
+  const toggleCollapse = (id: string) => {
+    setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
+
+  const collapseAll = () => {
+    setCollapsedIds(new Set(findings.map((f) => f.id)));
+  };
+
+  const expandAll = () => {
+    setCollapsedIds(new Set());
   };
 
   const filteredFindings = findings.filter(
@@ -63,31 +71,53 @@ export default function FindingsSection({
 
   return (
     <div className="console-panel rounded-xl overflow-hidden shadow-sm">
-      {/* ─── Workstation Dossier Header ─────────────────────────────── */}
+      {/* ─── Workstation Report Header ─────────────────────────────── */}
       <div className="dossier-header px-4 sm:px-5 py-3.5 flex-col sm:flex-row gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
-          <span className="font-bold tracking-wide text-sm">FINDINGS &amp; HYGIENE DOSSIER</span>
+          <span className="font-bold tracking-wide text-sm">DETAILED FINDINGS &amp; HYGIENE EVALUATION</span>
           <span className="text-xs text-[var(--text-secondary)] ml-1 font-sans">
-            {findings.length} RECORDED SIGNALS
+            {findings.length} RECORDED SIGNALS (EXPANDED BY DEFAULT)
           </span>
         </div>
 
-        {/* Severity Filters */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {['ALL', 'high', 'medium', 'low', 'informational'].map((sev) => (
+        {/* Action Controls: Severity Filters + Expand/Collapse All */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex items-center gap-1 border-r border-[var(--border-muted)] pr-2 mr-1">
             <button
-              key={sev}
-              onClick={() => setSelectedSeverity(sev)}
-              className={`px-3 py-1 text-xs font-bold uppercase cursor-pointer border rounded-lg transition ${
-                selectedSeverity === sev
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-xs'
-                  : 'border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-technical)]'
-              }`}
+              type="button"
+              onClick={expandAll}
+              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded text-[var(--accent-primary)] hover:bg-[var(--accent-active-bg)] cursor-pointer"
+              title="Expand all findings"
             >
-              {sev}
+              EXPAND ALL
             </button>
-          ))}
+            <span className="text-[var(--text-muted)]">|</span>
+            <button
+              type="button"
+              onClick={collapseAll}
+              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+              title="Collapse all findings"
+            >
+              COLLAPSE ALL
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {['ALL', 'high', 'medium', 'low', 'informational'].map((sev) => (
+              <button
+                key={sev}
+                onClick={() => setSelectedSeverity(sev)}
+                className={`px-2.5 py-1 text-xs font-bold uppercase cursor-pointer border rounded-lg transition ${
+                  selectedSeverity === sev
+                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-xs'
+                    : 'border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-technical)]'
+                }`}
+              >
+                {sev}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -121,9 +151,10 @@ export default function FindingsSection({
           </div>
         ) : (
           filteredFindings.map((finding) => {
-            const isExpanded = expandedIds.has(finding.id);
+            const isExpanded = !collapsedIds.has(finding.id);
             const sev = SEVERITY_CONFIG[finding.severity] || SEVERITY_CONFIG.informational;
             const Icon = sev.icon;
+            const analysis = finding.analysis;
             const obsStatus =
               finding.observationStatus ??
               (finding.title.toLowerCase().includes('missing') ||
@@ -158,7 +189,7 @@ export default function FindingsSection({
             return (
               <div key={finding.id} className={`p-4 sm:p-5 bg-[var(--bg-panel)] hover:bg-[var(--bg-panel-subtle)] transition-colors ${borderSeverityClass}`}>
                 <div
-                  onClick={() => toggleExpand(finding.id)}
+                  onClick={() => toggleCollapse(finding.id)}
                   className="cursor-pointer flex items-start justify-between gap-4"
                 >
                   <div className="space-y-1.5 flex-1">
@@ -173,114 +204,198 @@ export default function FindingsSection({
                       <span className="text-[var(--text-muted)] text-[11px] font-mono">
                         CATEGORY: {finding.category.toUpperCase()}
                       </span>
+                      <span className="text-[var(--accent-primary)] text-[11px] font-mono">
+                        CONFIDENCE: {(finding.confidence || 'high').toUpperCase()}
+                      </span>
                     </div>
 
-                    <div className="text-sm font-bold text-[var(--text-primary)]">
+                    <div className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
                       {finding.title}
                     </div>
 
-                    <div className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                    <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
                       {finding.description}
-                    </div>
-
-                    <div className="pt-1 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDetailFinding(finding);
-                        }}
-                        className="text-[11px] font-bold text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Full 12-Section Analysis</span>
-                        <ArrowRight size={11} />
-                      </button>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 rounded-lg transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapse(finding.id);
+                    }}
+                    className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 rounded-lg transition cursor-pointer"
+                    title={isExpanded ? 'Collapse this finding' : 'Expand full detail'}
                   >
-                    {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                 </div>
 
-                {/* ─── Expandable Structured Dossier Pillars ────────── */}
+                {/* ─── Full Technical Detail Rendered Inline by Default ────────── */}
                 {isExpanded && (
-                  <div className="mt-4 bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-4 sm:p-5 space-y-4 text-xs rounded-xl shadow-xs">
-                    {/* Pillar 1: Evidence */}
-                    <div>
-                      <div className="text-[11px] font-mono text-[var(--accent-primary)] uppercase font-bold mb-1 tracking-wider">
-                        [01] OBSERVED EVIDENCE
+                  <div className="mt-4 bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-4 sm:p-6 space-y-5 text-xs rounded-xl shadow-xs animate-in fade-in duration-200">
+                    {/* [01] What is this? */}
+                    <div className="space-y-1">
+                      <div className="text-[11px] font-mono text-[var(--accent-primary)] uppercase font-bold tracking-wider">
+                        [01] WHAT IS THIS?
                       </div>
-                      <div className="text-[var(--text-primary)] text-xs sm:text-sm leading-relaxed">
-                        {finding.description}
+                      <p className="text-[var(--text-primary)] text-xs sm:text-sm leading-relaxed">
+                        {analysis?.whatIsThis || finding.description}
+                      </p>
+                    </div>
+
+                    {/* [02] What was observed? */}
+                    <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                      <div className="text-[11px] font-mono text-[#d97706] dark:text-[#f59e0b] uppercase font-bold tracking-wider">
+                        [02] WHAT WAS OBSERVED?
+                      </div>
+                      <div className="p-3 bg-[var(--bg-panel)] border border-[var(--border-muted)] rounded-lg text-[var(--text-primary)] font-mono text-xs leading-relaxed">
+                        {analysis?.whatWasObserved || finding.description}
                       </div>
                     </div>
 
-                    {/* Pillar 2: Why It Matters */}
-                    {finding.whyItMatters && (
-                      <div className="border-t border-[var(--border-muted)] pt-3">
-                        <div className="text-[11px] font-mono text-[#d97706] dark:text-[#f59e0b] uppercase font-bold mb-1 tracking-wider">
-                          [02] WHY IT MATTERS
-                        </div>
-                        <div className="text-[var(--text-secondary)] text-xs sm:text-sm leading-relaxed">
-                          {finding.whyItMatters}
-                        </div>
+                    {/* [03] How was it discovered? */}
+                    <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                      <div className="text-[11px] font-mono text-[var(--text-secondary)] uppercase font-bold tracking-wider">
+                        [03] HOW WAS IT DISCOVERED?
                       </div>
-                    )}
-
-                    {/* Pillar 3: Recommended Action */}
-                    <div className="border-t border-[var(--border-muted)] pt-3">
-                      <div className="text-[11px] font-mono text-[#16a34a] dark:text-[#2ee59d] uppercase font-bold mb-1 tracking-wider">
-                        [03] RECOMMENDED VERIFICATION / REMEDIATION
-                      </div>
-                      {finding.investigationSteps && finding.investigationSteps.length > 0 ? (
-                        <ul className="space-y-1.5 text-xs sm:text-sm text-[var(--text-primary)]">
-                          {finding.investigationSteps.map((step, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="text-[#16a34a] dark:text-[#2ee59d] font-bold">&bull;</span>
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="text-[var(--text-primary)] text-xs sm:text-sm leading-relaxed">
-                          {finding.recommendation}
-                        </div>
-                      )}
+                      <p className="text-[var(--text-secondary)] text-xs leading-relaxed">
+                        {analysis?.howDiscovered || 'Passively discovered by querying public protocol configurations and response telemetry without intrusive packets.'}
+                      </p>
                     </div>
 
-                    {/* Pillar 4: Backing Probes */}
+                    {/* [04] Raw evidence & probes */}
                     {finding.evidence && finding.evidence.length > 0 && (
-                      <div className="border-t border-[var(--border-muted)] pt-3">
-                        <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase font-bold mb-1.5 tracking-wider">
-                          [04] BACKING PROBES &amp; TIMESTAMPS
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-2">
+                        <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase font-bold tracking-wider">
+                          [04] EVIDENCE &amp; TELEMETRY PROBES
                         </div>
                         <div className="space-y-1.5">
                           {finding.evidence.map((ev, idx) => (
                             <div
                               key={idx}
-                              className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 flex items-start justify-between gap-3 text-xs rounded-lg"
+                              className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs rounded-lg"
                             >
                               <div>
-                                <span className="text-[var(--accent-primary)] font-bold">{ev.source}:</span>{' '}
+                                <span className="text-[var(--accent-primary)] font-bold font-mono">{ev.source}:</span>{' '}
                                 <span className="text-[var(--text-secondary)]">{ev.description}</span>
                               </div>
-                              <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0 uppercase">
-                                {ev.confidence}_CONFIDENCE
-                              </span>
+                              <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono text-[var(--text-muted)]">
+                                {ev.observedAt && <span>{new Date(ev.observedAt).toISOString().slice(0, 19)}Z</span>}
+                                <span className="uppercase px-1.5 py-0.5 rounded bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] font-bold">
+                                  {ev.confidence}_CONFIDENCE
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Pillar 5: Complete 12-Section Analysis CTA */}
+                    {/* [05] Technical Explanation */}
+                    {(analysis?.technicalExplanation || finding.whyItMatters) && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                        <div className="text-[11px] font-mono text-[var(--text-primary)] uppercase font-bold tracking-wider">
+                          [05] TECHNICAL EXPLANATION
+                        </div>
+                        <p className="text-[var(--text-secondary)] text-xs leading-relaxed">
+                          {analysis?.technicalExplanation || finding.whyItMatters}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* [06] Why does it matter? */}
+                    {(analysis?.whyItMatters || finding.whyItMatters) && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                        <div className="text-[11px] font-mono text-[#d97706] dark:text-[#f59e0b] uppercase font-bold tracking-wider">
+                          [06] WHY DOES IT MATTER?
+                        </div>
+                        <p className="text-[var(--text-primary)] text-xs leading-relaxed">
+                          {analysis?.whyItMatters || finding.whyItMatters}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* [07] Realistic Security Impact */}
+                    {analysis?.securityImpact && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                        <div className="text-[11px] font-mono text-[#dc2626] dark:text-[#ef4444] uppercase font-bold tracking-wider">
+                          [07] REALISTIC SECURITY IMPACT
+                        </div>
+                        <p className="text-[var(--text-secondary)] text-xs leading-relaxed">
+                          {analysis.securityImpact}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* [08] Potential Abuse Scenario */}
+                    {analysis?.potentialAbuse && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                        <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase font-bold tracking-wider">
+                          [08] POTENTIAL ABUSE SCENARIO
+                        </div>
+                        <p className="text-[var(--text-secondary)] text-xs leading-relaxed italic">
+                          {analysis.potentialAbuse}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* [09] Recommended Remediation */}
+                    <div className="border-t border-[var(--border-muted)] pt-3 space-y-2">
+                      <div className="text-[11px] font-mono text-[#16a34a] dark:text-[#2ee59d] uppercase font-bold tracking-wider">
+                        [09] RECOMMENDED REMEDIATION
+                      </div>
+                      <div className="p-3 bg-[var(--bg-panel)] border border-[#16a34a]/30 rounded-lg text-xs leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap">
+                        {analysis?.remediation || finding.recommendation}
+                      </div>
+                      {finding.investigationSteps && finding.investigationSteps.length > 0 && (
+                        <ul className="space-y-1.5 text-xs text-[var(--text-secondary)] list-disc pl-4 mt-2">
+                          {finding.investigationSteps.map((step, idx) => (
+                            <li key={idx}>{step}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* [10] Safe Validation */}
+                    {analysis?.safeValidation && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1">
+                        <div className="text-[11px] font-mono text-[var(--accent-primary)] uppercase font-bold tracking-wider">
+                          [10] SAFE VALIDATION COMMAND
+                        </div>
+                        <div className="p-3 bg-[var(--bg-panel)] border border-[var(--border-muted)] rounded-lg text-xs font-mono text-[var(--text-primary)] leading-relaxed">
+                          {analysis.safeValidation}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* [11] Standards & Citations */}
+                    {analysis?.references && analysis.references.length > 0 && (
+                      <div className="border-t border-[var(--border-muted)] pt-3 space-y-1.5">
+                        <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase font-bold tracking-wider">
+                          [11] STANDARDS &amp; CITATIONS
+                        </div>
+                        <ul className="space-y-1 text-xs">
+                          {analysis.references.map((ref, idx) => (
+                            <li key={idx}>
+                              <a
+                                href={ref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[var(--accent-primary)] hover:underline font-mono break-all"
+                              >
+                                {ref}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Footer drawer launcher */}
                     <div className="border-t border-[var(--border-muted)] pt-3 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-[11px] text-[var(--text-muted)] font-mono">
-                        DASS v2 Deep-Dive Security Dossier
+                        FINDING_ID: {finding.id}
                       </span>
                       <button
                         type="button"
@@ -288,10 +403,10 @@ export default function FindingsSection({
                           e.stopPropagation();
                           setSelectedDetailFinding(finding);
                         }}
-                        className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="console-btn py-1 px-3 text-xs font-bold text-[var(--accent-primary)] flex items-center gap-1.5 cursor-pointer"
                       >
-                        <span>VIEW FULL 12-SECTION DOSSIER</span>
-                        <ArrowRight size={13} />
+                        <span>OPEN IN FOCUSED DRAWER</span>
+                        <ArrowRight size={12} />
                       </button>
                     </div>
                   </div>
@@ -302,7 +417,7 @@ export default function FindingsSection({
         )}
       </div>
 
-      {/* ─── 12-Section Finding Detail Drawer (v2) ────────────────── */}
+      {/* ─── Finding Detail Drawer ─────────────────────────────────── */}
       <FindingDetailPanel
         finding={selectedDetailFinding}
         onClose={() => setSelectedDetailFinding(null)}

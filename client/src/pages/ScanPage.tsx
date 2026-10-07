@@ -5,18 +5,13 @@ import {
   ArrowLeft,
   XCircle,
   RotateCw,
-  GitFork,
-  Layers,
-  AlertTriangle,
   FileText,
-  Network,
   Sparkles,
   SlidersHorizontal,
-  MapPin,
-  ListTree,
 } from 'lucide-react';
 import { getScan } from '../lib/api';
 import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
+import { generateNarrativeSummary } from '../lib/narrativeSummary';
 import ScanOverviewCard from '../components/ScanOverviewCard';
 import ScanProgressStepper from '../components/ScanProgressStepper';
 import InfrastructureMap from '../components/InfrastructureMap';
@@ -29,14 +24,11 @@ import AssetChainVisualizer from '../components/AssetChainVisualizer';
 import GlossaryModal from '../components/GlossaryModal';
 import WorkstationNav from '../components/WorkstationNav';
 
-type ActiveViewTab = 'graph' | 'map' | 'chains' | 'inventory' | 'findings' | 'raw' | 'all';
-
 export default function ScanPage() {
   const { scanId } = useParams();
   const [scan, setScan] = useState<DomainScan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeViewTab, setActiveViewTab] = useState<ActiveViewTab>('graph');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<ScanCategory>('dns');
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
@@ -125,7 +117,8 @@ export default function ScanPage() {
 
   const handleCategorySelectFromStepper = (category: ScanCategory) => {
     setSelectedCategoryTab(category);
-    setActiveViewTab('raw');
+    const el = document.getElementById('sec-telemetry');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   if (!scanId || error || (!scan && !loading)) {
@@ -170,7 +163,7 @@ export default function ScanPage() {
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] pb-12 font-sans w-full transition-colors duration-150 flex flex-col">
       <WorkstationNav onOpenGlossary={openGlossary} />
 
-      {/* ─── Modern Security Workstation Sub-Header ────────────── */}
+      {/* ─── Security Workstation Sub-Header ─────────────────────── */}
       <div className="border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] px-4 sm:px-8 py-3 text-xs">
         <div className="mx-auto flex max-w-[1720px] flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -191,7 +184,7 @@ export default function ScanPage() {
               className={`console-btn py-1.5 px-3 text-xs font-semibold rounded-lg ${
                 isGuidedMode ? 'border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'text-[var(--text-secondary)]'
               }`}
-              title="Toggle guided interpretation vs raw technical dossier"
+              title="Toggle guided interpretation vs raw technical telemetry"
             >
               <SlidersHorizontal size={13} />
               <span>{isGuidedMode ? 'MODE: GUIDED' : 'MODE: RAW'}</span>
@@ -202,7 +195,7 @@ export default function ScanPage() {
               className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold rounded-lg"
             >
               <FileText size={13} />
-              <span>FULL DOSSIER</span>
+              <span>SECURITY REPORT</span>
             </Link>
 
             <Link to="/history" className="console-btn py-1.5 px-3 text-xs text-[var(--text-secondary)] rounded-lg">
@@ -218,220 +211,124 @@ export default function ScanPage() {
         </div>
       </div>
 
-      {/* ─── Main Workstation Layout ─────────────────────────────────── */}
-      <div className="mx-auto max-w-[1720px] px-4 sm:px-8 pt-8 space-y-10 sm:space-y-14 pb-4">
+      {/* ─── Main Narrative-First Workstation Layout ───────────────── */}
+      <div className="mx-auto max-w-[1720px] px-4 sm:px-8 pt-8 space-y-10 sm:space-y-12 pb-4">
         {/* Compact Pipeline Stepper */}
         <ScanProgressStepper
           categories={scan.categories}
-          activeCategory={activeViewTab === 'raw' ? selectedCategoryTab : undefined}
+          activeCategory={selectedCategoryTab}
           onSelectCategory={handleCategorySelectFromStepper}
         />
 
-        {/* Dense Telemetry Strip */}
+        {/* ─── 00. Narrative Executive Summary Paragraph (A.1) ──────── */}
+        <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--accent-primary)] uppercase tracking-wider">
+                <span>EXECUTIVE RECONNAISSANCE SUMMARY</span>
+                <span className="console-tag">PASSIVE OSINT</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+                Attack Surface Assessment for {scan.domain}
+              </h2>
+            </div>
+            {scan.score !== undefined && scan.score !== null && (
+              <div className="sm:text-right shrink-0">
+                <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">HYGIENE SCORE</div>
+                <div className="text-2xl font-black font-mono text-[var(--accent-primary)]">{scan.score}/100</div>
+              </div>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed sm:leading-loose font-sans">
+            {generateNarrativeSummary(scan)}
+          </p>
+        </div>
+
+        {/* Dense Telemetry Strip + Transparent Hygiene Score Breakdown */}
         <ScanOverviewCard
           scan={scan}
           onOpenGlossary={openGlossary}
           isGuidedMode={isGuidedMode}
         />
 
-        {/* ─── Operational View Tabs ─────────────────────────────────── */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2">
-          <button
-            onClick={() => setActiveViewTab('graph')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'graph'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <GitFork size={14} />
-            <span>Relationship Graph</span>
-          </button>
+        {/* ─── Continuous Reading Anchor Bar ────────────────────────── */}
+        <nav aria-label="Section shortcuts" className="flex items-center gap-2 overflow-x-auto py-2 text-xs font-mono border-b border-[var(--border-muted)] sticky top-0 bg-[var(--bg-canvas)]/95 backdrop-blur-sm z-20">
+          <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] shrink-0">INDEX:</span>
+          <a href="#sec-findings" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            01. Detailed Findings ({scan.findings?.length ?? 0})
+          </a>
+          <a href="#sec-topology" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            02. Attack Surface Topology
+          </a>
+          <a href="#sec-map" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            03. Infrastructure Map
+          </a>
+          <a href="#sec-chains" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            04. Asset Routing Chains
+          </a>
+          <a href="#sec-inventory" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            05. Asset Inventory ({scan.assets?.length ?? 0})
+          </a>
+          <a href="#sec-telemetry" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+            06. Technical Telemetry
+          </a>
+        </nav>
 
-          <button
-            onClick={() => setActiveViewTab('map')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'map'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <MapPin size={14} />
-            <span>Infrastructure Map</span>
-          </button>
+        {/* ─── 01. Detailed Findings & Hygiene Evaluation (A.3) ─────── */}
+        <section id="sec-findings" className="w-full scroll-mt-14">
+          <FindingsSection
+            sectionNumber="01"
+            findings={scan.findings ?? []}
+            onOpenGlossary={openGlossary}
+          />
+        </section>
 
-          <button
-            onClick={() => setActiveViewTab('chains')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'chains'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <Network size={14} />
-            <span>Routing Chains</span>
-          </button>
+        {/* ─── 02. Attack Surface Topology Graph (A.4) ──────────────── */}
+        <section id="sec-topology" className="w-full scroll-mt-14">
+          <AttackSurfaceGraph
+            sectionNumber="02"
+            assets={scan.assets ?? []}
+            relationships={scan.relationships ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        </section>
 
-          <button
-            onClick={() => setActiveViewTab('inventory')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'inventory'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <Layers size={14} />
-            <span>Asset Inventory</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              activeViewTab === 'inventory' ? 'bg-white/20 text-white' : 'bg-[var(--bg-panel-inset)] text-[var(--accent-primary)]'
-            }`}>
-              {scan.assets?.length ?? 0}
-            </span>
-          </button>
+        {/* ─── 03. Infrastructure Distribution Map (A.5) ───────────── */}
+        <section id="sec-map" className="w-full scroll-mt-14">
+          <InfrastructureMap
+            sectionNumber="03"
+            assets={scan.assets ?? []}
+            relationships={scan.relationships ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        </section>
 
-          <button
-            onClick={() => setActiveViewTab('findings')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'findings'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <AlertTriangle size={14} />
-            <span>Findings</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              activeViewTab === 'findings' ? 'bg-white/20 text-white' : 'bg-[var(--bg-panel-inset)] text-[#d97706] dark:text-[#f59e0b]'
-            }`}>
-              {scan.findings?.length ?? 0}
-            </span>
-          </button>
+        {/* ─── 04. Asset Routing Chains (A.6) ───────────────────────── */}
+        <section id="sec-chains" className="w-full scroll-mt-14">
+          <AssetChainVisualizer
+            sectionNumber="04"
+            assets={scan.assets ?? []}
+            relationships={scan.relationships ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        </section>
 
-          <button
-            onClick={() => setActiveViewTab('raw')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'raw'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <FileText size={14} />
-            <span>Raw Telemetry</span>
-          </button>
+        {/* ─── 05. Attack Surface Asset Inventory Table ─────────────── */}
+        <section id="sec-inventory" className="w-full scroll-mt-14">
+          <AssetsInventoryTable
+            sectionNumber="05"
+            assets={scan.assets ?? []}
+            onSelectAsset={(asset) => setSelectedAsset(asset)}
+          />
+        </section>
 
-          <button
-            onClick={() => setActiveViewTab('all')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition whitespace-nowrap shadow-xs ${
-              activeViewTab === 'all'
-                ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md ring-2 ring-[var(--accent-glow)]'
-                : 'bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)]'
-            }`}
-          >
-            <ListTree size={14} />
-            <span>All Dossier Sections</span>
-          </button>
-        </div>
-
-        {/* ─── Primary View 1: Topology Graph (Default) ──────────────── */}
-        {activeViewTab === 'graph' && (
-          <div className="w-full">
-            <AttackSurfaceGraph
-              sectionNumber="03"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-          </div>
-        )}
-
-        {/* Primary View 2: Infrastructure Map */}
-        {activeViewTab === 'map' && (
-          <div className="w-full">
-            <InfrastructureMap
-              sectionNumber="04"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-          </div>
-        )}
-
-        {/* Primary View 3: Routing Chains */}
-        {activeViewTab === 'chains' && (
-          <div className="w-full">
-            <AssetChainVisualizer
-              sectionNumber="05"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-          </div>
-        )}
-
-        {/* Primary View 4: Inventory Table */}
-        {activeViewTab === 'inventory' && (
-          <div className="w-full">
-            <AssetsInventoryTable
-              sectionNumber="06"
-              assets={scan.assets ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-          </div>
-        )}
-
-        {/* Primary View 5: Findings Records */}
-        {activeViewTab === 'findings' && (
-          <div className="w-full">
-            <FindingsSection
-              sectionNumber="07"
-              findings={scan.findings ?? []}
-              onOpenGlossary={openGlossary}
-            />
-          </div>
-        )}
-
-        {/* Primary View 6: Raw Telemetry */}
-        {activeViewTab === 'raw' && (
-          <div className="w-full">
-            <CategoryInspectionTabs
-              scan={scan}
-              defaultCategory={selectedCategoryTab}
-            />
-          </div>
-        )}
-
-        {/* Primary View 7: All Dossier Sections Sequentially */}
-        {activeViewTab === 'all' && (
-          <div className="space-y-12 sm:space-y-16 w-full">
-            <AttackSurfaceGraph
-              sectionNumber="03"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-            <InfrastructureMap
-              sectionNumber="04"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-            <AssetChainVisualizer
-              sectionNumber="05"
-              assets={scan.assets ?? []}
-              relationships={scan.relationships ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-            <AssetsInventoryTable
-              sectionNumber="06"
-              assets={scan.assets ?? []}
-              onSelectAsset={(asset) => setSelectedAsset(asset)}
-            />
-            <FindingsSection
-              sectionNumber="07"
-              findings={scan.findings ?? []}
-              onOpenGlossary={openGlossary}
-            />
-          </div>
-        )}
+        {/* ─── 06. Technical Protocol Telemetry ─────────────────────── */}
+        <section id="sec-telemetry" className="w-full scroll-mt-14">
+          <CategoryInspectionTabs
+            scan={scan}
+            defaultCategory={selectedCategoryTab}
+          />
+        </section>
       </div>
 
       {/* Asset Detail & Evidence Modal */}

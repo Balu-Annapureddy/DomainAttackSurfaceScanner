@@ -123,7 +123,7 @@ export default function LandingPage() {
     { step: '03', name: 'Correlate', desc: 'Autonomous system & organization mapping' },
     { step: '04', name: 'Observe', desc: 'Perimeter HTTP/TLS response verification' },
     { step: '05', name: 'Assess', desc: 'Configuration hygiene & weakness scoring' },
-    { step: '06', name: 'Report', desc: 'Synthesizing actionable intelligence dossier' },
+    { step: '06', name: 'Report', desc: 'Synthesizing actionable security report' },
   ];
 
   return (

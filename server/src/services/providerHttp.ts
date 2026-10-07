@@ -54,6 +54,9 @@ export async function fetchProviderJson<T = unknown>(
     'api.bgpview.io',
     'dns.google',
     'cloudflare-dns.com',
+    'www.wikidata.org',
+    'services.nvd.nist.gov',
+    'haveibeenpwned.com',
   ];
   const customAllowedHosts =
     process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];

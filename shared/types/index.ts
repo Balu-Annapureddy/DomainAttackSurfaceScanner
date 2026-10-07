@@ -15,7 +15,10 @@ export type AssetType =
   | 'GEOLOCATION'
   | 'PORT'
   | 'VULNERABILITY'
-  | 'DNSSEC';
+  | 'DNSSEC'
+  | 'CLOUD_STORAGE'
+  | 'DOCUMENT_METADATA'
+  | 'BREACH_EXPOSURE';
 export type FindingSeverity = 'informational' | 'low' | 'medium' | 'high';
 export type FindingKind = 'observation' | 'configuration_weakness' | 'recommendation' | 'potential_risk';
 export type ObservationStatus = 'observed' | 'not_observed' | 'check_failed' | 'not_applicable';
@@ -52,7 +55,10 @@ export interface Relationship {
     | 'located_approximately_at'
     | 'exposes_port'
     | 'vulnerable_to'
-    | 'secured_by';
+    | 'secured_by'
+    | 'hosted_on_storage'
+    | 'references_document'
+    | 'referenced_in_breach';
   evidence: Evidence;
 }
 

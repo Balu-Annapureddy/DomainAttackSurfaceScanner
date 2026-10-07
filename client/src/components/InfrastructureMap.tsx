@@ -15,10 +15,45 @@ interface GeoPoint {
   lat: number;
   lng: number;
   city?: string;
+  region?: string;
   country?: string;
   asn?: string;
   organization?: string;
+  anycastLikely?: boolean;
+  hubColor?: string;
   asset: Asset;
+}
+
+const REGISTRATION_HUBS: Record<string, string> = {
+  ashburn: "Ashburn (Northern Virginia) is the world's most concentrated data center corridor, routing a major share of global cloud traffic.",
+  'san francisco': "San Francisco & Silicon Valley serve as the primary Pacific peering and cloud headquarters nexus for US West Coast infrastructure.",
+  amsterdam: "Amsterdam (AMS-IX) is one of Europe's largest internet exchange ecosystems and a key transatlantic routing gateway.",
+  frankfurt: "Frankfurt (DE-CIX) hosts the highest-throughput internet exchange in mainland Europe and central transit junction.",
+  london: "London (LINX) is the primary telecommunications routing and financial network crossroads in the United Kingdom.",
+  singapore: "Singapore is the premier subsea cable landing and hyperscaler interchange hub for Southeast Asia.",
+  dublin: "Dublin anchors key European cloud availability zone clusters for AWS, Microsoft Azure, and Google Cloud.",
+  tokyo: "Tokyo is the primary East Asian peering interconnection point connecting transpacific subsea cables.",
+  seattle: "Seattle represents a major Pacific Northwest cloud engineering corridor and transpacific cable gateway.",
+  dallas: "Dallas / Fort Worth serves as a central North American telecommunications crossroads and carrier-neutral peering hub.",
+  chicago: "Chicago is a high-bandwidth central North American transit nexus and low-latency financial interconnect.",
+  sydney: "Sydney anchors Australasia's core cloud availability zones and Southern Cross cable routing.",
+  atlanta: "Atlanta serves as the primary telecommunications routing hub for the Southeastern United States.",
+  'new york': "New York metro is a primary North American financial exchange center and transatlantic cable terminus.",
+  newark: "Newark / Northern NJ is a key regional data center and carrier hotel gateway for the New York metropolitan area.",
+};
+
+function getHubColor(city?: string): string | undefined {
+  if (!city) return undefined;
+  const c = city.toLowerCase().trim();
+  for (const [hub, text] of Object.entries(REGISTRATION_HUBS)) {
+    if (c.includes(hub) || hub.includes(c)) return text;
+  }
+  return undefined;
+}
+
+function getAnycastNote(organization?: string): string {
+  const org = organization || 'a distributed edge provider';
+  return `This is part of ${org}'s distributed edge network — the marker shows where this address range is registered, not a single physical server.`;
 }
 
 export default function InfrastructureMap({
@@ -71,14 +106,23 @@ export default function InfrastructureMap({
         const adjustedLat = existingCount > 0 ? lat + existingCount * 0.008 : lat;
         const adjustedLng = existingCount > 0 ? lng + existingCount * 0.008 : lng;
 
+        const city = typeof geo.metadata?.city === 'string' ? geo.metadata.city : undefined;
+        const region = typeof geo.metadata?.region === 'string' ? geo.metadata.region : undefined;
+        const country = typeof geo.metadata?.country === 'string' ? geo.metadata.country : undefined;
+        const isAnycast = Boolean(geo.metadata?.anycastLikely || ipAsset?.metadata?.anycastLikely);
+        const hubColor = getHubColor(city);
+
         points.push({
           ip: ipAsset?.value ?? 'Discovered Host',
           lat: adjustedLat,
           lng: adjustedLng,
-          city: typeof geo.metadata?.city === 'string' ? geo.metadata.city : undefined,
-          country: typeof geo.metadata?.country === 'string' ? geo.metadata.country : undefined,
+          city,
+          region,
+          country,
           asn: asnName,
           organization: orgName,
+          anycastLikely: isAnycast,
+          hubColor,
           asset: ipAsset ?? geo,
         });
       }
@@ -163,17 +207,21 @@ export default function InfrastructureMap({
         fillOpacity: 0.85,
       });
 
-      const locText = [point.city, point.country].filter(Boolean).join(', ') || 'Approximate Datacenter';
+      const locText = [point.city, point.region, point.country].filter(Boolean).join(', ') || 'Approximate Datacenter';
       const asnText = point.asn ? `ASN: ${point.asn}` : '';
       const orgText = point.organization ? `Org: ${point.organization}` : '';
+      const anycastHtml = point.anycastLikely ? `<div style="margin-top: 5px; padding: 4px 6px; background: rgba(59, 130, 246, 0.12); border-left: 2px solid #3b82f6; font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;">${getAnycastNote(point.organization)}</div>` : '';
+      const hubHtml = point.hubColor ? `<div style="margin-top: 5px; padding: 4px 6px; background: rgba(16, 185, 129, 0.1); border-left: 2px solid #10b981; font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;"><strong>Hub Context:</strong> ${point.hubColor}</div>` : '';
 
       marker.bindPopup(`
-        <div style="font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--bg-panel-elevated); padding: 8px 10px; border: 1px solid var(--border-technical); border-radius: 6px; box-shadow: var(--shadow-card);">
-          <div style="color: var(--accent-primary); font-weight: 700; margin-bottom: 2px;">IP: ${point.ip}</div>
-          <div style="color: var(--text-secondary); margin-bottom: 3px;">${locText}</div>
+        <div style="font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--bg-panel-elevated); padding: 10px 12px; border: 1px solid var(--border-technical); border-radius: 8px; box-shadow: var(--shadow-card); max-width: 280px;">
+          <div style="color: var(--accent-primary); font-weight: 700; font-size: 13px; margin-bottom: 2px;">IP: ${point.ip}</div>
+          <div style="color: var(--text-secondary); margin-bottom: 4px;">${locText}</div>
           ${asnText ? `<div style="color: #10b981; font-weight: 600; font-size: 11px;">${asnText}</div>` : ''}
           ${orgText ? `<div style="color: var(--text-muted); font-size: 11px;">${orgText}</div>` : ''}
-          <div style="margin-top: 6px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border-muted); pt-1;">[CLICK FOR ASSET DETAILS]</div>
+          ${anycastHtml}
+          ${hubHtml}
+          <div style="margin-top: 6px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border-muted); pt-1; font-family: monospace;">[CLICK FOR ASSET DETAILS]</div>
         </div>
       `);
 
@@ -274,16 +322,25 @@ export default function InfrastructureMap({
         {geoPoints.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             {geoPoints.slice(0, 4).map((pt, idx) => (
-              <div key={idx} className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-3.5 rounded-lg shadow-sm">
+              <div key={idx} className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-3.5 rounded-lg shadow-sm space-y-1">
                 <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider font-semibold">ENDPOINT // {pt.ip}</div>
-                <div className="text-[var(--text-primary)] font-bold truncate mt-1 text-sm">
-                  {[pt.city, pt.country].filter(Boolean).join(', ') || 'Regional Datacenter'}
+                <div className="text-[var(--text-primary)] font-bold truncate text-sm">
+                  {[pt.city, pt.region, pt.country].filter(Boolean).join(', ') || 'Regional Datacenter'}
                 </div>
-                <div className="text-xs text-[#16a34a] dark:text-[#2ee59d] font-semibold truncate mt-0.5">{pt.asn || 'ASN Unassigned'}</div>
-                <div className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                <div className="text-xs text-[#16a34a] dark:text-[#2ee59d] font-semibold truncate">{pt.asn || 'ASN Unassigned'}</div>
+                <div className="text-[11px] text-[var(--text-secondary)] truncate">
                   {pt.organization || 'Hosting Provider'}
-                  {Boolean(pt.asset?.metadata?.anycastLikely) && ' • Anycast Edge'}
                 </div>
+                {pt.anycastLikely && (
+                  <div className="text-[10px] text-[var(--accent-primary)] font-sans leading-tight bg-[var(--accent-active-bg)] px-2 py-1 rounded">
+                    Distributed Anycast Edge (registered range)
+                  </div>
+                )}
+                {pt.hubColor && (
+                  <div className="text-[10px] text-[var(--text-muted)] font-sans line-clamp-2 leading-tight pt-0.5">
+                    {pt.hubColor}
+                  </div>
+                )}
               </div>
             ))}
           </div>

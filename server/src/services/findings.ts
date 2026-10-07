@@ -1256,5 +1256,147 @@ export function buildFindings(scan: DomainScan): Finding[] {
     }
   }
 
-  return findings;
+    // ── Phase 3: Cloud Storage Exposure Checks ─────────────────────────────
+    const cloudStorage = (exposure as { cloudStorage?: Array<{ bucketName: string; provider: string; url: string; status: string }> })?.cloudStorage;
+    if (Array.isArray(cloudStorage)) {
+      for (const bucket of cloudStorage) {
+        if (bucket.status === 'publicly_accessible') {
+          findings.push(finding({
+            title: `Publicly accessible cloud storage bucket observed (${bucket.bucketName})`,
+            severity: 'high',
+            kind: 'configuration_weakness',
+            category: 'exposure',
+            description: `The cloud storage bucket ${bucket.bucketName} (${bucket.provider}) responded with HTTP 200 to a public HEAD request, indicating public access or listing permissions are enabled.`,
+            recommendation: `Enable "Block Public Access" on the cloud storage bucket and verify access policies (IAM/ACLs) to prevent unauthorized public file access.`,
+            confidence: 'high',
+            observationStatus: 'observed',
+            evidence: [
+              ev('Cloud Storage Probe', `Bucket ${bucket.bucketName} at ${bucket.url} returned HTTP 200 to unauthenticated HEAD request.`),
+            ],
+            analysis: {
+              whatIsThis: `Public cloud storage (${bucket.provider}) namespace matching organizational domain branding.`,
+              whatWasObserved: `Public HEAD probe to ${bucket.url} succeeded with HTTP 200 without authentication.`,
+              howDiscovered: `Passive namespace probe using non-invasive HTTP HEAD checks. DASS never downloads or lists bucket objects.`,
+              technicalExplanation: `Cloud storage buckets default to private access, but permissive ACLs or bucket policies can expose the entire namespace to public visitors.`,
+              whyItMatters: `Publicly accessible buckets are one of the leading causes of enterprise data leaks, accidental exposure of backups, and data tampering.`,
+              securityImpact: `Unauthorized external access to files stored in the bucket namespace.`,
+              potentialAbuse: `Adversaries scan public cloud namespaces to find sensitive corporate data or staging backups.`,
+              remediation: `1. Open your cloud provider management console.\n2. Enable "Block All Public Access" for the bucket.\n3. Audit bucket policies to require authenticated access.`,
+              safeValidation: `Execute curl -I ${bucket.url}. The response should return HTTP 403 Forbidden.`,
+              references: [
+                'https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html',
+                'https://owasp.org/www-project-top-ten/2017/A6_2017-Security_Misconfiguration',
+              ],
+            },
+          }));
+        }
+      }
+    }
+
+    // ── Phase 3: Recently Disclosed NVD CVEs ───────────────────────────────
+    const recentCves = (exposure as { recentCves?: Array<{ cveId: string; cpe: string; description: string; publishedDate: string; severity: 'high' | 'medium' | 'low' }> })?.recentCves;
+    if (Array.isArray(recentCves)) {
+      const existingCves = new Set(findings.map((f) => f.title));
+      for (const cve of recentCves) {
+        if (existingCves.has(cve.cveId)) continue;
+        findings.push(finding({
+          title: `Documented CVE ${cve.cveId} matching software component ${cve.cpe}`,
+          severity: cve.severity,
+          kind: 'potential_risk',
+          category: 'exposure',
+          description: `Identified technology (${cve.cpe}) correlates with recent CVE disclosure ${cve.cveId} in the National Vulnerability Database: ${cve.description.slice(0, 200)}…`,
+          recommendation: `Upgrade the affected software daemon (${cve.cpe}) to the latest patched version to remediate ${cve.cveId}.`,
+          confidence: 'high',
+          observationStatus: 'observed',
+          evidence: [
+            ev('NVD API 2.0', `CPE ${cve.cpe} matched ${cve.cveId} published on ${cve.publishedDate.slice(0, 10)}.`),
+          ],
+          analysis: {
+            whatIsThis: `${cve.cveId} is an officially catalogued security advisory from the National Vulnerability Database.`,
+            whatWasObserved: `Software fingerprint ${cve.cpe} matches the affected CPE specification for ${cve.cveId}.`,
+            howDiscovered: `Queried the public NVD API using identified software CPE records.`,
+            technicalExplanation: `Documented vulnerabilities have publicly disclosed vulnerability details, and exploit proof-of-concepts often circulate shortly after publication.`,
+            whyItMatters: `Unpatched CVEs on perimeter software are actively targeted by automated vulnerability scanning frameworks.`,
+            securityImpact: `Severity rated ${cve.severity.toUpperCase()} under CVSS criteria.`,
+            potentialAbuse: `Automated vulnerability scanners probe endpoints matching ${cve.cpe} to deploy exploits.`,
+            remediation: `Review the vendor security advisory at https://nvd.nist.gov/vuln/detail/${cve.cveId} and apply the relevant patch.`,
+            safeValidation: `Confirm software version on host is upgraded to the patched release.`,
+            references: [
+              `https://nvd.nist.gov/vuln/detail/${cve.cveId}`,
+            ],
+          },
+        }));
+      }
+    }
+
+    // ── Phase 3: Breach Exposure Presence ──────────────────────────────────
+    const breachData = (exposure as { breachData?: { domain: string; breaches: Array<{ name: string; title: string; breachDate: string; pwnCount: number; dataClasses: string[] }>; totalPwnCount: number } })?.breachData;
+    if (breachData && breachData.breaches.length > 0) {
+      findings.push(finding({
+        title: `Historical security incident presence recorded for ${breachData.domain} (${breachData.breaches.length} incident${breachData.breaches.length > 1 ? 's' : ''})`,
+        severity: 'informational',
+        kind: 'observation',
+        category: 'exposure',
+        description: `Public breach index records indicate ${breachData.domain} was associated with ${breachData.breaches.length} historical public disclosure incident(s) affecting an estimated ${breachData.totalPwnCount.toLocaleString()} account record(s). Strictly records incident presence; no credentials or employee identities are stored or processed.`,
+        recommendation: `Enforce organization-wide multi-factor authentication (MFA/FIDO2) and mandate periodic credential rotation.`,
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('HaveIBeenPwned Directory', `${breachData.breaches.length} historical breach disclosure record(s) catalogued.`),
+        ],
+        analysis: {
+          whatIsThis: `Aggregated historical breach disclosure metadata from public security indexes.`,
+          whatWasObserved: `Domain ${breachData.domain} has recorded public breach history (${breachData.breaches.map((b) => `${b.title} [${b.breachDate.slice(0, 4)}]`).join(', ')}).`,
+          howDiscovered: `Queried public breach index records for domain presence. No credentials, hashes, or personal records are ever requested or stored.`,
+          technicalExplanation: `Historical breaches indicate past exposure incidents. Even if historical, credential reuse across employee accounts poses residual risk if MFA is not enforced.`,
+          whyItMatters: `Password reuse across corporate accounts remains one of the primary vectors for initial access and account takeover.`,
+          securityImpact: `Residual risk of credential stuffing if compromised legacy passwords match active corporate credentials.`,
+          potentialAbuse: `Attackers attempt historical compromised credentials against active corporate SSO or VPN login portals.`,
+          remediation: `1. Mandate phishing-resistant Multi-Factor Authentication (MFA) across all corporate accounts.\n2. Disallow common passwords and check new passwords against known breached password lists.`,
+          safeValidation: `Review identity provider (IdP) logs for anomalous login attempts from unusual geographic regions.`,
+          references: [
+            'https://haveibeenpwned.com/',
+            'https://csrc.nist.gov/publications/detail/sp/800-63b/final',
+          ],
+        },
+      }));
+    }
+
+    // ── Phase 3: Document Metadata Disclosure ──────────────────────────────
+    const docMetadata = (exposure as { docMetadata?: Array<{ url: string; fileType: string; creationTool?: string; creationDate?: string; hasAuthorField: boolean }> })?.docMetadata;
+    if (Array.isArray(docMetadata)) {
+      const withTools = docMetadata.filter((d) => d.creationTool);
+      if (withTools.length > 0) {
+        const toolsList = withTools.map((d) => `${d.fileType}: ${d.creationTool}`).join(', ');
+        findings.push(finding({
+          title: `Internal software and tooling metadata observed in public document(s)`,
+          severity: 'low',
+          kind: 'observation',
+          category: 'exposure',
+          description: `Public documents linked on the target website contain embedded creation metadata (${toolsList}). While not directly exploitable, embedded metadata discloses internal software versions and authoring environments.`,
+          recommendation: `Implement document sanitization or metadata scrubbing before publishing files to the public website.`,
+          confidence: 'medium',
+          observationStatus: 'observed',
+          evidence: [
+            ev('Public Document Inspection', `Observed creation metadata in public file(s): ${toolsList}.`),
+          ],
+          analysis: {
+            whatIsThis: `Embedded metadata tags (creation tools, software versions, generation timestamps) in publicly linked documents.`,
+            whatWasObserved: `Public files linked on the target domain contained embedded creation tool attributes: ${toolsList}.`,
+            howDiscovered: `Passive inspection of public documents already linked on the target domain's web surface. No employee personal names are recorded.`,
+            technicalExplanation: `Document authoring tools (PDF generators, word processors) automatically embed application versions and internal file properties unless explicitly sanitized.`,
+            whyItMatters: `Discloses internal operating system environments and desktop application versions to reconnaissance actors.`,
+            securityImpact: `Information disclosure aiding adversary passive technology profiling.`,
+            potentialAbuse: `Adversaries profile internal software versions to select targeted phishing attachments or client-side exploits.`,
+            remediation: `Use automated metadata stripping tools or export settings in authoring suites to remove internal properties before public release.`,
+            safeValidation: `Inspect exported files using exiftool or PDF properties inspection to confirm metadata fields are cleared.`,
+            references: [
+              'https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/07-Map_Execution_Paths_Through_Application',
+            ],
+          },
+        }));
+      }
+    }
+
+    return findings;
 }

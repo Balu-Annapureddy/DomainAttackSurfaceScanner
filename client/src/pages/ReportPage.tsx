@@ -33,7 +33,7 @@ export default function ReportPage() {
         }
       } catch (err) {
         if (!isCancelled) {
-          setError(err instanceof Error ? err.message : 'Unable to compile dossier');
+          setError(err instanceof Error ? err.message : 'Unable to compile report');
         }
       } finally {
         if (!isCancelled) {
@@ -52,7 +52,7 @@ export default function ReportPage() {
       <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center font-mono transition-colors">
         <div className="console-panel p-6 text-center space-y-2">
           <RefreshCw className="h-6 w-6 animate-spin text-[var(--accent-primary)] mx-auto" />
-          <p className="text-xs text-[var(--text-secondary)] font-bold tracking-wider">COMPILING INTELLIGENCE DOSSIER…</p>
+          <p className="text-xs text-[var(--text-secondary)] font-bold tracking-wider">COMPILING SECURITY REPORT…</p>
         </div>
       </main>
     );
@@ -63,7 +63,7 @@ export default function ReportPage() {
       <main className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-mono transition-colors">
         <div className="max-w-md console-panel p-6 text-center space-y-3">
           <AlertTriangle className="mx-auto h-7 w-7 text-red-500" />
-          <h1 className="text-sm font-bold tracking-wider">DOSSIER UNAVAILABLE</h1>
+          <h1 className="text-sm font-bold tracking-wider">REPORT UNAVAILABLE</h1>
           <p className="text-xs text-[var(--text-secondary)]">{error || 'Scan record expired or not found.'}</p>
           <Link
             to="/history"
@@ -167,25 +167,13 @@ export default function ReportPage() {
         </div>
       </nav>
 
-      {/* ─── Mobile Sticky Tab Bar ─────────────────────────────────── */}
-      <nav aria-label="Dossier section navigation" className="sticky top-0 z-30 bg-[var(--bg-canvas)]/95 backdrop-blur-sm border-b border-[var(--border-technical)] px-4 py-2 flex items-center gap-2 overflow-x-auto [scroll-snap-type:x_mandatory] lg:hidden print:hidden text-xs font-mono">
-        <a href="#sec-overview" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">01. Overview</a>
-        <a href="#sec-footprint" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">02. Footprint</a>
-        <a href="#sec-transport" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">03. Transport</a>
-        <a href="#sec-mail" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">04. Mail</a>
-        <a href="#sec-hygiene" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">05. Hygiene</a>
-        <a href="#sec-findings" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">06. Findings</a>
-        <a href="#sec-tls" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">07. TLS</a>
-        <a href="#sec-methodology" className="shrink-0 scroll-snap-align-start px-2.5 py-1 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)]">08. Scope</a>
-      </nav>
-
-      {/* ─── Printable Intelligence Dossier Layout (Desktop Sidebar + Main) ── */}
+      {/* ─── Printable Security Report Layout (Desktop Sidebar + Main) ── */}
       <div className="mx-auto max-w-7xl px-4 pt-4 lg:flex lg:gap-6 print:p-0 print:block">
         {/* Left Anchor-Nav Sidebar (Desktop) */}
         <aside className="hidden lg:block w-48 shrink-0 print:hidden">
           <div className="sticky top-4 console-panel p-3 space-y-1 text-xs font-mono">
             <div className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider px-2 py-1 mb-1 border-b border-[var(--border-muted)]">
-              DOSSIER INDEX
+              REPORT INDEX
             </div>
             <a href="#sec-overview" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">01. Overview</a>
             <a href="#sec-footprint" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">02. Footprint</a>
@@ -193,20 +181,20 @@ export default function ReportPage() {
             <a href="#sec-mail" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">04. Mail</a>
             <a href="#sec-hygiene" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">05. Hygiene</a>
             <a href="#sec-findings" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">06. Findings</a>
-            <a href="#sec-tls" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">07. TLS Dossier</a>
+            <a href="#sec-tls" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">07. TLS Evaluation</a>
             <a href="#sec-methodology" className="block px-2 py-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--bg-panel-subtle)] transition">08. Scope</a>
           </div>
         </aside>
 
-        {/* Dossier Content Body */}
+        {/* Report Content Body */}
         <article className="flex-1 min-w-0 space-y-4 print:p-0 print:space-y-3">
-          {/* ─── Dossier Masthead ───────────────────────────────────────── */}
+          {/* ─── Report Masthead ───────────────────────────────────────── */}
           <header className="console-panel p-4 print:border-b print:border-slate-300">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 font-mono">
               <div>
                 <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">
                   <Shield size={13} />
-                  <span>EXTERNAL ATTACK SURFACE INTELLIGENCE DOSSIER</span>
+                  <span>EXTERNAL ATTACK SURFACE SECURITY REPORT</span>
                 </div>
                 <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] print:text-slate-900">
                   {scan.domain}
@@ -464,12 +452,12 @@ export default function ReportPage() {
               </div>
             </section>
 
-            {/* [08] TLS Dossier */}
+            {/* [08] TLS Evaluation */}
             <section id="sec-tls" className="console-panel font-mono text-xs scroll-mt-14">
               <div className="dossier-header">
                 <div>
                   <span className="dossier-num">[08]</span>
-                  <span>TLS DOSSIER</span>
+                  <span>TLS EVALUATION</span>
                 </div>
                 <span className="text-[10px] text-[var(--text-secondary)]">CERTIFICATE METADATA</span>
               </div>
@@ -499,7 +487,7 @@ export default function ReportPage() {
                 [09] RECONNAISSANCE METHODOLOGY & SCOPE
               </div>
               <p className="text-[11px] text-[var(--text-secondary)] font-sans leading-relaxed">
-                This intelligence dossier was assembled entirely using passive open-source reconnaissance (OSINT). Inquiries were bounded by public DNS queries, Certificate Transparency logs, standard TLS handshakes, and public HTTP response headers. No port scans, vulnerability probes, or intrusive packets were transmitted.
+                This security report was assembled entirely using passive open-source reconnaissance (OSINT). Inquiries were bounded by public DNS queries, Certificate Transparency logs, standard TLS handshakes, and public HTTP response headers. No port scans, vulnerability probes, or intrusive packets were transmitted.
               </p>
             </section>
           </div>
@@ -507,7 +495,7 @@ export default function ReportPage() {
 
         {/* ─── Footer ────────────────────────────────────────────────── */}
         <footer className="border-t border-[var(--border-muted)] pt-3 font-mono text-[11px] text-[var(--text-muted)] flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>DOMAIN ATTACK SURFACE SCANNER // INTELLIGENCE DOSSIER</span>
+          <span>DOMAIN ATTACK SURFACE SCANNER // SECURITY REPORT</span>
           <div className="flex flex-wrap items-center gap-3">
             <Link to="/privacy" className="hover:text-[var(--accent-primary)] transition-colors">Privacy</Link>
             <span>&middot;</span>

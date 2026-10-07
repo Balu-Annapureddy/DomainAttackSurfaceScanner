@@ -39,7 +39,7 @@ describe('FindingDetailPanel component', () => {
     },
   };
 
-  it('renders all key 12-section technical dossier sections', () => {
+  it('renders all key 12-section technical analysis sections', () => {
     const handleClose = vi.fn();
     render(<FindingDetailPanel finding={mockFinding} onClose={handleClose} />);
 

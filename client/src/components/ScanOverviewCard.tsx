@@ -12,7 +12,7 @@ interface ScanOverviewCardProps {
 
 export default function ScanOverviewCard({ scan, onOpenGlossary, isGuidedMode }: ScanOverviewCardProps) {
   const [warningsOpen, setWarningsOpen] = useState(false);
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(true);
   const score = scan.score ?? 0;
   const hasScore = scan.score !== undefined && scan.score !== null;
   const breakdown = scan.scoreBreakdown;

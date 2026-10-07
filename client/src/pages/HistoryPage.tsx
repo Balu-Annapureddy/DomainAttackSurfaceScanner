@@ -273,7 +273,7 @@ export default function HistoryPage() {
         ) : items.length === 0 ? (
           <div className="console-panel p-12 text-center space-y-4 rounded-xl">
             <Database size={32} className="mx-auto text-[var(--text-muted)]" />
-            <h2 className="text-base font-bold text-[var(--text-primary)]">No Reconnaissance Dossiers Found</h2>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">No Reconnaissance Reports Found</h2>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
               Initiate a passive reconnaissance assessment from the main console to begin building perimeter intelligence.
             </p>
@@ -364,7 +364,7 @@ export default function HistoryPage() {
                         to={`/report/${encodeURIComponent(item.scanId)}`}
                         className="console-btn py-1 px-2.5 text-xs text-[var(--text-secondary)] font-medium rounded-md"
                       >
-                        Dossier
+                        Report
                       </Link>
                     </div>
 

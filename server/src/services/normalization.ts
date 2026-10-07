@@ -2,7 +2,20 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import type { Asset, DomainScan, Evidence, Relationship, ShodanHostData } from '../../../shared/types';
 import type { IpIntelligence } from './ipIntelligence';
+import type { OrgProfile } from './orgProfile';
+import type { DisclosedCve } from './cveLookup';
+import type { CloudStorageCheckResult } from './cloudStorage';
+import type { BreachExposureResult } from './breachExposure';
+import type { DocumentMetadataRecord } from './docMetadata';
 import { config } from '../config';
+
+export interface Phase3ExtraIntel {
+  orgProfile?: OrgProfile | null;
+  recentCves?: DisclosedCve[];
+  cloudStorageData?: CloudStorageCheckResult[];
+  breachData?: BreachExposureResult | null;
+  docMetadata?: DocumentMetadataRecord[];
+}
 
 function makeEvidence(source: string, description: string, confidence: Evidence['confidence'] = 'high'): Evidence {
   return { source, description, confidence, observedAt: new Date().toISOString() };
@@ -12,6 +25,7 @@ export function buildNormalizedAssets(
   scan: DomainScan,
   ipIntelligence: IpIntelligence[] = [],
   shodanData: ShodanHostData[] = [],
+  phase3Intel?: Phase3ExtraIntel,
 ): { assets: Asset[]; relationships: Relationship[]; warnings: string[] } {
   const assets: Asset[] = [];
   const relationships: Relationship[] = [];
@@ -296,6 +310,123 @@ export function buildNormalizedAssets(
       type: 'secured_by',
       evidence: makeEvidence('DNS query', `Observed DNSSEC records validating ${scan.domain}`, 'high'),
     });
+  }
+
+  // ── Phase 3: Organization Profile Enrichment ──────────────────────────────
+  if (phase3Intel?.orgProfile) {
+    const orgProf = phase3Intel.orgProfile;
+    const existingOrgAsset = assets.find((a) => a.type === 'ORGANIZATION');
+    if (existingOrgAsset) {
+      existingOrgAsset.metadata = {
+        ...(existingOrgAsset.metadata ?? {}),
+        foundingYear: orgProf.foundingYear || null,
+        headquarters: orgProf.headquarters || null,
+        website: orgProf.website || null,
+        logoUrl: orgProf.logoUrl || null,
+        wikidataId: orgProf.wikidataId || null,
+        description: orgProf.description,
+      };
+      existingOrgAsset.evidence.push(
+        makeEvidence('Wikidata Public Knowledge Base', `Verified public profile for ${orgProf.name}: ${orgProf.description}`, 'high'),
+      );
+    }
+  }
+
+  // ── Phase 3: Cloud Storage Namespace Assets ────────────────────────────────
+  if (Array.isArray(phase3Intel?.cloudStorageData)) {
+    for (const bucket of phase3Intel.cloudStorageData) {
+      const storageAsset = add(
+        'CLOUD_STORAGE',
+        bucket.bucketName,
+        'Cloud Storage Probe',
+        `Discovered ${bucket.provider} storage namespace (${bucket.url})`,
+        'high',
+        {
+          provider: bucket.provider,
+          url: bucket.url,
+          publiclyAccessible: bucket.status === 'publicly_accessible',
+          status: bucket.status,
+        },
+      );
+      relationships.push({
+        fromAssetId: domain.id,
+        toAssetId: storageAsset.id,
+        type: 'hosted_on_storage',
+        evidence: makeEvidence('Cloud Storage Probe', `Correlated bucket namespace ${bucket.bucketName}`, 'high'),
+      });
+    }
+  }
+
+  // ── Phase 3: Recently Disclosed NVD CVEs ───────────────────────────────────
+  if (Array.isArray(phase3Intel?.recentCves)) {
+    for (const cve of phase3Intel.recentCves) {
+      const vulnAsset = add(
+        'VULNERABILITY',
+        cve.cveId,
+        'NVD API 2.0',
+        cve.description,
+        'high',
+        {
+          cpe: cve.cpe,
+          publishedDate: cve.publishedDate,
+          severity: cve.severity,
+          source: 'NVD API 2.0',
+        },
+      );
+      relationships.push({
+        fromAssetId: domain.id,
+        toAssetId: vulnAsset.id,
+        type: 'vulnerable_to',
+        evidence: makeEvidence('NVD API 2.0', `Correlated ${cve.cveId} against identified ${cve.cpe}`, 'high'),
+      });
+    }
+  }
+
+  // ── Phase 3: Breach Exposure Presence ──────────────────────────────────────
+  if (phase3Intel?.breachData && phase3Intel.breachData.breaches.length > 0) {
+    const bData = phase3Intel.breachData;
+    const breachAsset = add(
+      'BREACH_EXPOSURE',
+      `${bData.domain} (${bData.breaches.length} breaches recorded)`,
+      'HaveIBeenPwned Directory',
+      `${bData.totalPwnCount.toLocaleString()} estimated accounts across ${bData.breaches.length} historical disclosure event(s)`,
+      'high',
+      {
+        breachCount: bData.breaches.length,
+        totalPwnCount: bData.totalPwnCount,
+      },
+    );
+    relationships.push({
+      fromAssetId: domain.id,
+      toAssetId: breachAsset.id,
+      type: 'referenced_in_breach',
+      evidence: makeEvidence('HaveIBeenPwned Directory', `Observed public incident history for ${bData.domain}`, 'high'),
+    });
+  }
+
+  // ── Phase 3: Document Metadata Records ─────────────────────────────────────
+  if (Array.isArray(phase3Intel?.docMetadata)) {
+    for (const doc of phase3Intel.docMetadata) {
+      const docAsset = add(
+        'DOCUMENT_METADATA',
+        doc.url,
+        'Public Document Inspection',
+        `${doc.fileType} document: ${doc.creationTool || 'Tool unspecified'}`,
+        'medium',
+        {
+          fileType: doc.fileType,
+          creationTool: doc.creationTool || null,
+          creationDate: doc.creationDate || null,
+          hasAuthorField: doc.hasAuthorField,
+        },
+      );
+      relationships.push({
+        fromAssetId: domain.id,
+        toAssetId: docAsset.id,
+        type: 'references_document',
+        evidence: makeEvidence('Public Document Inspection', `Extracted document properties from ${doc.url}`, 'medium'),
+      });
+    }
   }
 
   if (assets.length > config.maxAssets) {

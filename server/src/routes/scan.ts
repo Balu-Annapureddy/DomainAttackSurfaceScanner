@@ -21,6 +21,11 @@ import { runExposureChecks } from '../services/exposureChecks';
 import { computeExposureScore, computeScoreBreakdown } from '../services/scoring';
 import { runIpIntelligence, type IpIntelligence } from '../services/ipIntelligence';
 import { runShodanIntel, type ShodanHostData } from '../services/shodanIntel';
+import { fetchOrgProfile, type OrgProfile } from '../services/orgProfile';
+import { lookupRecentCves, type DisclosedCve } from '../services/cveLookup';
+import { checkCloudStorageExposure, type CloudStorageCheckResult } from '../services/cloudStorage';
+import { checkBreachExposure, type BreachExposureResult } from '../services/breachExposure';
+import { extractDocumentMetadata, findLinkedDocuments, type DocumentMetadataRecord } from '../services/docMetadata';
 import { buildNormalizedAssets } from '../services/normalization';
 import { buildFindings } from '../services/findings';
 import { compareScans } from '../services/diff';
@@ -151,11 +156,77 @@ async function runScan(scanId: string): Promise<void> {
       logError('shodan_intel_failed', error, { scanId });
     }
 
+    // ── Phase 3: Scoped Information-Gathering Categories ─────────────────────
+    let orgProfile: OrgProfile | null = null;
+    const orgCandidate =
+      (freshScan.categories.whois.data as { organization?: string } | undefined)?.organization ||
+      ipIntelligence.find((i) => i.organization)?.organization;
+    if (orgCandidate) {
+      try {
+        orgProfile = await fetchOrgProfile(orgCandidate, { budget });
+      } catch (err) {
+        logError('org_profile_failed', err, { scanId });
+      }
+    }
+
+    let recentCves: DisclosedCve[] = [];
+    const allCpes = shodanData.flatMap((s) => s.cpes || []);
+    if (allCpes.length > 0) {
+      try {
+        recentCves = await lookupRecentCves(allCpes, { budget });
+      } catch (err) {
+        logError('nvd_cve_lookup_failed', err, { scanId });
+      }
+    }
+
+    let cloudStorageData: CloudStorageCheckResult[] = [];
+    try {
+      cloudStorageData = await checkCloudStorageExposure(freshScan.domain, { budget });
+    } catch (err) {
+      logError('cloud_storage_check_failed', err, { scanId });
+    }
+
+    let breachData: BreachExposureResult | null = null;
+    try {
+      breachData = await checkBreachExposure(freshScan.domain, { budget });
+    } catch (err) {
+      logError('breach_exposure_check_failed', err, { scanId });
+    }
+
+    let docMetadata: DocumentMetadataRecord[] = [];
+    try {
+      const httpData = freshScan.categories.http.data as {
+        http?: { body?: string };
+        https?: { body?: string };
+      } | undefined;
+      const htmlBodies = [httpData?.http?.body, httpData?.https?.body].filter((b): b is string => Boolean(b));
+      const docLinks = findLinkedDocuments(htmlBodies, freshScan.domain);
+      if (docLinks.length > 0) {
+        docMetadata = await extractDocumentMetadata(docLinks, { budget });
+      }
+    } catch (err) {
+      logError('doc_metadata_check_failed', err, { scanId });
+    }
+
+    const expData = (freshScan.categories.exposure.data as Record<string, unknown>) || {};
+    if (orgProfile) expData.orgProfile = orgProfile;
+    if (recentCves.length > 0) expData.recentCves = recentCves;
+    if (cloudStorageData.length > 0) expData.cloudStorage = cloudStorageData;
+    if (breachData) expData.breachData = breachData;
+    if (docMetadata.length > 0) expData.docMetadata = docMetadata;
+    freshScan.categories.exposure.data = expData;
+
     if (budget.isExhausted()) {
       intelligenceWarnings.push(`Outbound request budget limit (${config.maxExternalRequests}) was reached.`);
     }
 
-    const normalized = buildNormalizedAssets(freshScan, ipIntelligence, shodanData);
+    const normalized = buildNormalizedAssets(freshScan, ipIntelligence, shodanData, {
+      orgProfile,
+      recentCves,
+      cloudStorageData,
+      breachData,
+      docMetadata,
+    });
     const findings = buildFindings(freshScan);
     const failedCategories = (Object.entries(freshScan.categories) as Array<[ScanCategory, { status: string }]>)
       .filter(([category, state]) => category !== 'scoring' && state.status === 'failed')

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Filter, Search, X, Info, List, Network } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
+import { generateGraphNarrative } from '../lib/graphNarrative';
 
 interface AttackSurfaceGraphProps {
   assets: Asset[];
@@ -24,6 +25,9 @@ const TYPE_COLORS: Record<Asset['type'], { border: string; text: string }> = {
   PORT: { border: '#eab308', text: '#eab308' },
   VULNERABILITY: { border: '#ef4444', text: '#ef4444' },
   DNSSEC: { border: '#10b981', text: '#10b981' },
+  CLOUD_STORAGE: { border: '#0284c7', text: '#0284c7' },
+  DOCUMENT_METADATA: { border: '#8b5cf6', text: '#8b5cf6' },
+  BREACH_EXPOSURE: { border: '#f97316', text: '#f97316' },
 };
 
 export default function AttackSurfaceGraph({
@@ -137,6 +141,11 @@ export default function AttackSurfaceGraph({
     );
   }, [activeAsset, relationships]);
 
+  const graphNarrative = useMemo(
+    () => generateGraphNarrative(assets, relationships),
+    [assets, relationships],
+  );
+
   const handleNodeClick = (asset: Asset) => {
     setActiveAsset(asset);
     onSelectAsset?.(asset);
@@ -226,6 +235,13 @@ export default function AttackSurfaceGraph({
             <span>{viewMode === 'graph' ? 'List View' : 'Graph View'}</span>
           </button>
         </div>
+      </div>
+
+      {/* ─── Dynamic Topology Narrative Explanation (A.4) ──────────── */}
+      <div className="bg-[var(--bg-panel-subtle)] border-b border-[var(--border-technical)] px-4 sm:px-6 py-3.5 text-xs text-[var(--text-secondary)] leading-relaxed">
+        <p className="font-sans text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed">
+          {graphNarrative}
+        </p>
       </div>
 
       {viewMode === 'list' ? (

@@ -149,14 +149,14 @@ describe('Authentication, Authorization & Quotas', () => {
   });
 
   describe('Email Verification Flow & Quota Gating', () => {
-    it('gates unverified user quota to anonymous limit (5) and marks emailVerified false', async () => {
+    it('gates unverified user quota to anonymous limit and marks emailVerified false', async () => {
       const res = await request(app)
         .get('/api/auth/me')
         .set('Cookie', authCookie);
 
       expect(res.status).toBe(200);
       expect(res.body.user.emailVerified).toBe(false);
-      expect(res.body.quota.limit).toBe(5); // Gated behind verification
+      expect(res.body.quota.limit).toBe(config.anonymousScanLimit); // Gated behind verification
     });
 
     it('rejects GET /api/auth/verify with invalid token', async () => {
@@ -189,7 +189,7 @@ describe('Authentication, Authorization & Quotas', () => {
       expect(record?.verificationToken).toBeDefined();
     });
 
-    it('verifies user email and unlocks 50 scans/hr allocation via GET /api/auth/verify', async () => {
+    it('verifies user email and unlocks registered quota allocation via GET /api/auth/verify', async () => {
       const record = await db.findUserByEmail(testEmail);
       expect(record?.verificationToken).toBeDefined();
 
@@ -200,14 +200,14 @@ describe('Authentication, Authorization & Quotas', () => {
       expect(verifyRes.status).toBe(200);
       expect(verifyRes.body.success).toBe(true);
 
-      // Check /me now reports emailVerified = true and 50 scans/hr quota
+      // Check /me now reports emailVerified = true and registered quota
       const meRes = await request(app)
         .get('/api/auth/me')
         .set('Cookie', authCookie);
 
       expect(meRes.status).toBe(200);
       expect(meRes.body.user.emailVerified).toBe(true);
-      expect(meRes.body.quota.limit).toBe(50);
+      expect(meRes.body.quota.limit).toBe(config.registeredScanLimit);
     });
   });
 

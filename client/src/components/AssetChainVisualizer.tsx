@@ -117,6 +117,38 @@ export default function AssetChainVisualizer({
         </div>
       </div>
 
+      {/* ─── One-Time Plain-Language Chain Architecture Explainer (A.6) ── */}
+      <div className="bg-[var(--bg-panel-subtle)] border-b border-[var(--border-technical)] px-4 sm:px-6 py-4 text-xs text-[var(--text-secondary)] space-y-2">
+        <p className="text-[var(--text-primary)] font-medium leading-relaxed">
+          Each routing chain traces one operational path from a public hostname down to its physical and network hosting infrastructure:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[11px] font-sans pt-1">
+          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
+            <span className="font-bold text-[var(--accent-primary)] font-mono block mb-0.5">1. DOMAIN</span>
+            The apex or child hostname that clients request via authoritative DNS.
+          </div>
+          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
+            <span className="font-bold text-[#8b5cf6] font-mono block mb-0.5">2. IP ADDRESS</span>
+            The IPv4 or IPv6 network address where incoming traffic terminates.
+          </div>
+          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
+            <span className="font-bold text-[#10b981] font-mono block mb-0.5">3. AUTONOMOUS SYSTEM</span>
+            The BGP routing network (ASN) controlling backbone internet traffic.
+          </div>
+          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
+            <span className="font-bold text-[#14b8a6] font-mono block mb-0.5">4. ORGANIZATION</span>
+            The cloud provider, CDN, or hosting provider operating that address pool.
+          </div>
+          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
+            <span className="font-bold text-[#f43f5e] font-mono block mb-0.5">5. LOCATION</span>
+            The approximate datacenter or regional edge registry coordinates.
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--text-muted)] pt-1">
+          Multiple rows appear when a domain resolves to dual-stack IPv4/IPv6 endpoints, when CDN load-balancing publishes redundant IPs, or when subdomains route to distinct cloud providers.
+        </p>
+      </div>
+
       {/* ─── Trace Rows (Network Tracing Console) ───────────────────── */}
       <div className="p-4 sm:p-5 bg-[var(--bg-canvas)] space-y-3">
         {filteredChains.length === 0 ? (

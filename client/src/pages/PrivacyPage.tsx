@@ -207,7 +207,7 @@ export default function PrivacyPage() {
             </div>
             <div className="console-panel-inset p-2.5">
               <span className="text-[var(--accent-primary)] font-bold block">DATA PORTABILITY</span>
-              <span className="text-[var(--text-secondary)] font-sans text-xs">Operators can export complete scan dossiers as structured JSON or CSV spreadsheets.</span>
+              <span className="text-[var(--text-secondary)] font-sans text-xs">Operators can export complete scan reports as structured JSON or CSV spreadsheets.</span>
             </div>
             <div className="console-panel-inset p-2.5">
               <span className="text-[var(--accent-primary)] font-bold block">RIGHT TO ERASURE</span>
