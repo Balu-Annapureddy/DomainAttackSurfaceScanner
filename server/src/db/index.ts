@@ -719,8 +719,8 @@ class PostgresAdapter implements DatabaseAdapter {
       ]);
 
       const resultQuery = `
-        INSERT INTO scan_results (scan_id, categories, assets, relationships, findings, warnings, completeness, completeness_details)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO scan_results (scan_id, categories, assets, relationships, findings, warnings, completeness, completeness_details, score_breakdown)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (scan_id) DO UPDATE SET
           categories = EXCLUDED.categories,
           assets = EXCLUDED.assets,
@@ -728,7 +728,8 @@ class PostgresAdapter implements DatabaseAdapter {
           findings = EXCLUDED.findings,
           warnings = EXCLUDED.warnings,
           completeness = EXCLUDED.completeness,
-          completeness_details = EXCLUDED.completeness_details
+          completeness_details = EXCLUDED.completeness_details,
+          score_breakdown = EXCLUDED.score_breakdown
       `;
       await client.query(resultQuery, [
         scan.scanId,
@@ -739,6 +740,7 @@ class PostgresAdapter implements DatabaseAdapter {
         JSON.stringify(scan.warnings),
         scan.completeness ?? null,
         JSON.stringify(scan.completenessDetails ?? null),
+        JSON.stringify(scan.scoreBreakdown ?? null),
       ]);
 
       await client.query('COMMIT');
@@ -753,7 +755,7 @@ class PostgresAdapter implements DatabaseAdapter {
   async getScan(scanId: string): Promise<{ scan: DomainScan; userId: string | null } | null> {
     const query = `
       SELECT s.id, s.user_id, s.domain, s.status, s.score, s.score_label, s.created_at, s.expires_at, s.is_saved,
-             r.categories, r.assets, r.relationships, r.findings, r.warnings, r.completeness, r.completeness_details
+             r.categories, r.assets, r.relationships, r.findings, r.warnings, r.completeness, r.completeness_details, r.score_breakdown
       FROM scans s
       LEFT JOIN scan_results r ON s.id = r.scan_id
       WHERE s.id = $1
@@ -770,6 +772,7 @@ class PostgresAdapter implements DatabaseAdapter {
       status: row.status,
       score: row.score,
       scoreLabel: row.score_label,
+      scoreBreakdown: row.score_breakdown || (row.categories?.scoring?.data as { scoreBreakdown?: any })?.scoreBreakdown,
       isSaved: row.is_saved,
       userId: row.user_id,
       categories: row.categories || {},

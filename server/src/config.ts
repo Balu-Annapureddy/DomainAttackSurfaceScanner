@@ -45,7 +45,17 @@ function validateConfig() {
   if (parsedIpProviderUrl.protocol !== 'https:') {
     throw new Error('[config] IP_INTELLIGENCE_URL must use the HTTPS protocol.');
   }
-  const defaultAllowedHosts = ['ipapi.co', 'ip-api.com', 'ipwhois.app', 'ipinfo.io'];
+  const defaultAllowedHosts = [
+    'ipapi.co',
+    'ip-api.com',
+    'ipwhois.app',
+    'ipinfo.io',
+    'api.certspotter.com',
+    'internetdb.shodan.io',
+    'api.bgpview.io',
+    'dns.google',
+    'cloudflare-dns.com',
+  ];
   const customAllowedHosts = process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
   const allowedProviderHosts = new Set([...defaultAllowedHosts, ...customAllowedHosts]);
   if (!allowedProviderHosts.has(parsedIpProviderUrl.hostname.toLowerCase())) {

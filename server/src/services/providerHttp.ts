@@ -15,6 +15,7 @@ export interface ProviderHttpOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   budget?: ScanRequestBudget;
+  headers?: Record<string, string>;
 }
 
 function readBody(response: http.IncomingMessage, maxBytes: number): Promise<string> {
@@ -39,11 +40,21 @@ export async function fetchProviderJson<T = unknown>(
   options: ProviderHttpOptions = {},
 ): Promise<T> {
   const url = new URL(urlStr);
-  if (url.protocol !== 'https:') {
-    throw new Error('Provider requests must strictly use HTTPS');
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('Provider requests must strictly use HTTP or HTTPS');
   }
 
-  const defaultAllowedHosts = ['ipapi.co', 'ip-api.com', 'ipwhois.app', 'ipinfo.io'];
+  const defaultAllowedHosts = [
+    'ipapi.co',
+    'ip-api.com',
+    'ipwhois.app',
+    'ipinfo.io',
+    'api.certspotter.com',
+    'internetdb.shodan.io',
+    'api.bgpview.io',
+    'dns.google',
+    'cloudflare-dns.com',
+  ];
   const customAllowedHosts =
     process.env.ALLOWED_IP_INTELLIGENCE_HOSTS?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
   const allowedProviderHosts = new Set([...defaultAllowedHosts, ...customAllowedHosts]);
@@ -57,6 +68,7 @@ export async function fetchProviderJson<T = unknown>(
   }
 
   const timeoutMs = options.timeoutMs ?? config.ipIntelligenceTimeoutMs;
+  const transport = url.protocol === 'http:' ? http : https;
 
   return new Promise((resolve, reject) => {
     if (options.signal?.aborted) {
@@ -64,13 +76,14 @@ export async function fetchProviderJson<T = unknown>(
       return;
     }
 
-    const request = https.request(
+    const request = transport.request(
       url,
       {
         method: 'GET',
         headers: {
           Accept: 'application/json',
           'User-Agent': 'DomainAttackSurfaceScanner-ProviderClient/1.0',
+          ...(options.headers ?? {}),
         },
         timeout: timeoutMs,
       },

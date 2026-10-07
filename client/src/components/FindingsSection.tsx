@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, ShieldCheck, HelpCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, ShieldCheck, HelpCircle, ArrowRight } from 'lucide-react';
 import type { Finding, FindingSeverity } from '../../../shared/types';
+import FindingDetailPanel from './FindingDetailPanel';
 
 interface FindingsSectionProps {
   findings: Finding[];
@@ -45,6 +46,7 @@ export default function FindingsSection({
 }: FindingsSectionProps) {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selectedDetailFinding, setSelectedDetailFinding] = useState<Finding | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -180,6 +182,20 @@ export default function FindingsSection({
                     <div className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
                       {finding.description}
                     </div>
+
+                    <div className="pt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDetailFinding(finding);
+                        }}
+                        className="text-[11px] font-bold text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Full 12-Section Analysis</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -260,6 +276,24 @@ export default function FindingsSection({
                         </div>
                       </div>
                     )}
+
+                    {/* Pillar 5: Complete 12-Section Analysis CTA */}
+                    <div className="border-t border-[var(--border-muted)] pt-3 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                        DASS v2 Deep-Dive Security Dossier
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDetailFinding(finding);
+                        }}
+                        className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <span>VIEW FULL 12-SECTION DOSSIER</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -267,6 +301,13 @@ export default function FindingsSection({
           })
         )}
       </div>
+
+      {/* ─── 12-Section Finding Detail Drawer (v2) ────────────────── */}
+      <FindingDetailPanel
+        finding={selectedDetailFinding}
+        onClose={() => setSelectedDetailFinding(null)}
+        onOpenGlossary={onOpenGlossary}
+      />
     </div>
   );
 }

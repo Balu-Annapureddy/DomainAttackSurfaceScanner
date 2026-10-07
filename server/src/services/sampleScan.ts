@@ -13,6 +13,31 @@ export function createSampleScan(): DomainScan {
     status: 'completed',
     score: 88,
     scoreLabel: 'External Hygiene Score',
+    scoreBreakdown: {
+      total: 88,
+      totalDeducted: 12,
+      dimensions: {
+        tlsHygiene: { label: 'TLS Hygiene', maxDeduction: 25, deducted: 0, observations: [] },
+        httpsEnforcement: { label: 'HTTPS Enforcement', maxDeduction: 20, deducted: 0, observations: [] },
+        webSecurityHeaders: {
+          label: 'Web Security Headers',
+          maxDeduction: 25,
+          deducted: 10,
+          observations: [
+            { description: 'Missing HTTP security header: strict-transport-security', pointsDeducted: 5 },
+            { description: 'Missing HTTP security header: content-security-policy', pointsDeducted: 5 },
+          ],
+        },
+        emailSecurity: {
+          label: 'Email Security',
+          maxDeduction: 10,
+          deducted: 2,
+          observations: [
+            { description: 'SPF softfail (~all) observed instead of strict reject (-all)', pointsDeducted: 2 },
+          ],
+        },
+      },
+    },
     completeness: 'complete',
     completenessDetails: {
       completed: 6,

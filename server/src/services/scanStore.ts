@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DomainScan, ScanCategory } from '../../../shared/types';
+import type { DomainScan, ScanCategory, ScoreBreakdown } from '../../../shared/types';
 
 export type CategoryRuntimeStatus = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -93,6 +93,20 @@ export function setScanScore(scanId: string, score: number): void {
   }
 
   scan.score = score;
+}
+
+/**
+ * Set the score and the v2 per-dimension breakdown simultaneously.
+ * Prefer this over setScanScore when a ScoreBreakdown is available.
+ */
+export function setScanScoreAndBreakdown(scanId: string, score: number, breakdown: ScoreBreakdown): void {
+  const scan = getScanRecord(scanId);
+  if (!scan) {
+    return;
+  }
+
+  scan.score = score;
+  scan.scoreBreakdown = breakdown;
 }
 
 export function markScanFinished(scanId: string): void {

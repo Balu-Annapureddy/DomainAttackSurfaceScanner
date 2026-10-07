@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import net from 'node:net';
-import type { Asset, DomainScan, Evidence, Relationship } from '../../../shared/types';
+import type { Asset, DomainScan, Evidence, Relationship, ShodanHostData } from '../../../shared/types';
 import type { IpIntelligence } from './ipIntelligence';
 import { config } from '../config';
 
@@ -11,6 +11,7 @@ function makeEvidence(source: string, description: string, confidence: Evidence[
 export function buildNormalizedAssets(
   scan: DomainScan,
   ipIntelligence: IpIntelligence[] = [],
+  shodanData: ShodanHostData[] = [],
 ): { assets: Asset[]; relationships: Relationship[]; warnings: string[] } {
   const assets: Asset[] = [];
   const relationships: Relationship[] = [];
@@ -90,14 +91,22 @@ export function buildNormalizedAssets(
     });
   }
 
-  const subdomains = scan.categories.subdomains.data as { subdomains?: string[]; available?: boolean } | undefined;
+  const subdomains = scan.categories.subdomains.data as {
+    subdomains?: string[];
+    subdomainSources?: Record<string, string[]>;
+    available?: boolean;
+  } | undefined;
   for (const subdomain of (subdomains?.subdomains ?? []).slice(0, config.maxSubdomains)) {
-    const asset = add('SUBDOMAIN', subdomain, 'Certificate Transparency', 'Observed in a public certificate record', 'high');
+    const sources = subdomains?.subdomainSources?.[subdomain] ?? ['Certificate Transparency'];
+    const sourceLabel = sources.length > 1 || (sources[0] && sources[0] !== 'Certificate Transparency')
+      ? `Certificate Transparency (${sources.join(', ')})`
+      : 'Certificate Transparency';
+    const asset = add('SUBDOMAIN', subdomain, sourceLabel, 'Observed in a public certificate record', 'high');
     relationships.push({
       fromAssetId: domain.id,
       toAssetId: asset.id,
       type: 'issued_for',
-      evidence: makeEvidence('Certificate Transparency', `Observed ${subdomain} in CT data`),
+      evidence: makeEvidence(sourceLabel, `Observed ${subdomain} in CT logs (${sources.join(', ')})`),
     });
   }
   if (subdomains?.available === false) {
@@ -169,12 +178,15 @@ export function buildNormalizedAssets(
     }
 
     if (info.country || info.city) {
-      const locationLabel = `${info.city ?? 'Unknown city'}, ${info.country ?? 'Unknown country'}`;
+      const anycastSuffix = info.anycastLikely ? ' (Anycast / Edge CDN)' : '';
+      const locationLabel = `${info.city ?? 'Unknown city'}, ${info.country ?? 'Unknown country'}${anycastSuffix}`;
       const geoAsset = add(
         'GEOLOCATION',
         locationLabel,
         'IP intelligence provider',
-        'Approximate infrastructure/network location; not a person location',
+        info.anycastLikely
+          ? 'Anycast/CDN edge endpoint — traffic is routed to globally distributed datacenters'
+          : 'Approximate infrastructure/network location; not a person location',
         'low',
         {
           country: info.country ?? null,
@@ -183,6 +195,7 @@ export function buildNormalizedAssets(
           latitude: info.latitude ?? null,
           longitude: info.longitude ?? null,
           accuracy: 'approximate',
+          anycastLikely: Boolean(info.anycastLikely),
           source: 'IP intelligence provider',
         },
       );
@@ -197,7 +210,92 @@ export function buildNormalizedAssets(
           'low',
         ),
       });
+    } else if (!info.available && info.reason) {
+      const locationLabel = `Lookup failed: ${info.reason}`;
+      const geoAsset = add(
+        'GEOLOCATION',
+        locationLabel,
+        'IP intelligence provider',
+        `Geolocation lookup failed: ${info.reason}`,
+        'low',
+        {
+          error: info.reason,
+          accuracy: 'failed',
+          source: 'IP intelligence provider',
+        },
+      );
+
+      relationships.push({
+        fromAssetId: ipAsset.id,
+        toAssetId: geoAsset.id,
+        type: 'located_approximately_at',
+        evidence: makeEvidence(
+          'IP intelligence provider',
+          `Geolocation lookup failed for IP ${info.ip}: ${info.reason}`,
+          'low',
+        ),
+      });
     }
+  }
+
+  // ── Shodan InternetDB open ports and CVEs ──────────────────────────────────
+  for (const host of shodanData) {
+    if (!host.hasData) continue;
+    const ipAsset = assets.find((asset) => asset.type === 'IP' && asset.value === host.ip);
+    if (!ipAsset) continue;
+
+    for (const port of host.ports) {
+      const portAsset = add(
+        'PORT',
+        `${host.ip}:${port}`,
+        'Shodan InternetDB',
+        `Observed open port ${port} on ${host.ip}`,
+        'high',
+        { ip: host.ip, port, tags: host.tags?.join(', ') || null },
+      );
+      relationships.push({
+        fromAssetId: ipAsset.id,
+        toAssetId: portAsset.id,
+        type: 'exposes_port',
+        evidence: makeEvidence('Shodan InternetDB', `Observed open port ${port} on host ${host.ip}`, 'high'),
+      });
+    }
+
+    for (const cve of host.vulns) {
+      const vulnAsset = add(
+        'VULNERABILITY',
+        cve,
+        'Shodan InternetDB',
+        `Observed known vulnerability ${cve} on ${host.ip}`,
+        'high',
+        { ip: host.ip, cve },
+      );
+      relationships.push({
+        fromAssetId: ipAsset.id,
+        toAssetId: vulnAsset.id,
+        type: 'vulnerable_to',
+        evidence: makeEvidence('Shodan InternetDB', `Observed CVE ${cve} associated with host ${host.ip}`, 'high'),
+      });
+    }
+  }
+
+  // ── DNSSEC signed status ───────────────────────────────────────────────────
+  const dnssec = (dns as { dnssec?: { observed?: boolean; note?: string; record?: string } } | undefined)?.dnssec;
+  if (dnssec?.observed) {
+    const dnssecAsset = add(
+      'DNSSEC',
+      `${scan.domain} (DNSSEC)`,
+      'DNS query',
+      dnssec.note || 'DNSSEC cryptographic signing chain observed',
+      'high',
+      { record: dnssec.record || null },
+    );
+    relationships.push({
+      fromAssetId: domain.id,
+      toAssetId: dnssecAsset.id,
+      type: 'secured_by',
+      evidence: makeEvidence('DNS query', `Observed DNSSEC records validating ${scan.domain}`, 'high'),
+    });
   }
 
   if (assets.length > config.maxAssets) {

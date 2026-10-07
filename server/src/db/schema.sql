@@ -70,8 +70,11 @@ CREATE TABLE IF NOT EXISTS scan_results (
   findings JSONB NOT NULL,
   warnings JSONB NOT NULL,
   completeness VARCHAR(32),
-  completeness_details JSONB
+  completeness_details JSONB,
+  score_breakdown JSONB
 );
+
+ALTER TABLE scan_results ADD COLUMN IF NOT EXISTS score_breakdown JSONB;
 
 -- ─── 5. Quota Tracking ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS quotas (

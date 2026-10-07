@@ -9,6 +9,7 @@ import {
   markScanFinished,
   setScanIntelligence,
   setScanScore,
+  setScanScoreAndBreakdown,
   updateCategoryStatus,
 } from '../services/scanStore';
 import { runWhois } from '../services/whois';
@@ -17,8 +18,9 @@ import { runSubdomains } from '../services/subdomains';
 import { runTls } from '../services/tls';
 import { runHttpFingerprint } from '../services/httpFingerprint';
 import { runExposureChecks } from '../services/exposureChecks';
-import { computeExposureScore } from '../services/scoring';
+import { computeExposureScore, computeScoreBreakdown } from '../services/scoring';
 import { runIpIntelligence, type IpIntelligence } from '../services/ipIntelligence';
+import { runShodanIntel, type ShodanHostData } from '../services/shodanIntel';
 import { buildNormalizedAssets } from '../services/normalization';
 import { buildFindings } from '../services/findings';
 import { compareScans } from '../services/diff';
@@ -136,11 +138,24 @@ async function runScan(scanId: string): Promise<void> {
       logError('ip_intelligence_failed', error, { scanId });
     }
 
+    let shodanData: ShodanHostData[] = [];
+    try {
+      shodanData = await runShodanIntel(addresses, { budget });
+      if (shodanData.length > 0) {
+        const expData = (freshScan.categories.exposure.data as Record<string, unknown>) || {};
+        expData.shodan = shodanData;
+        freshScan.categories.exposure.data = expData;
+      }
+    } catch (error) {
+      intelligenceWarnings.push('Shodan InternetDB intelligence was unavailable.');
+      logError('shodan_intel_failed', error, { scanId });
+    }
+
     if (budget.isExhausted()) {
       intelligenceWarnings.push(`Outbound request budget limit (${config.maxExternalRequests}) was reached.`);
     }
 
-    const normalized = buildNormalizedAssets(freshScan, ipIntelligence);
+    const normalized = buildNormalizedAssets(freshScan, ipIntelligence, shodanData);
     const findings = buildFindings(freshScan);
     const failedCategories = (Object.entries(freshScan.categories) as Array<[ScanCategory, { status: string }]>)
       .filter(([category, state]) => category !== 'scoring' && state.status === 'failed')
@@ -175,9 +190,11 @@ async function runScan(scanId: string): Promise<void> {
     });
 
     const score = computeExposureScore(freshScan);
-    setScanScore(scanId, score);
+    const scoreBreakdown = computeScoreBreakdown(freshScan);
+    setScanScoreAndBreakdown(scanId, score, scoreBreakdown);
     updateCategoryStatus(scanId, 'scoring', 'completed', {
       score,
+      scoreBreakdown,
       formula: 'Observable configuration posture (TLS, HTTPS enforcement, certificates, security headers, and email authentication)',
     });
 

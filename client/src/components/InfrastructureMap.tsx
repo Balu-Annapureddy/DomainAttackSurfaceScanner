@@ -280,7 +280,10 @@ export default function InfrastructureMap({
                   {[pt.city, pt.country].filter(Boolean).join(', ') || 'Regional Datacenter'}
                 </div>
                 <div className="text-xs text-[#16a34a] dark:text-[#2ee59d] font-semibold truncate mt-0.5">{pt.asn || 'ASN Unassigned'}</div>
-                <div className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">{pt.organization || 'Hosting Provider'}</div>
+                <div className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                  {pt.organization || 'Hosting Provider'}
+                  {Boolean(pt.asset?.metadata?.anycastLikely) && ' • Anycast Edge'}
+                </div>
               </div>
             ))}
           </div>

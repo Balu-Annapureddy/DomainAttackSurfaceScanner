@@ -21,6 +21,9 @@ const TYPE_COLORS: Record<Asset['type'], { border: string; text: string }> = {
   GEOLOCATION: { border: '#f43f5e', text: '#f43f5e' },
   TECHNOLOGY: { border: '#6366f1', text: '#6366f1' },
   URL: { border: '#64748b', text: '#64748b' },
+  PORT: { border: '#eab308', text: '#eab308' },
+  VULNERABILITY: { border: '#ef4444', text: '#ef4444' },
+  DNSSEC: { border: '#10b981', text: '#10b981' },
 };
 
 export default function AttackSurfaceGraph({
