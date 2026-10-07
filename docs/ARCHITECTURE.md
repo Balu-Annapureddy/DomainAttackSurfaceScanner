@@ -87,7 +87,7 @@ Passive scanning must strictly target legitimate public domains without becoming
 
 ## 5. Dual-Mode Persistence Layer
 
-The database adapter ([server/src/db/index.ts](file:///c:/Users/annap/Desktop/Projects/DomainAttackSurfaceScanner/server/src/db/index.ts)) operates in two distinct operational modes:
+The database adapter (`server/src/db/index.ts`) operates in two distinct operational modes:
 
 1. **Production Mode (`DATABASE_URL` configured)**:
    - Connects via `pg.Pool` with connection pooling, SSL/TLS, and prepared statements.
@@ -116,10 +116,21 @@ The database adapter ([server/src/db/index.ts](file:///c:/Users/annap/Desktop/Pr
   ├── Certificate Transparency Logs (crt.sh / Subject Alternative Names)
   ├── TLS Handshake & Cipher Suite Analysis
   ├── HTTP Header & Security Directives (HSTS, CSP, X-Frame-Options)
+  ├── IP/ASN/Organization/Geolocation Intelligence
+  ├── Shodan InternetDB Exposure Intelligence
+  ├── NVD/CVE Enrichment
+  ├── Cloud Storage and Public Document Metadata Checks
+  ├── Breach-Exposure Metadata (no raw credentials)
   └── Subdomain Discovery & Network ASN Correlation
        │
        ▼
-[Scoring Engine (Heuristic 0-100 & Finding Generation)]
+[Normalization & Relationship Correlation]
+       │
+       ▼
+[Finding Engine + Transparent 0-100 Score Breakdown]
+       │
+       ▼
+[Historical Diff / Comparison]
        │
        ▼
 [Database / Store] ◄── [Client Polls GET /api/scan/:scanId]
@@ -195,3 +206,9 @@ Passive reconnaissance relies on external third-party services which can suffer 
   - Database users should operate with least privilege (CRUD permissions on application tables, without `SUPERUSER` privileges).
   - Production databases should have automated daily snapshot backups with point-in-time recovery (PITR) enabled.
 
+
+## 12. Passive Exposure and Privacy Boundaries
+
+The later-stage intelligence services deliberately remain defensive and non-exploitative. Shodan InternetDB and NVD are used for public exposure/CVE enrichment; cloud-storage checks use safe HEAD requests rather than downloading bucket contents; public-document metadata is filtered to avoid exposing employee-level personal information; and breach checks expose presence/count/date metadata without storing raw credentials, passwords, or hashes.
+
+The shared data model records assets and relationships with evidence, confidence, observation status, and scan completeness. Findings therefore distinguish an observed weakness from a failed or inconclusive check rather than treating missing provider data as a vulnerability.
