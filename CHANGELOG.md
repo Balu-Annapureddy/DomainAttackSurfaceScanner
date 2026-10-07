@@ -9,6 +9,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [Unreleased] - 2026-10-07
+
+### Documentation & Validation
+- Refreshed the README to match the current passive intelligence architecture and repository layout.
+- Updated testing documentation to reflect the current automated test tree and coverage areas.
+- Updated architecture documentation to include IP/ASN intelligence, Shodan InternetDB, NVD/CVE enrichment, cloud-storage checks, document metadata controls, breach-exposure metadata, normalization, relationship correlation, transparent scoring, and historical comparison.
+- Corrected stale test-count documentation in the README.
+- Added the scoring documentation to the README documentation index.
+
+### Security & Data-Minimization Clarifications
+- Documented that cloud-storage inspection uses safe HEAD checks rather than content retrieval.
+- Documented that public breach enrichment does not expose raw credentials, passwords, or hashes.
+- Documented privacy boundaries for document metadata and employee-level personal information.
+- Clarified that failed or inconclusive provider checks are not automatically treated as security weaknesses.
+
+---
+
 ## [1.0.0] - 2026-09-27
 
 ### Summary
