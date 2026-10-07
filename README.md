@@ -69,7 +69,7 @@ DomainAttackSurfaceScanner/
 │   │   ├── routes/             # /api/scan, /api/auth, /api/quota
 │   │   ├── services/           # DNS, WHOIS, TLS, CT, HTTP, Quota, Scoring, Diff
 │   │   ├── utils/              # Scrypt crypto, SSRF validator (publicResolution.ts), safeHttp
-│   │   └── __tests__/          # Automated Jest test suites (44 tests)
+│   │   └── __tests__/          # Automated Jest test suites (current test coverage)
 ├── shared/                     # Canonical TypeScript interfaces and contracts
 └── docs/                       # Architecture, Security, SEO, Environment, and Deployment specs
 ```
@@ -113,7 +113,7 @@ For cloud hosting with PostgreSQL, Cloudflare Pages, Nginx reverse proxy, and en
 ## 5. Automated Testing & Validation
 
 ```bash
-# Run complete automated test suite (67 tests across 4 suites)
+# Run the complete automated Jest test suite
 npm test
 
 # Run build verification (Server TypeScript compiler + Client Vite production bundle)
@@ -126,7 +126,21 @@ curl http://localhost:3001/api/health/ready
 
 ---
 
-## 6. Responsible Use & Passive Scope
+## 6. Results, Validation & Current Test Coverage
+
+The repository includes dedicated server and client test suites covering scanner behavior, scoring, SSRF protection, authentication and authorization, quota enforcement, provider failures, DNS/email analysis, UI behavior, API handling, and end-to-end sample scanning. The current repository contains **26 test files** with **202 `test`/`it` test-case declarations** based on the source tree.
+
+Validation commands:
+
+```bash
+npm test
+npm run build
+npm run lint
+```
+
+The project also includes a real-domain end-to-end test using `example.com`, while the broader suite uses mocked or controlled provider behavior where appropriate to keep tests deterministic.
+
+## 7. Responsible Use & Passive Scope
 
 > **NOTICE:** DomainAttackSurfaceScanner is exclusively a passive reconnaissance platform.
 
@@ -140,7 +154,7 @@ curl http://localhost:3001/api/health/ready
 
 ---
 
-## 7. Documentation Index
+## 8. Documentation Index
 
 - [Architecture & Data Pipeline](docs/ARCHITECTURE.md)
 - [Environment Configuration & Variables](docs/ENVIRONMENT.md)
@@ -148,3 +162,8 @@ curl http://localhost:3001/api/health/ready
 - [SEO & Webmaster Guide](docs/SEO.md)
 - [Passive Security Disclosure](docs/SECURITY.md)
 - [Development Log](docs/DEVELOPMENT_LOG.md)
+- [Domain Scan Scoring](docs/domain-scan-scoring.md)
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
