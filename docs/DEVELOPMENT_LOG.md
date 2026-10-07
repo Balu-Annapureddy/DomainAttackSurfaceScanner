@@ -1,5 +1,16 @@
 # Development log
 
+## 2026-10-07 — Documentation, Validation & Current-State Alignment
+
+- Audited the current repository structure and aligned project documentation with the implemented passive intelligence pipeline.
+- Refreshed README capability, testing, project-structure, and documentation-index sections.
+- Updated testing documentation to cover scanner intelligence, security boundaries, authentication, quotas, findings/scoring, comparison, API behavior, and client validation.
+- Updated architecture documentation to include normalization, relationship correlation, Shodan InternetDB exposure intelligence, NVD/CVE enrichment, cloud-storage checks, public-document metadata controls, breach-exposure metadata, and historical comparison.
+- Documented the current repository snapshot as 26 automated test files with 202 test/it-case declarations.
+- Confirmed the existing MIT License is appropriate for the repository and requires no content change.
+- Corrected a repository-local file URI in the architecture documentation so the documentation is portable across development environments.
+- Added an Unreleased changelog entry describing the documentation and validation alignment.
+
 ## 2026-09-24 — Passive intelligence backend sprint
 
 - Added centralized scanner resource limits and environment-based provider configuration.
