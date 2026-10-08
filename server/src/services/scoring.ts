@@ -1,255 +1,218 @@
+/**
+ * External Hygiene Score — v1 scoring engine
+ *
+ * Design principles
+ * ─────────────────
+ * 1. Single source of truth: `computeScoreBreakdown` collects all observations
+ *    in one pass. `computeExposureScore` delegates entirely to it — the two
+ *    functions can never silently diverge.
+ *
+ * 2. Epistemic safety: a check that is pending, running, or failed does NOT
+ *    contribute a deduction. Only a category with status === 'completed' is
+ *    eligible for scoring. Absence of evidence ≠ evidence of weakness.
+ *
+ * 3. Deterministic + bounded: every dimension has an explicit maxDeduction cap.
+ *    Sum of all caps = 103 (TLS 25 + HTTPS 20 + Headers 25 + Email 10 +
+ *    DNSSEC 3 + Exposure 20). The final score is clamped to [0, 100].
+ *
+ * 4. No double-counting: each signal is recorded in exactly one dimension.
+ *
+ * Scoring Version: 1
+ *
+ * Dimension table
+ * ───────────────
+ * | Dimension            | Max deduction | Notes                              |
+ * |----------------------|---------------|------------------------------------|
+ * | TLS Hygiene          | 25            | No TLS: −25. Expiring ≤7d: −25.    |
+ * |                      |               | Expiring ≤30d: −10.                |
+ * | HTTPS Enforcement    | 20            | HTTP not redirecting to HTTPS: −20 |
+ * | Web Security Headers | 25            | −5 per missing header, capped at 5 |
+ * | Email Security       | 10            | No SPF: −5. No DMARC: −5.         |
+ * | DNSSEC Hygiene       |  3            | No DNSKEY/DS records: −3           |
+ * | Network Exposure     | 20            | Risky port: −10. Known CVE: −10.  |
+ */
+
 import type { DomainScan, DimensionScore, ScoreBreakdown, ScoreObservation } from '../../../shared/types';
+
+/** Current scoring model version. Increment when deduction weights change. */
+export const SCORING_VERSION = 1 as const;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
 function parseExpiryDays(value: string | undefined | null): number | null {
-  if (!value) {
-    return null;
-  }
-
+  if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
+  if (Number.isNaN(date.getTime())) return null;
   const diffMs = date.getTime() - Date.now();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-function dim(
+function buildDimension(
   label: string,
   maxDeduction: number,
   observations: ScoreObservation[],
 ): DimensionScore {
   const deducted = Math.min(maxDeduction, observations.reduce((sum, o) => sum + o.pointsDeducted, 0));
-  return { label, maxDeduction, deducted, observations };
+  return { label, maxDeduction, deducted, observations: observations.slice() };
 }
 
-export function computeExposureScore(scan: DomainScan): number {
-  // The score is an external hygiene score measuring observable configuration posture:
-  // TLS availability, certificate validity, HTTPS enforcement, security headers, and email authentication.
-  // CRITICAL PRINCIPLE: Failed or inconclusive category checks do NOT deduct points.
-  // Incomplete evidence reduces completeness, not security posture.
-  let score = 100;
+// ── Risky ports: publicly-exposed management or database surfaces ───────────
+const RISKY_PORTS = new Set([
+  21,    // FTP
+  23,    // Telnet
+  445,   // SMB
+  1433,  // MSSQL
+  1521,  // Oracle DB
+  3306,  // MySQL/MariaDB
+  3389,  // RDP
+  5432,  // PostgreSQL
+  5900,  // VNC
+  6379,  // Redis
+  8086,  // InfluxDB
+  9200,  // Elasticsearch
+  27017, // MongoDB
+]);
 
-  const tlsCategory = scan.categories.tls;
-  const httpCategory = scan.categories.http;
-  const dnsCategory = scan.categories.dns;
+// ── Observation collectors ─────────────────────────────────────────────────
 
-  const tls = tlsCategory?.status === 'completed'
-    ? (tlsCategory.data as { available?: boolean; validTo?: string | null; reason?: string } | undefined)
-    : undefined;
+function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
+  const tlsCat = scan.categories.tls;
+  if (tlsCat?.status !== 'completed') return []; // epistemic safety
 
-  const http = httpCategory?.status === 'completed'
-    ? (httpCategory.data as {
-        http?: { status?: number };
-        https?: { missingSecurityHeaders?: string[]; status?: number };
-        httpsEnforced?: boolean;
-        httpAvailable?: boolean;
-        worryingHeaders?: string[];
-      } | undefined)
-    : undefined;
+  const tls = tlsCat.data as { available?: boolean; validTo?: string | null } | undefined;
 
-  const dns = dnsCategory?.status === 'completed'
-    ? (dnsCategory.data as {
-        spf?: { present?: boolean };
-        dmarc?: { present?: boolean };
-        mx?: string[];
-      } | undefined)
-    : undefined;
+  if (tls?.available === false) {
+    return [{ description: 'No TLS/HTTPS service observed on port 443', pointsDeducted: 25 }];
+  }
 
-  // 1. TLS Certificate Validity and Encryption (only if TLS category completed)
-  if (tlsCategory?.status === 'completed') {
-    if (tls?.available === true) {
-      const certDaysLeft = parseExpiryDays(tls.validTo ?? null);
-      if (certDaysLeft !== null) {
-        if (certDaysLeft <= 7) {
-          score -= 25;
-        } else if (certDaysLeft <= 30) {
-          score -= 10;
-        }
-      }
-    } else if (tls?.available === false) {
-      // Completed TLS check confirmed no TLS service
-      score -= 25;
+  if (tls?.available === true) {
+    const days = parseExpiryDays(tls.validTo ?? null);
+    if (days !== null && days <= 7) {
+      return [{
+        description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'} — immediate renewal required`,
+        pointsDeducted: 25,
+      }];
+    }
+    if (days !== null && days <= 30) {
+      return [{
+        description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'}`,
+        pointsDeducted: 10,
+      }];
     }
   }
 
-  // 2. HTTPS enforcement (HTTP properly redirects to HTTPS, only if HTTP category completed)
-  if (httpCategory?.status === 'completed' && http?.httpsEnforced === false) {
-    score -= 20;
-  }
-
-  // 3. Security response headers (only evaluated if HTTP category completed)
-  if (httpCategory?.status === 'completed') {
-    const missingHeaders = http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
-    score -= Math.min(25, missingHeaders.length * 5);
-  }
-
-  // 4. Email authentication configuration (SPF & DMARC, only if DNS category completed)
-  if (dnsCategory?.status === 'completed' && dns) {
-    if (dns.spf && !dns.spf.present) {
-      score -= 5;
-    }
-    if (dns.dmarc && !dns.dmarc.present) {
-      score -= 5;
-    }
-    // DNSSEC missing: modest 3-point deduction. Absence leaves DNS unauthenticated.
-    if ((dns as { dnssec?: { observed?: boolean } }).dnssec?.observed === false) {
-      score -= 3;
-    }
-  }
-
-  // 5. Network perimeter exposure & known CVEs (Shodan InternetDB passive records)
-  const exposureCategory = scan.categories.exposure;
-  const exposure = exposureCategory?.status === 'completed'
-    ? (exposureCategory.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined)
-    : undefined;
-
-  if (exposureCategory?.status === 'completed' && exposure?.shodan) {
-    const riskyPorts = new Set([21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017]);
-    let hasRiskyPort = false;
-    let hasVuln = false;
-
-    for (const host of exposure.shodan) {
-      if (host.ports && host.ports.some((p) => riskyPorts.has(p))) hasRiskyPort = true;
-      if (host.vulns && host.vulns.length > 0) hasVuln = true;
-    }
-
-    // Risky service exposure: 10-point deduction for publicly exposed databases/remote management
-    if (hasRiskyPort) {
-      score -= 10;
-    }
-    // Confirmed known CVE: 10-point deduction for documented unpatched vulnerabilities on perimeter
-    if (hasVuln) {
-      score -= 10;
-    }
-  }
-
-  return clamp(Math.round(score), 0, 100);
+  return [];
 }
+
+function collectHttpsObservations(scan: DomainScan): ScoreObservation[] {
+  const httpCat = scan.categories.http;
+  if (httpCat?.status !== 'completed') return []; // epistemic safety
+
+  const http = httpCat.data as { httpsEnforced?: boolean } | undefined;
+  if (http?.httpsEnforced === false) {
+    return [{ description: 'HTTP requests are not redirected to HTTPS', pointsDeducted: 20 }];
+  }
+  return [];
+}
+
+function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
+  const httpCat = scan.categories.http;
+  if (httpCat?.status !== 'completed') return []; // epistemic safety
+
+  const http = httpCat.data as {
+    https?: { missingSecurityHeaders?: string[] };
+    worryingHeaders?: string[];
+  } | undefined;
+
+  // Prefer the structured missingSecurityHeaders list; fall back to worryingHeaders
+  const missing = http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
+  // Cap at 5 headers × 5 pts = 25 (also enforced by buildDimension)
+  return missing.slice(0, 5).map((h) => ({
+    description: `Missing HTTP security header: ${h}`,
+    pointsDeducted: 5,
+  }));
+}
+
+function collectEmailObservations(scan: DomainScan): ScoreObservation[] {
+  const dnsCat = scan.categories.dns;
+  if (dnsCat?.status !== 'completed') return []; // epistemic safety
+
+  const dns = dnsCat.data as {
+    spf?: { present?: boolean };
+    dmarc?: { present?: boolean };
+  } | undefined;
+
+  const obs: ScoreObservation[] = [];
+  if (dns?.spf && !dns.spf.present) {
+    obs.push({ description: 'No SPF record observed in DNS', pointsDeducted: 5 });
+  }
+  if (dns?.dmarc && !dns.dmarc.present) {
+    obs.push({ description: 'No DMARC record observed in DNS', pointsDeducted: 5 });
+  }
+  return obs;
+}
+
+function collectDnssecObservations(scan: DomainScan): ScoreObservation[] {
+  const dnsCat = scan.categories.dns;
+  if (dnsCat?.status !== 'completed') return []; // epistemic safety
+
+  const dns = dnsCat.data as { dnssec?: { observed?: boolean } } | undefined;
+  if (dns?.dnssec?.observed === false) {
+    return [{ description: 'No DNSSEC (DNSKEY/DS) records observed in DNS', pointsDeducted: 3 }];
+  }
+  return [];
+}
+
+function collectExposureObservations(scan: DomainScan): ScoreObservation[] {
+  const expCat = scan.categories.exposure;
+  if (expCat?.status !== 'completed') return []; // epistemic safety
+
+  const exposure = expCat.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined;
+  if (!exposure?.shodan) return [];
+
+  let hasRiskyPort = false;
+  let hasVuln = false;
+
+  for (const host of exposure.shodan) {
+    if (host.ports?.some((p) => RISKY_PORTS.has(p))) hasRiskyPort = true;
+    if (host.vulns && host.vulns.length > 0) hasVuln = true;
+  }
+
+  const obs: ScoreObservation[] = [];
+  if (hasRiskyPort) {
+    obs.push({
+      description: 'Potentially risky database or remote management service port exposed to public internet',
+      pointsDeducted: 10,
+    });
+  }
+  if (hasVuln) {
+    obs.push({
+      description: 'Host running software version with confirmed CVE vulnerability in Shodan records',
+      pointsDeducted: 10,
+    });
+  }
+  return obs;
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Compute a transparent per-dimension breakdown of the hygiene score.
- * The total is identical to computeExposureScore — this function exposes
- * the same algorithm as named dimensions so the user can see exactly
- * why their score is what it is.
+ * Compute the full per-dimension score breakdown.
  *
- * Dimension max deductions: TLS(25) + HTTPS(20) + Headers(25) + Email(10) + DNSSEC(3) + Exposure(20).
- * A domain with no issues receives a score of 100 (no deductions).
+ * This is the single authoritative implementation. `computeExposureScore`
+ * derives its result from this function to guarantee they never diverge.
  */
 export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
-  const tlsCategory = scan.categories.tls;
-  const httpCategory = scan.categories.http;
-  const dnsCategory = scan.categories.dns;
-  const exposureCategory = scan.categories.exposure;
-
-  const tls = tlsCategory?.status === 'completed'
-    ? (tlsCategory.data as { available?: boolean; validTo?: string | null } | undefined)
-    : undefined;
-
-  const http = httpCategory?.status === 'completed'
-    ? (httpCategory.data as {
-        https?: { missingSecurityHeaders?: string[] };
-        httpsEnforced?: boolean;
-        worryingHeaders?: string[];
-      } | undefined)
-    : undefined;
-
-  const dns = dnsCategory?.status === 'completed'
-    ? (dnsCategory.data as {
-        spf?: { present?: boolean };
-        dmarc?: { present?: boolean };
-        dnssec?: { observed?: boolean };
-      } | undefined)
-    : undefined;
-
-  const exposure = exposureCategory?.status === 'completed'
-    ? (exposureCategory.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined)
-    : undefined;
-
-  // ── TLS Hygiene (max deduction: 25) ───────────────────────────────────────
-  const tlsObservations: ScoreObservation[] = [];
-  if (tlsCategory?.status === 'completed') {
-    if (tls?.available === false) {
-      tlsObservations.push({ description: 'No TLS/HTTPS service observed on port 443', pointsDeducted: 25 });
-    } else if (tls?.available === true) {
-      const days = parseExpiryDays(tls.validTo ?? null);
-      if (days !== null && days <= 7) {
-        tlsObservations.push({ description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'} — immediate renewal required`, pointsDeducted: 25 });
-      } else if (days !== null && days <= 30) {
-        tlsObservations.push({ description: `TLS certificate expires in ${days} days`, pointsDeducted: 10 });
-      }
-    }
-  }
-
-  // ── HTTPS Enforcement (max deduction: 20) ─────────────────────────────────
-  const httpsObservations: ScoreObservation[] = [];
-  if (httpCategory?.status === 'completed' && http?.httpsEnforced === false) {
-    httpsObservations.push({ description: 'HTTP requests are not redirected to HTTPS', pointsDeducted: 20 });
-  }
-
-  // ── Web Security Headers (max deduction: 25) ──────────────────────────────
-  const headerObservations: ScoreObservation[] = [];
-  if (httpCategory?.status === 'completed') {
-    const missing = http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
-    const capped = missing.slice(0, 5); // max 5 headers × 5 pts = 25
-    for (const h of capped) {
-      headerObservations.push({ description: `Missing HTTP security header: ${h}`, pointsDeducted: 5 });
-    }
-  }
-
-  // ── Email Security (max deduction: 10) ────────────────────────────────────
-  const emailObservations: ScoreObservation[] = [];
-  if (dnsCategory?.status === 'completed' && dns) {
-    if (dns.spf && !dns.spf.present) {
-      emailObservations.push({ description: 'No SPF record observed in DNS', pointsDeducted: 5 });
-    }
-    if (dns.dmarc && !dns.dmarc.present) {
-      emailObservations.push({ description: 'No DMARC record observed in DNS', pointsDeducted: 5 });
-    }
-  }
-
-  // ── DNSSEC Hygiene (max deduction: 3) ─────────────────────────────────────
-  const dnssecObservations: ScoreObservation[] = [];
-  if (dnsCategory?.status === 'completed' && dns?.dnssec?.observed === false) {
-    dnssecObservations.push({ description: 'No DNSSEC (DNSKEY/DS) records observed in DNS', pointsDeducted: 3 });
-  }
-
-  // ── Network Exposure (max deduction: 20) ──────────────────────────────────
-  const exposureObservations: ScoreObservation[] = [];
-  if (exposureCategory?.status === 'completed' && exposure?.shodan) {
-    const riskyPorts = new Set([21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017]);
-    let hasRiskyPort = false;
-    let hasVuln = false;
-
-    for (const host of exposure.shodan) {
-      if (host.ports && host.ports.some((p) => riskyPorts.has(p))) hasRiskyPort = true;
-      if (host.vulns && host.vulns.length > 0) hasVuln = true;
-    }
-
-    if (hasRiskyPort) {
-      exposureObservations.push({
-        description: 'Potentially risky database or remote management service port exposed to public internet',
-        pointsDeducted: 10,
-      });
-    }
-    if (hasVuln) {
-      exposureObservations.push({
-        description: 'Host running software version with confirmed CVE vulnerability in Shodan records',
-        pointsDeducted: 10,
-      });
-    }
-  }
-
-  const tlsDim = dim('TLS Hygiene', 25, tlsObservations);
-  const httpsDim = dim('HTTPS Enforcement', 20, httpsObservations);
-  const headersDim = dim('Web Security Headers', 25, headerObservations);
-  const emailDim = dim('Email Security', 10, emailObservations);
-  const dnssecDim = dim('DNSSEC Hygiene', 3, dnssecObservations);
-  const exposureDim = dim('Network Exposure', 20, exposureObservations);
+  const tlsDim      = buildDimension('TLS Hygiene',          25, collectTlsObservations(scan));
+  const httpsDim    = buildDimension('HTTPS Enforcement',    20, collectHttpsObservations(scan));
+  const headersDim  = buildDimension('Web Security Headers', 25, collectHeaderObservations(scan));
+  const emailDim    = buildDimension('Email Security',       10, collectEmailObservations(scan));
+  const dnssecDim   = buildDimension('DNSSEC Hygiene',        3, collectDnssecObservations(scan));
+  const exposureDim = buildDimension('Network Exposure',     20, collectExposureObservations(scan));
 
   const totalDeducted =
     tlsDim.deducted +
@@ -258,18 +221,28 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
     emailDim.deducted +
     dnssecDim.deducted +
     exposureDim.deducted;
+
   const total = clamp(100 - totalDeducted, 0, 100);
 
   return {
+    scoringVersion: SCORING_VERSION,
     total,
     totalDeducted,
     dimensions: {
-      tlsHygiene: tlsDim,
-      httpsEnforcement: httpsDim,
+      tlsHygiene:         tlsDim,
+      httpsEnforcement:   httpsDim,
       webSecurityHeaders: headersDim,
-      emailSecurity: emailDim,
-      dnssecHygiene: dnssecDim,
-      networkExposure: exposureDim,
+      emailSecurity:      emailDim,
+      dnssecHygiene:      dnssecDim,
+      networkExposure:    exposureDim,
     },
   };
+}
+
+/**
+ * Convenience wrapper that returns only the integer score (0–100).
+ * Delegates entirely to `computeScoreBreakdown` to guarantee consistency.
+ */
+export function computeExposureScore(scan: DomainScan): number {
+  return computeScoreBreakdown(scan).total;
 }

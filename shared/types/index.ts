@@ -156,10 +156,15 @@ export interface DimensionScore {
 }
 
 /**
- * Transparent breakdown of the Scope Hygiene Score.
+ * Transparent breakdown of the External Hygiene Score.
  * total = 100 − totalDeducted. Answers "Why is my score X?"
  */
 export interface ScoreBreakdown {
+  /**
+   * Scoring model version. Increment when deduction weights or dimensions change
+   * so that historical scans can be compared on equal terms.
+   */
+  scoringVersion: number;
   /** Overall score (0–100). Identical to DomainScan.score. */
   total: number;
   /** Sum of all deductions across all dimensions. */
@@ -169,8 +174,10 @@ export interface ScoreBreakdown {
     httpsEnforcement: DimensionScore;
     webSecurityHeaders: DimensionScore;
     emailSecurity: DimensionScore;
-    dnssecHygiene?: DimensionScore;
-    networkExposure?: DimensionScore;
+    /** DNSSEC presence check. Always present from scoring v1 onwards. */
+    dnssecHygiene: DimensionScore;
+    /** Shodan/exposure perimeter check. Always present from scoring v1 onwards. */
+    networkExposure: DimensionScore;
   };
 }
 

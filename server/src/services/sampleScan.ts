@@ -14,6 +14,7 @@ export function createSampleScan(): DomainScan {
     score: 88,
     scoreLabel: 'External Hygiene Score',
     scoreBreakdown: {
+      scoringVersion: 1,
       total: 88,
       totalDeducted: 12,
       dimensions: {
@@ -36,8 +37,11 @@ export function createSampleScan(): DomainScan {
             { description: 'SPF softfail (~all) observed instead of strict reject (-all)', pointsDeducted: 2 },
           ],
         },
+        dnssecHygiene: { label: 'DNSSEC Hygiene', maxDeduction: 3, deducted: 0, observations: [] },
+        networkExposure: { label: 'Network Exposure', maxDeduction: 20, deducted: 0, observations: [] },
       },
     },
+
     completeness: 'complete',
     completenessDetails: {
       completed: 6,
