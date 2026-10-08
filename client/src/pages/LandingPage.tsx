@@ -130,20 +130,17 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col transition-colors duration-150">
       <WorkstationNav onOpenGlossary={(term) => { setGlossaryTerm(term); setGlossaryOpen(true); }} />
 
-      {/* ─── Hero Section with Subtle Workstation Grid Texture ───────── */}
-      <section className="relative border-b border-[var(--border-muted)] bg-[var(--bg-canvas)] workstation-grid-bg py-20 sm:py-28 overflow-hidden">
-        {/* Ambient atmospheric glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-[var(--accent-primary)] opacity-[0.06] rounded-full blur-3xl pointer-events-none" />
-
+      {/* ─── Hero Section ───────────────────────────────────────────── */}
+      <section className="relative border-b border-[var(--border-technical)] bg-[var(--bg-canvas)] py-16 sm:py-24 overflow-hidden">
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[var(--accent-active-bg)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-30 mb-6 shadow-xs animate-fade-in">
-            <Shield className="w-3.5 h-3.5" />
-            <span className="font-mono tracking-wide uppercase text-[11px]">Passive External Attack Surface Reconnaissance</span>
+          {/* Eyebrow Tag */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xs text-xs font-mono font-medium bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)] border border-[var(--border-technical)] mb-6 animate-fade-in">
+            <Shield className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span className="tracking-wide uppercase text-[11px]">Passive External Attack Surface Reconnaissance</span>
           </div>
 
           {/* Headline */}
-          <h1 className="font-hero tracking-tight text-[var(--text-primary)] max-w-4xl">
+          <h1 className="font-display italic font-normal text-4xl sm:text-6xl text-[var(--text-primary)] max-w-4xl tracking-normal leading-tight">
             Domain Attack Surface Scanner
           </h1>
 
@@ -152,7 +149,7 @@ export default function LandingPage() {
             Continuously observe public infrastructure perimeter, DNS records, TLS certificates, and security hygiene without sending invasive probes.
           </p>
 
-          {/* Single Joined Pill Search Control */}
+          {/* Search Box */}
           <form onSubmit={handleScan} className="w-full max-w-2xl">
             <div className="hero-search-pill">
               <div className="flex items-center gap-2 pl-2 text-[var(--accent-primary)] shrink-0">
@@ -178,7 +175,7 @@ export default function LandingPage() {
                 type="submit"
                 id="start-scan-btn"
                 disabled={loading || !domain.trim()}
-                className="console-btn-primary rounded-full px-6 sm:px-8 py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+                className="console-btn console-btn-primary rounded-xs px-6 sm:px-8 py-2 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
                 aria-label="Start Passive Attack Surface Scan"
               >
                 {loading ? (
@@ -197,7 +194,7 @@ export default function LandingPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="mt-4 p-3 bg-[var(--sev-critical-bg)] border border-[var(--sev-critical)] text-[var(--sev-critical)] text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 max-w-md mx-auto">
+              <div className="mt-4 p-3 bg-[var(--sev-critical-bg)] border border-[var(--sev-critical)] text-[var(--sev-critical)] text-xs sm:text-sm rounded-xs flex items-center justify-center gap-2 max-w-md mx-auto">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -226,11 +223,11 @@ export default function LandingPage() {
 
         {/* ─── Core Capability Vectors (4-col desktop → 2-col tablet → 1-col mobile) ── */}
         <section className="flex flex-col gap-8">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 border-b border-[var(--border-muted)] pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 border-b border-[var(--border-technical)] pb-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-mono text-xs font-bold text-[var(--accent-primary)]">[01]</span>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+                <h2 className="text-2xl sm:text-3xl font-normal font-display italic tracking-tight text-[var(--text-primary)]">
                   Passive Reconnaissance Capabilities
                 </h2>
               </div>
@@ -243,20 +240,20 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {featureCards.map((card, i) => {
               const IconComp = card.icon;
               return (
                 <div
                   key={i}
                   id={`feature-card-${i}`}
-                  className="console-panel p-6 rounded-xl flex flex-col justify-between hover:border-[var(--accent-primary)] transition-all group cursor-pointer bg-[var(--bg-panel)]"
+                  className="console-panel p-5 rounded-xs flex flex-col justify-between hover:border-[var(--border-strong)] transition-all group cursor-pointer bg-[var(--bg-panel)]"
                   onClick={() => handleOpenTerm(card.term)}
                 >
                   <div>
-                    {/* Icon in soft circle */}
-                    <div className="flex items-start justify-between gap-3 mb-5">
-                      <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center border border-[var(--border-technical)] group-hover:scale-105 transition-transform">
+                    {/* Icon in flat square */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xs bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center border border-[var(--border-technical)]">
                         <IconComp className="w-5 h-5" />
                       </div>
                       <span className="console-tag">
@@ -264,7 +261,7 @@ export default function LandingPage() {
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-primary)] transition-colors">
+                    <h3 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-primary)] transition-colors">
                       {card.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
@@ -272,7 +269,7 @@ export default function LandingPage() {
                     </p>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t border-[var(--border-muted)] flex items-center justify-between text-xs text-[var(--accent-primary)] font-semibold">
+                  <div className="mt-5 pt-3 border-t border-[var(--border-technical)] flex items-center justify-between text-xs text-[var(--accent-primary)] font-semibold">
                     <span className="opacity-90 group-hover:underline">Learn more in Field Manual</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -283,11 +280,11 @@ export default function LandingPage() {
         </section>
 
         {/* ─── How the System Works: Methodological Pipeline ─────────── */}
-        <section className="console-panel overflow-hidden rounded-xl">
+        <section className="console-panel overflow-hidden rounded-xs">
           <div className="dossier-header px-6 py-4">
             <div className="flex items-center gap-2.5">
               <span className="dossier-num">[02]</span>
-              <span>HOW THE SYSTEM WORKS</span>
+              <span className="font-display italic text-sm">HOW THE SYSTEM WORKS</span>
             </div>
             <span className="text-[11px] text-[var(--text-secondary)] font-mono tracking-wider">
               METHODOLOGICAL PIPELINE
@@ -300,13 +297,13 @@ export default function LandingPage() {
                 <div
                   key={stage.step}
                   id={`pipeline-stage-${i}`}
-                  className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-4 rounded-xl flex flex-col justify-between gap-3 shadow-xs hover:border-[var(--accent-primary)] transition-all"
+                  className="bg-[var(--bg-panel)] border border-[var(--border-technical)] p-4 rounded-xs flex flex-col justify-between gap-3 hover:border-[var(--border-strong)] transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-bold text-[var(--accent-primary)]">
                       STAGE {stage.step}
                     </span>
-                    <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] opacity-50" />
+                    <span className="w-1.5 h-1.5 bg-[var(--accent-primary)]" />
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-[var(--text-primary)] mb-1">

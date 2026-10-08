@@ -76,7 +76,7 @@ export default function FindingDetailPanel({ finding, onClose, onOpenGlossary }:
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+        className="fixed inset-0 bg-black/40 transition-opacity duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -86,31 +86,31 @@ export default function FindingDetailPanel({ finding, onClose, onOpenGlossary }:
         role="dialog"
         aria-modal="true"
         aria-label={finding.title}
-        className="relative w-full max-w-2xl bg-[var(--bg-panel)] border-l border-[var(--border-technical)] shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300"
+        className="relative w-full max-w-2xl bg-[var(--bg-panel)] border-l border-[var(--border-technical)] flex flex-col h-full z-10 animate-fade-in"
       >
         {/* Top Header */}
-        <div className="p-5 border-b border-[var(--border-muted)] bg-[var(--bg-panel-subtle)] flex items-start justify-between gap-4">
+        <div className="p-5 border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] flex items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`px-2.5 py-0.5 border text-xs font-bold font-mono rounded-md flex items-center gap-1.5 ${sev.bg} ${sev.text} ${sev.border}`}>
+              <span className={`px-2.5 py-0.5 border text-xs font-mono font-medium rounded-xs flex items-center gap-1.5 ${sev.bg} ${sev.text} ${sev.border}`}>
                 <SevIcon size={13} />
                 {sev.label}
               </span>
-              <span className="text-xs font-mono text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-0.5 rounded-md bg-[var(--bg-panel-inset)]">
+              <span className="text-xs font-mono text-[var(--text-muted)] border border-[var(--border-technical)] px-2 py-0.5 rounded-xs bg-[var(--bg-panel-inset)]">
                 CATEGORY: {finding.category.toUpperCase()}
               </span>
-              <span className={`text-xs font-mono font-bold border px-2 py-0.5 rounded-md ${getConfidenceBadgeClass(finding.confidence)}`}>
+              <span className={`text-xs font-mono font-medium border px-2 py-0.5 rounded-xs ${getConfidenceBadgeClass(finding.confidence)}`}>
                 {formatConfidence(finding.confidence)}
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black text-[var(--text-primary)] leading-snug">
+            <h2 className="text-xl sm:text-2xl font-normal font-display italic text-[var(--text-primary)] leading-snug">
               {finding.title}
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] rounded-lg transition shrink-0"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] rounded-xs transition shrink-0 cursor-pointer"
             aria-label="Close details"
           >
             <X size={18} />

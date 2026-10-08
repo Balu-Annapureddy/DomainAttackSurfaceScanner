@@ -210,18 +210,18 @@ export default function InfrastructureMap({
       const locText = [point.city, point.region, point.country].filter(Boolean).join(', ') || 'Approximate Datacenter';
       const asnText = point.asn ? `ASN: ${point.asn}` : '';
       const orgText = point.organization ? `Org: ${point.organization}` : '';
-      const anycastHtml = point.anycastLikely ? `<div style="margin-top: 5px; padding: 4px 6px; background: rgba(59, 130, 246, 0.12); border-left: 2px solid #3b82f6; font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;">${getAnycastNote(point.organization)}</div>` : '';
-      const hubHtml = point.hubColor ? `<div style="margin-top: 5px; padding: 4px 6px; background: rgba(16, 185, 129, 0.1); border-left: 2px solid #10b981; font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;"><strong>Hub Context:</strong> ${point.hubColor}</div>` : '';
+      const anycastHtml = point.anycastLikely ? `<div style="margin-top: 5px; padding: 4px 6px; background: var(--bg-panel-subtle); border: 1px solid var(--border-technical); font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;">${getAnycastNote(point.organization)}</div>` : '';
+      const hubHtml = point.hubColor ? `<div style="margin-top: 5px; padding: 4px 6px; background: var(--bg-panel-subtle); border: 1px solid var(--border-technical); font-size: 10px; color: var(--text-secondary); line-height: 1.35; border-radius: 2px;"><strong>Hub Context:</strong> ${point.hubColor}</div>` : '';
 
       marker.bindPopup(`
-        <div style="font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--bg-panel-elevated); padding: 10px 12px; border: 1px solid var(--border-technical); border-radius: 8px; box-shadow: var(--shadow-card); max-width: 280px;">
-          <div style="color: var(--accent-primary); font-weight: 700; font-size: 13px; margin-bottom: 2px;">IP: ${point.ip}</div>
+        <div style="font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--bg-panel); padding: 10px 12px; border: 1px solid var(--border-technical); border-radius: 2px; max-width: 280px;">
+          <div style="color: var(--accent-primary); font-weight: 700; font-size: 13px; margin-bottom: 2px; font-family: monospace;">IP: ${point.ip}</div>
           <div style="color: var(--text-secondary); margin-bottom: 4px;">${locText}</div>
-          ${asnText ? `<div style="color: #10b981; font-weight: 600; font-size: 11px;">${asnText}</div>` : ''}
+          ${asnText ? `<div style="color: var(--accent-primary); font-weight: 600; font-size: 11px; font-family: monospace;">${asnText}</div>` : ''}
           ${orgText ? `<div style="color: var(--text-muted); font-size: 11px;">${orgText}</div>` : ''}
           ${anycastHtml}
           ${hubHtml}
-          <div style="margin-top: 6px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border-muted); pt-1; font-family: monospace;">[CLICK FOR ASSET DETAILS]</div>
+          <div style="margin-top: 6px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border-technical); padding-top: 4px; font-family: monospace;">[CLICK FOR ASSET DETAILS]</div>
         </div>
       `);
 

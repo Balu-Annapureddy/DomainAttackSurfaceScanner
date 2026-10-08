@@ -58,25 +58,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col">
       <WorkstationNav />
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-[420px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)]">
+        <div className="w-full max-w-[420px] console-panel p-6 sm:p-8 rounded-xs font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)]">
           {/* Header */}
-          <div className="flex items-center gap-2 border-b border-[var(--border-technical)] pb-3 mb-5">
-            <LogIn size={16} className="text-[var(--accent-primary)]" />
-            <h1 className="text-sm font-bold tracking-wider uppercase text-[var(--text-primary)]">
-              OPERATOR AUTHENTICATION
+          <div className="border-b border-[var(--border-technical)] pb-3 mb-5">
+            <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider mb-1 font-mono">
+              <LogIn size={14} />
+              <span>AUTHENTICATION</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)]">
+              Sign in to workstation
             </h1>
           </div>
 
           {isVerifiedSuccess && (
             <div
               role="status"
-              className="mb-4 p-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-start gap-2 text-xs"
+              className="mb-4 p-3 border border-[var(--accent-primary)] bg-[var(--bg-panel-subtle)] text-[var(--text-primary)] rounded-xs flex items-start gap-2 text-xs"
             >
-              <CheckCircle size={14} className="shrink-0 mt-0.5" />
+              <CheckCircle size={14} className="shrink-0 mt-0.5 text-[var(--accent-primary)]" />
               <span>Email verified successfully! You can now log in to access your 50 scans/hr quota allocation.</span>
             </div>
           )}
@@ -84,7 +87,7 @@ export default function LoginPage() {
           {isVerifiedError && (
             <div
               role="alert"
-              className="mb-4 p-3 border border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg flex items-start gap-2 text-xs"
+              className="mb-4 p-3 border border-[var(--sev-medium)] bg-[var(--bg-panel-subtle)] text-[var(--sev-medium)] rounded-xs flex items-start gap-2 text-xs"
             >
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>Verification link is invalid or has expired. You can sign in and request a new verification email.</span>
@@ -94,7 +97,7 @@ export default function LoginPage() {
           {error && (
             <div
               role="alert"
-              className="mb-4 p-3 border border-[#dc2626] dark:border-[#ff4d5e] bg-[#dc2626]/10 dark:bg-[#ff4d5e]/10 text-[#dc2626] dark:text-[#ff4d5e] rounded-lg flex items-start gap-2 text-xs"
+              className="mb-4 p-3 border border-[var(--sev-high)] bg-[var(--bg-panel-subtle)] text-[var(--sev-high)] rounded-xs flex items-start gap-2 text-xs"
             >
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>

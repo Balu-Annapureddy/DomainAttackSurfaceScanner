@@ -196,7 +196,7 @@ export default function ReportPage() {
                   <Shield size={13} />
                   <span>EXTERNAL ATTACK SURFACE SECURITY REPORT</span>
                 </div>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] print:text-slate-900">
+                <h1 className="mt-1 text-2xl sm:text-3xl font-display italic font-normal tracking-tight text-[var(--text-primary)] print:text-slate-900">
                   {scan.domain}
                 </h1>
                 <p className="mt-0.5 text-xs text-[var(--text-secondary)] print:text-slate-600 font-sans">
@@ -428,21 +428,29 @@ export default function ReportPage() {
               </div>
               <div className="divide-y divide-[var(--border-muted)] bg-[var(--bg-panel-inset)] max-h-72 overflow-y-auto">
                 {findings.length === 0 ? (
-                  <div className="p-4 text-center text-emerald-500">
+                  <div className="p-4 text-center text-[var(--accent-primary)] font-mono text-xs">
                     NO HYGIENE ANOMALIES OBSERVED
                   </div>
                 ) : (
                   findings.map((f) => (
-                    <div key={f.id} className="p-2.5 bg-[var(--bg-panel-subtle)] space-y-1">
-                      <div className="flex items-center justify-between">
+                    <div key={f.id} className="p-3 bg-[var(--bg-panel-subtle)] space-y-1">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-[var(--text-primary)]">{f.title}</span>
-                        <span className="text-[10px] text-amber-500 uppercase">[{f.severity}]</span>
+                        <span className={`console-tag text-[10px] uppercase font-mono ${
+                          f.severity.toLowerCase() === 'critical' ? 'console-tag-sev-critical' :
+                          f.severity.toLowerCase() === 'high' ? 'console-tag-sev-high' :
+                          f.severity.toLowerCase() === 'medium' ? 'console-tag-sev-medium' :
+                          f.severity.toLowerCase() === 'low' ? 'console-tag-sev-low' :
+                          'console-tag-sev-info'
+                        }`}>
+                          {f.severity}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-[var(--text-secondary)] font-sans">
+                      <p className="text-[11px] text-[var(--text-secondary)] font-sans leading-relaxed">
                         {f.description}
                       </p>
                       {f.recommendation && (
-                        <div className="text-[10px] text-emerald-500 font-mono">
+                        <div className="text-[10px] text-[var(--text-muted)] font-mono">
                           ACTION: {f.recommendation}
                         </div>
                       )}

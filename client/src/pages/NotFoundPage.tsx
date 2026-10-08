@@ -8,17 +8,17 @@ export default function NotFoundPage() {
       <WorkstationNav />
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md console-panel p-8 text-center space-y-4 shadow-2xl rounded-xl border border-[var(--border-technical)] font-mono">
-          <div className="w-14 h-14 rounded-full bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--border-technical)]">
-            <Compass size={28} />
+        <div className="w-full max-w-md console-panel p-8 text-center space-y-4 rounded-xs border border-[var(--border-technical)] font-mono">
+          <div className="w-12 h-12 rounded-xs bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--border-technical)]">
+            <Compass size={24} />
           </div>
 
           <div className="space-y-1">
             <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent-primary)]">
               404 // RESOURCE NOT LOCATED
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-              ENDPOINT NOT FOUND
+            <h1 className="text-2xl font-display italic font-normal tracking-tight text-[var(--text-primary)]">
+              Endpoint not found
             </h1>
             <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed pt-1">
               The requested workstation path does not exist or may have been repositioned.
@@ -28,7 +28,7 @@ export default function NotFoundPage() {
           <div className="pt-2">
             <Link
               to="/"
-              className="console-btn console-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
+              className="console-btn console-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xs"
             >
               <ArrowLeft size={13} />
               <span>RETURN TO CONSOLE</span>

@@ -20,7 +20,7 @@ export default function CookiePage() {
       toc={TOC}
     >
       {/* Executive Summary Card */}
-      <section id="sec-summary" className="console-panel p-5 space-y-3 scroll-mt-20">
+      <section id="sec-summary" className="console-panel p-5 space-y-3 scroll-mt-20 rounded-xs">
         <div className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5 font-mono">
           <CheckCircle2 size={14} className="text-[var(--accent-primary)]" />
           <span>EXECUTIVE SUMMARY — ZERO TRACKING COOKIES</span>
@@ -29,11 +29,11 @@ export default function CookiePage() {
           DomainAttackSurfaceScanner maintains an aggressive data minimization posture. We use exactly <strong>one</strong> first-party HTTP cookie, which is strictly essential for maintaining authenticated operator sessions. If you use the application as an anonymous user, <strong>zero HTTP cookies</strong> are set.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 font-mono text-[11px]">
-          <div className="console-panel-inset p-3 rounded-lg">
+          <div className="console-panel-inset p-3 rounded-xs">
             <span className="text-[var(--text-secondary)] block text-[10px]">ANONYMOUS SCANNING</span>
             <strong className="text-[var(--accent-primary)]">0 HTTP COOKIES</strong>
           </div>
-          <div className="console-panel-inset p-3 rounded-lg">
+          <div className="console-panel-inset p-3 rounded-xs">
             <span className="text-[var(--text-secondary)] block text-[10px]">REGISTERED OPERATOR</span>
             <strong className="text-[var(--accent-primary)]">1 ESSENTIAL SESSION COOKIE</strong>
           </div>
@@ -41,12 +41,12 @@ export default function CookiePage() {
       </section>
 
       {/* 1. Essential Authentication Cookie */}
-      <section id="sec-essential" className="space-y-3 font-mono scroll-mt-20">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
+      <section id="sec-essential" className="space-y-3 scroll-mt-20">
+        <h2 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
           <Shield size={14} className="text-[var(--accent-primary)]" />
-          <span>1. ESSENTIAL AUTHENTICATION COOKIE</span>
+          <span>1. Essential Authentication Cookie</span>
         </h2>
-        <div className="console-panel p-4 space-y-3 font-sans text-xs text-[var(--text-secondary)] rounded-lg">
+        <div className="console-panel p-4 space-y-3 font-sans text-xs text-[var(--text-secondary)] rounded-xs">
           <p>
             When an operator explicitly registers or logs into an account, the backend issues a single cryptographic session cookie:
           </p>

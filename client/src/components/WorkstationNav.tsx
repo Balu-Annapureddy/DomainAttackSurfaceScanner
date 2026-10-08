@@ -60,73 +60,73 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
 
       <nav
         aria-label="Workstation Top Navigation"
-        className="border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-4 sm:px-6 py-2.5 font-sans text-xs transition-colors duration-150 sticky top-0 z-50 shadow-xs"
+        className="border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-4 sm:px-6 py-2.5 font-sans text-xs transition-colors duration-150 sticky top-0 z-50"
       >
       <div className="mx-auto max-w-7xl flex items-center justify-between gap-3">
         {/* Brand & Workstation Status Identifier */}
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2.5 font-bold tracking-tight text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors group"
+            className="flex items-center gap-2 font-bold tracking-tight text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors group"
           >
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-active-bg)] text-[var(--accent-primary)] flex items-center justify-center border border-[var(--accent-primary)] border-opacity-30 group-hover:scale-105 transition-transform">
-              <Shield size={17} />
+            <div className="w-7 h-7 rounded-xs bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center border border-[var(--border-technical)]">
+              <Shield size={15} />
             </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-sm tracking-tight leading-tight">DAS Scanner</span>
-              <span className="text-[10px] text-[var(--text-muted)] font-mono leading-none">Attack Surface OSINT</span>
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono font-bold text-sm tracking-tight leading-tight">DAS_SCANNER</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-mono leading-none hidden sm:inline">FIELD REPORT</span>
             </div>
           </Link>
           
-          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] border-l border-[var(--border-muted)] pl-3">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-medium">Passive Recon Online</span>
+          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] border-l border-[var(--border-technical)] pl-3">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-teal)]" />
+            <span className="font-mono text-[10px]">PASSIVE RECON ONLINE</span>
           </div>
         </div>
 
         {/* Center / Navigation Links (Desktop) */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-4">
           <Link
             to="/"
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`text-xs transition-colors ${
               isCurrent('/')
-                ? 'text-[var(--accent-primary)] bg-[var(--accent-active-bg)] font-bold shadow-xs'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-subtle)]'
+                ? 'text-[var(--accent-primary)] font-bold'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             Console
           </Link>
           <Link
             to="/history"
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`text-xs transition-colors ${
               isCurrent('/history')
-                ? 'text-[var(--accent-primary)] bg-[var(--accent-active-bg)] font-bold shadow-xs'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-subtle)]'
+                ? 'text-[var(--accent-primary)] font-bold'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
-            History
+            Archive
           </Link>
           {onOpenGlossary && (
             <button
               type="button"
               onClick={() => onOpenGlossary('attack_surface')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-subtle)] cursor-pointer flex items-center gap-1.5 transition-all"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer flex items-center gap-1.5 transition-colors"
             >
-              <BookOpen size={13} className="text-[var(--accent-primary)]" />
-              <span>Field Manual</span>
+              <BookOpen size={12} className="text-[var(--accent-primary)]" />
+              <span>Manual</span>
             </button>
           )}
         </div>
 
         {/* Right Section: Quota, Auth, Theme, & Mobile Hamburger */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quota Badge (Always Visible) */}
+          {/* Quota Badge (Bordered Mono Tag) */}
           {quota && (
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 border text-xs rounded-full shadow-xs ${
+              className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs rounded-xs font-mono ${
                 quota.isRegistered
-                  ? 'border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] text-[var(--text-primary)]'
-                  : 'border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)]'
+                  ? 'border-[var(--border-strong)] bg-[var(--bg-panel-subtle)] text-[var(--text-primary)]'
+                  : 'border-[var(--border-technical)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)]'
               }`}
               title={
                 quota.isRegistered
@@ -134,8 +134,8 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
                   : `Guest Quota: ${quota.used} consumed of ${quota.limit} per hour.`
               }
             >
-              <Activity size={12} className={quota.isRegistered ? 'text-[var(--accent-teal)]' : 'text-amber-500'} />
-              <span className="font-mono text-[11px] font-semibold">
+              <Activity size={11} className={quota.isRegistered ? 'text-[var(--accent-teal)]' : 'text-[var(--sev-medium)]'} />
+              <span className="text-[11px] font-semibold">
                 {quota.used}/{quota.limit}
               </span>
               {!quota.isRegistered && ACCOUNTS_ENABLED && (
@@ -153,14 +153,14 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
           <div className="hidden md:flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-secondary)] truncate max-w-[140px]" title={user.email}>
+                <span className="text-xs text-[var(--text-secondary)] truncate max-w-[140px] font-mono text-[11px]" title={user.email}>
                   <User size={12} className="inline mr-1 text-[var(--accent-primary)]" />
                   {user.email}
                 </span>
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="console-btn py-1 px-2.5 text-xs flex items-center gap-1"
+                  className="console-btn py-0.5 px-2 text-xs flex items-center gap-1"
                   title="Log out of account"
                 >
                   <LogOut size={12} />
@@ -171,14 +171,14 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
               <div className="flex items-center gap-1.5">
                 <Link
                   to="/login"
-                  className="console-btn py-1 px-2.5 text-xs flex items-center gap-1"
+                  className="console-btn py-0.5 px-2 text-xs flex items-center gap-1"
                 >
                   <LogIn size={12} />
                   <span>Login</span>
                 </Link>
                 <Link
                   to="/register"
-                  className="console-btn-primary py-1 px-3 text-xs rounded-lg flex items-center gap-1 font-semibold"
+                  className="console-btn console-btn-primary py-0.5 px-2.5 text-xs rounded-xs flex items-center gap-1 font-semibold"
                 >
                   <UserPlus size={12} />
                   <span>Register</span>

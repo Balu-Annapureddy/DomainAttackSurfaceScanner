@@ -181,7 +181,7 @@ export default function ScanPage() {
             <button
               type="button"
               onClick={toggleGuidedMode}
-              className={`console-btn py-1.5 px-3 text-xs font-semibold rounded-lg ${
+              className={`console-btn py-1.5 px-3 text-xs font-semibold rounded-xs ${
                 isGuidedMode ? 'border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--accent-active-bg)]' : 'text-[var(--text-secondary)]'
               }`}
               title="Toggle guided interpretation vs raw technical telemetry"
@@ -192,18 +192,18 @@ export default function ScanPage() {
 
             <Link
               to={`/report/${encodeURIComponent(scan.scanId)}`}
-              className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold rounded-lg"
+              className="console-btn console-btn-primary py-1.5 px-3.5 text-xs font-bold rounded-xs"
             >
               <FileText size={13} />
               <span>SECURITY REPORT</span>
             </Link>
 
-            <Link to="/history" className="console-btn py-1.5 px-3 text-xs text-[var(--text-secondary)] rounded-lg">
+            <Link to="/history" className="console-btn py-1.5 px-3 text-xs text-[var(--text-secondary)] rounded-xs">
               <Clock3 size={13} />
               <span className="hidden sm:inline">HISTORY</span>
             </Link>
 
-            <Link to="/" className="console-btn console-btn-phosphor py-1.5 px-3 text-xs font-bold rounded-lg">
+            <Link to="/" className="console-btn console-btn-phosphor py-1.5 px-3 text-xs font-bold rounded-xs">
               <RotateCw size={13} />
               <span>NEW SCAN</span>
             </Link>
@@ -221,21 +221,21 @@ export default function ScanPage() {
         />
 
         {/* ─── 00. Narrative Executive Summary Paragraph (A.1) ──────── */}
-        <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+        <div className="bg-[var(--bg-panel)] border border-[var(--border-technical)] rounded-xs p-5 sm:p-6 relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--accent-primary)] uppercase tracking-wider">
                 <span>EXECUTIVE RECONNAISSANCE SUMMARY</span>
                 <span className="console-tag">PASSIVE OSINT</span>
               </div>
-              <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+              <h2 className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)]">
                 Attack Surface Assessment for {scan.domain}
               </h2>
             </div>
             {scan.score !== undefined && scan.score !== null && (
               <div className="sm:text-right shrink-0">
                 <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">HYGIENE SCORE</div>
-                <div className="text-2xl font-black font-mono text-[var(--accent-primary)]">{scan.score}/100</div>
+                <div className="text-3xl font-display italic text-[var(--accent-primary)]">{scan.score}/100</div>
               </div>
             )}
           </div>
@@ -256,7 +256,7 @@ export default function ScanPage() {
                     <span className="text-[10px] text-[var(--text-muted)] font-normal">PLAIN-LANGUAGE SUMMARY</span>
                   </div>
                   {overview.findingsWalkthrough.length === 0 ? (
-                    <p className="text-xs sm:text-sm text-[#16a34a] dark:text-[#2ee59d] font-medium">
+                    <p className="text-xs sm:text-sm text-[var(--accent-primary)] font-medium">
                       No security weaknesses or configuration issues were observed during this scan.
                     </p>
                   ) : (
@@ -264,11 +264,11 @@ export default function ScanPage() {
                       {overview.findingsWalkthrough.map((item) => (
                         <div
                           key={item.id}
-                          className="bg-[var(--bg-panel-inset)] p-3 rounded-lg border border-[var(--border-muted)] text-xs space-y-1"
+                          className="bg-[var(--bg-panel-inset)] p-3 rounded-xs border border-[var(--border-technical)] text-xs space-y-1"
                         >
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-[var(--text-primary)]">{item.title}</span>
-                            <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.2 rounded border bg-[var(--bg-panel)] text-[var(--text-secondary)]">
+                            <span className="console-tag text-[10px]">
                               {item.severity}
                             </span>
                           </div>
@@ -282,8 +282,8 @@ export default function ScanPage() {
                 </div>
 
                 {/* 4: What's good (confirmed positive controls) or plain statement if 0 */}
-                <div className="border-t border-[var(--border-muted)] pt-3.5 space-y-2">
-                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#16a34a] dark:text-[#2ee59d]">
+                <div className="border-t border-[var(--border-technical)] pt-3.5 space-y-2">
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--text-primary)]">
                     CONFIRMED SECURITY CONTROLS ({overview.positiveControls.length})
                   </div>
                   {overview.positiveControls.length === 0 ? (
@@ -294,7 +294,7 @@ export default function ScanPage() {
                     <ul className="space-y-1.5 text-xs text-[var(--text-secondary)]">
                       {overview.positiveControls.map((ctrl, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="text-[#16a34a] dark:text-[#2ee59d] font-bold mt-0.5 shrink-0">✓</span>
+                          <span className="text-[var(--accent-primary)] font-bold mt-0.5 shrink-0">✓</span>
                           <span>{ctrl}</span>
                         </li>
                       ))}
@@ -314,24 +314,24 @@ export default function ScanPage() {
         />
 
         {/* ─── Continuous Reading Anchor Bar ────────────────────────── */}
-        <nav aria-label="Section shortcuts" className="flex items-center gap-2 overflow-x-auto py-2 text-xs font-mono border-b border-[var(--border-muted)] sticky top-0 bg-[var(--bg-canvas)]/95 backdrop-blur-sm z-20">
+        <nav aria-label="Section shortcuts" className="flex items-center gap-2 overflow-x-auto py-2 text-xs font-mono border-b border-[var(--border-technical)] sticky top-0 bg-[var(--bg-canvas)]/95 backdrop-blur-xs z-20">
           <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] shrink-0">INDEX:</span>
-          <a href="#sec-findings" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-findings" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             01. Detailed Findings ({scan.findings?.length ?? 0})
           </a>
-          <a href="#sec-topology" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-topology" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             02. Attack Surface Topology
           </a>
-          <a href="#sec-map" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-map" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             03. Infrastructure Map
           </a>
-          <a href="#sec-chains" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-chains" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             04. Asset Routing Chains
           </a>
-          <a href="#sec-inventory" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-inventory" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             05. Asset Inventory ({scan.assets?.length ?? 0})
           </a>
-          <a href="#sec-telemetry" className="px-2.5 py-1 rounded-md bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-muted)] shrink-0 transition">
+          <a href="#sec-telemetry" className="px-2.5 py-1 rounded-xs bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] border border-[var(--border-technical)] shrink-0 transition">
             06. Technical Telemetry
           </a>
         </nav>

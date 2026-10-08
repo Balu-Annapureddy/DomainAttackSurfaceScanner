@@ -54,25 +54,25 @@ export default function AssetDetailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="asset-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans modal-bottom-sheet"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 font-sans modal-bottom-sheet"
     >
-      <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col console-panel shadow-2xl overflow-hidden rounded-2xl border border-[var(--border-technical)]">
+      <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col console-panel overflow-hidden rounded-xs border border-[var(--border-technical)]">
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-[var(--border-technical)] p-5 bg-[var(--bg-panel-subtle)]">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="console-tag console-tag-cyan text-xs font-bold px-2 py-0.5 rounded-md">
+              <span className="console-tag text-xs font-mono px-2 py-0.5 rounded-xs">
                 {asset.type}
               </span>
               <span className="text-xs text-[var(--text-muted)] font-mono">ID: {asset.id.slice(0, 8)}…</span>
             </div>
-            <h2 id="asset-modal-title" className="text-base font-bold text-[var(--text-primary)] break-all">{asset.value}</h2>
+            <h2 id="asset-modal-title" className="text-lg sm:text-xl font-normal font-display italic text-[var(--text-primary)] break-all">{asset.value}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close asset details"
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] transition cursor-pointer"
+            className="flex items-center justify-center w-8 h-8 rounded-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] transition cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -81,18 +81,18 @@ export default function AssetDetailModal({
         {/* Modal Scrollable Body */}
         <div className="overflow-y-auto p-5 space-y-5 text-sm bg-[var(--bg-panel)]">
           {/* ── Asset Explanation Layer (v2) ───────────────────────── */}
-          <div className="console-panel-inset p-4 space-y-3.5 rounded-xl border border-[var(--border-technical)] bg-[var(--bg-panel-inset)]">
+          <div className="console-panel-inset p-4 space-y-3.5 rounded-xs border border-[var(--border-technical)] bg-[var(--bg-panel-inset)]">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border-muted)] pb-2.5">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent-primary)] flex items-center gap-1.5">
                 <span>[EXPLANATION &amp; CONTEXT]</span>
               </span>
               <div className="flex items-center gap-1.5">
                 {explanation.isHighRisk && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
+                  <span className="px-2 py-0.5 rounded-xs text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
                     HIGH RISK EXPOSURE
                   </span>
                 )}
-                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
+                <span className={`px-2 py-0.5 rounded-xs border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
                   {formatConfidence(explanation.confidence)}
                 </span>
               </div>

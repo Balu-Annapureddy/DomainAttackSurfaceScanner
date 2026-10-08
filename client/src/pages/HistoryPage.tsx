@@ -167,19 +167,19 @@ export default function HistoryPage() {
         {/* Page Header Strip */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--border-technical)] pb-6">
           <div>
-            <div className="flex items-center gap-2 text-xs text-[var(--accent-primary)] font-bold">
+            <div className="flex items-center gap-2 text-xs text-[var(--accent-primary)] font-bold font-mono">
               <Database size={15} />
               <span>RECONNAISSANCE ARCHIVE</span>
               <span>•</span>
               <span className="text-[var(--text-secondary)]">{items.length} Saved Scans</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight mt-1">
+            <h1 className="text-2xl sm:text-3xl font-normal font-display italic text-[var(--text-primary)] mt-1">
               {user ? `Persistent Scan Archive (${user.email})` : 'Local Browser Scan History'}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <Link to="/" className="console-btn-primary py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm">
+            <Link to="/" className="console-btn-primary py-2 px-4 rounded-xs text-xs font-bold flex items-center gap-2">
               <span>+ NEW RECON SCAN</span>
             </Link>
           </div>
@@ -187,10 +187,10 @@ export default function HistoryPage() {
 
         {/* Verification Gating Banner */}
         {user && !user.emailVerified && (
-          <div className="console-panel p-5 bg-amber-500/10 border-l-4 border-l-amber-500 border border-amber-500/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
+          <div className="console-panel p-5 bg-[var(--bg-panel-subtle)] border border-[var(--border-technical)] rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
-                <AlertTriangle size={15} className="text-amber-500" />
+              <div className="flex items-center gap-2 font-bold text-[var(--sev-medium)]">
+                <AlertTriangle size={15} className="text-[var(--sev-medium)]" />
                 <span>Verification Required — Quota Gated</span>
               </div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-2xl">
@@ -198,7 +198,7 @@ export default function HistoryPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Link to="/verify" className="console-btn-primary py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs">
+              <Link to="/verify" className="console-btn-primary py-1.5 px-3 rounded-xs text-xs font-bold flex items-center gap-1.5">
                 <span>VERIFY EMAIL (UNLOCK 50/HR)</span>
                 <ArrowRight size={13} />
               </Link>
@@ -208,7 +208,7 @@ export default function HistoryPage() {
 
         {/* Guest Mode Informational Banner */}
         {!user && (
-          <div className="console-panel p-5 bg-[var(--bg-panel-subtle)] border-l-4 border-l-[var(--accent-primary)] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
+          <div className="console-panel p-5 bg-[var(--bg-panel-subtle)] border border-[var(--border-technical)] rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
             <div className="space-y-1">
               <div className="flex items-center gap-2 font-bold text-[var(--text-primary)]">
                 <User size={15} className="text-[var(--accent-primary)]" />
@@ -219,7 +219,7 @@ export default function HistoryPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Link to="/register" className="console-btn-primary py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs">
+              <Link to="/register" className="console-btn-primary py-1.5 px-3 rounded-xs text-xs font-bold flex items-center gap-1.5">
                 <span>REGISTER FREE</span>
                 <ArrowRight size={13} />
               </Link>
@@ -434,10 +434,10 @@ export default function HistoryPage() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-account-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 modal-bottom-sheet"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 modal-bottom-sheet"
         >
-          <div className="console-panel max-w-lg w-full p-6 space-y-4 border-l-4 border-l-[#ef4444] animate-in fade-in duration-150">
-            <div className="flex items-center gap-2 text-[#ef4444] font-bold text-sm">
+          <div className="console-panel max-w-lg w-full p-6 space-y-4 border border-[var(--sev-critical)] rounded-xs animate-fade-in">
+            <div className="flex items-center gap-2 text-[var(--sev-critical)] font-bold text-sm">
               <AlertCircle size={16} />
               <h2 id="delete-account-title">PERMANENT ACCOUNT &amp; DATA DELETION</h2>
             </div>

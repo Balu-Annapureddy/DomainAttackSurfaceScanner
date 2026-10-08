@@ -47,27 +47,27 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
       role="dialog"
       aria-modal="true"
       aria-labelledby="glossary-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm font-sans modal-bottom-sheet"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 font-sans modal-bottom-sheet"
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col bg-[var(--bg-panel)] border border-[var(--border-technical)] shadow-2xl overflow-hidden rounded-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col bg-[var(--bg-panel)] border border-[var(--border-technical)] overflow-hidden rounded-xs">
         {/* ─── Workstation Dossier Header ─────────────────────────────── */}
         <div className="dossier-header px-5 py-4 border-b border-[var(--border-technical)] bg-[var(--bg-panel-subtle)] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--accent-active-bg)] text-[var(--accent-primary)]">
-              <BookOpen size={16} />
+            <div className="flex items-center justify-center w-7 h-7 rounded-xs bg-[var(--bg-panel)] border border-[var(--border-technical)] text-[var(--accent-primary)]">
+              <BookOpen size={14} />
             </div>
             <div>
-              <h2 id="glossary-modal-title" className="text-sm font-bold text-[var(--text-primary)] tracking-wide">
+              <h2 id="glossary-modal-title" className="text-sm font-normal font-display italic text-[var(--text-primary)] tracking-wide">
                 SECURITY FIELD MANUAL
               </h2>
-              <p className="text-xs text-[var(--text-secondary)]">TECHNICAL LEXICON &amp; OSINT EPISTEMOLOGY</p>
+              <p className="text-xs text-[var(--text-secondary)] font-mono text-[10px]">TECHNICAL LEXICON &amp; OSINT EPISTEMOLOGY</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close glossary modal"
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] transition cursor-pointer"
+            className="flex items-center justify-center w-8 h-8 rounded-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-panel-inset)] transition cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -76,18 +76,18 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
         {/* ─── Body ───────────────────────────────────────────────────── */}
         <div className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-12 text-sm">
           {/* Term List Sidebar (Cols 1-5) */}
-          <div className="flex flex-col border-b border-[var(--border-muted)] md:border-b-0 md:border-r md:col-span-5 bg-[var(--bg-panel-inset)]">
-            <div className="p-3 border-b border-[var(--border-muted)]">
+          <div className="flex flex-col border-b border-[var(--border-technical)] md:border-b-0 md:border-r md:col-span-5 bg-[var(--bg-panel-inset)]">
+            <div className="p-3 border-b border-[var(--border-technical)]">
               <input
                 type="text"
                 placeholder="Search definitions &amp; terms..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="console-input text-xs h-9 px-3 w-full rounded-lg"
+                className="console-input text-xs h-8 px-3 w-full rounded-xs"
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-muted)] max-h-56 md:max-h-[500px]">
+            <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-technical)] max-h-56 md:max-h-[500px]">
               {filtered.map(([key, item]) => {
                 const isSelected = selectedKey === key;
                 return (
@@ -96,13 +96,13 @@ export default function GlossaryModal({ initialTermKey, isOpen, onClose }: Gloss
                     onClick={() => setSelectedKey(key)}
                     className={`w-full text-left p-3.5 transition text-xs cursor-pointer ${
                       isSelected
-                        ? 'bg-[var(--accent-active-bg)] border-l-4 border-l-[var(--accent-primary)] text-[var(--text-primary)] font-semibold'
+                        ? 'bg-[var(--bg-panel)] border-l-2 border-l-[var(--border-strong)] text-[var(--text-primary)] font-semibold'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-[var(--text-primary)] text-sm">{item.term}</span>
-                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--bg-panel-subtle)] text-[var(--text-muted)] border border-[var(--border-muted)]">
+                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-xs bg-[var(--bg-panel-subtle)] text-[var(--text-muted)] border border-[var(--border-technical)]">
                         {item.category}
                       </span>
                     </div>

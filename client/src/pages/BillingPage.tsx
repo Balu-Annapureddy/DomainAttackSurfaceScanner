@@ -27,17 +27,17 @@ export default function BillingPage() {
         <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
           <strong>DomainAttackSurfaceScanner is provided entirely free of charge.</strong> The application currently processes <strong>no financial transactions</strong>, maintains no paid subscriptions, charges no fees, and integrates no payment processors (such as Stripe, PayPal, or merchant banks).
         </p>
-        <div className="console-panel-inset p-3.5 border-l-4 border-l-[var(--accent-primary)] font-mono text-xs text-[var(--text-primary)] rounded-r-lg">
+        <div className="console-panel-inset p-3.5 border border-[var(--border-technical)] font-mono text-xs text-[var(--text-primary)] rounded-xs">
           &ldquo;Because the service currently does not charge fees or process paid transactions, no payment billing or refund process currently applies.&rdquo;
         </div>
       </section>
 
       {/* 1. Free-Tier Quota Model */}
-      <section id="sec-tiers" className="space-y-3 font-mono scroll-mt-20">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
-          <span>1. USAGE QUOTA ALLOCATION (FREE TIERS)</span>
+      <section id="sec-tiers" className="space-y-3 scroll-mt-20">
+        <h2 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
+          <span>1. Usage Quota Allocation (Free Tiers)</span>
         </h2>
-        <div className="console-panel p-4 space-y-3 font-sans text-xs text-[var(--text-secondary)] rounded-lg">
+        <div className="console-panel p-4 space-y-3 font-sans text-xs text-[var(--text-secondary)] rounded-xs">
           <p>
             To protect public external data sources and ensure equitable compute distribution across all users, rate limits are enforced automatically at no monetary cost:
           </p>

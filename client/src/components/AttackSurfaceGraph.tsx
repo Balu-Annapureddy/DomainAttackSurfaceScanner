@@ -290,7 +290,7 @@ export default function AttackSurfaceGraph({
         </div>
       ) : (
       /* ─── Full-Width Canvas Container with Floating Overlay Inspector ─ */
-      <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)] workstation-grid-bg">
+      <div className="relative w-full overflow-hidden bg-[var(--bg-canvas)]">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
           className="h-[680px] sm:h-[760px] w-full select-none transition-transform duration-150"
@@ -413,7 +413,7 @@ export default function AttackSurfaceGraph({
 
         {/* ─── Floating Inspector Panel (Only Visible When a Node is Clicked) ── */}
         {activeAsset && (
-          <div className="absolute top-3 right-3 w-80 max-w-[calc(100%-24px)] bg-[var(--bg-panel)]/95 border border-[var(--accent-primary)] shadow-2xl p-3.5 font-mono text-xs z-20 backdrop-blur-xs rounded-xs">
+          <div className="absolute top-3 right-3 w-80 max-w-[calc(100%-24px)] bg-[var(--bg-panel)] border border-[var(--border-technical)] p-3.5 font-mono text-xs z-20 rounded-xs">
             <div className="flex items-center justify-between pb-2 border-b border-[var(--border-muted)]">
               <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
                 <Info size={13} className="text-[var(--accent-primary)]" />

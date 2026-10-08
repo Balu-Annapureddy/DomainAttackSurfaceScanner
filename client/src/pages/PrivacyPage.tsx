@@ -46,14 +46,14 @@ export default function PrivacyPage() {
 
       {/* Section 1: Classification of Data Processed */}
       <section id="sec-classification" className="space-y-4 scroll-mt-20">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-1.5 border-b border-[var(--border-technical)] pb-2 font-mono">
-          <span className="text-[var(--accent-primary)]">[01]</span>
-          <span>THREE-TIER DATA CLASSIFICATION</span>
+        <h2 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
+          <span className="text-[var(--accent-primary)] font-mono not-italic text-xs font-bold">[01]</span>
+          <span>Three-Tier Data Classification</span>
         </h2>
 
         <div className="space-y-3 font-sans text-xs">
           {/* Category A */}
-          <div className="console-panel p-4 space-y-2 border-l-4 border-l-[var(--accent-primary)]">
+          <div className="console-panel p-4 space-y-2 rounded-xs">
             <div className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)] text-xs">
               <UserCheck size={14} className="text-[var(--accent-primary)]" />
               <span>A. USER-PROVIDED DATA (DATA ABOUT THE OPERATOR)</span>
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
           </div>
 
           {/* Category B */}
-          <div className="console-panel p-4 space-y-2 border-l-4 border-l-[var(--accent-teal)]">
+          <div className="console-panel p-4 space-y-2 rounded-xs">
             <div className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)] text-xs">
               <Server size={14} className="text-[var(--accent-teal)]" />
               <span>B. SCANNER-GENERATED DATA (TARGET INFRASTRUCTURE ONLY)</span>
@@ -100,9 +100,9 @@ export default function PrivacyPage() {
           </div>
 
           {/* Category C */}
-          <div className="console-panel p-4 space-y-2 border-l-4 border-l-amber-500">
+          <div className="console-panel p-4 space-y-2 rounded-xs">
             <div className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)] text-xs">
-              <Lock size={14} className="text-amber-500" />
+              <Lock size={14} className="text-[var(--sev-medium)]" />
               <span>C. TECHNICAL &amp; SECURITY DATA (NETWORK &amp; SESSIONS)</span>
             </div>
             <ul className="list-disc pl-5 space-y-1 font-mono text-[11px] text-[var(--text-secondary)]">

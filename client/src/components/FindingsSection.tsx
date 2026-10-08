@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, ShieldCheck, HelpCircle, ArrowRight } from 'lucide-react';
-import type { Finding, FindingSeverity } from '../../../shared/types';
+import { ChevronDown, ChevronUp, ShieldCheck, ArrowRight } from 'lucide-react';
+import type { Finding } from '../../../shared/types';
 import FindingDetailPanel from './FindingDetailPanel';
 import { formatConfidence, getConfidenceBadgeClass } from '../lib/confidence';
 
@@ -9,36 +9,6 @@ interface FindingsSectionProps {
   onOpenGlossary?: (termKey: string) => void;
   sectionNumber?: string;
 }
-
-const SEVERITY_CONFIG: Record<
-  FindingSeverity,
-  { label: string; borderClass: string; textClass: string; icon: React.ComponentType<{ size?: number; className?: string }> }
-> = {
-  high: {
-    label: 'HIGH',
-    borderClass: 'border-[#dc2626]/40 bg-[#fee2e2]/40 dark:border-[#ef4444]/40 dark:bg-[#ef4444]/15',
-    textClass: 'text-[#dc2626] dark:text-[#ef4444]',
-    icon: AlertCircle,
-  },
-  medium: {
-    label: 'MEDIUM',
-    borderClass: 'border-[#d97706]/40 bg-[#fef3c7]/50 dark:border-[#eab308]/40 dark:bg-[#eab308]/15',
-    textClass: 'text-[#d97706] dark:text-[#eab308]',
-    icon: AlertTriangle,
-  },
-  low: {
-    label: 'LOW',
-    borderClass: 'border-[var(--accent-primary)]/40 bg-[var(--accent-active-bg)]',
-    textClass: 'text-[var(--accent-primary)]',
-    icon: Info,
-  },
-  informational: {
-    label: 'INFO',
-    borderClass: 'border-[var(--border-muted)] bg-[var(--bg-panel-inset)]',
-    textClass: 'text-[var(--text-secondary)]',
-    icon: HelpCircle,
-  },
-};
 
 export default function FindingsSection({
   findings,
@@ -71,12 +41,12 @@ export default function FindingsSection({
   );
 
   return (
-    <div className="console-panel rounded-xl overflow-hidden shadow-sm">
+    <div className="console-panel rounded-xs overflow-hidden">
       {/* ─── Workstation Report Header ─────────────────────────────── */}
       <div className="dossier-header px-4 sm:px-5 py-3.5 flex-col sm:flex-row gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
-          <span className="font-bold tracking-wide text-sm">DETAILED FINDINGS &amp; HYGIENE EVALUATION</span>
+          <span className="font-bold tracking-wide text-sm font-display italic">DETAILED FINDINGS &amp; HYGIENE EVALUATION</span>
           <span className="text-xs text-[var(--text-secondary)] ml-1 font-sans">
             {findings.length} RECORDED SIGNALS (EXPANDED BY DEFAULT)
           </span>
@@ -88,7 +58,7 @@ export default function FindingsSection({
             <button
               type="button"
               onClick={expandAll}
-              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded text-[var(--accent-primary)] hover:bg-[var(--accent-active-bg)] cursor-pointer"
+              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-xs text-[var(--accent-primary)] hover:bg-[var(--accent-active-bg)] cursor-pointer"
               title="Expand all findings"
             >
               EXPAND ALL
@@ -97,7 +67,7 @@ export default function FindingsSection({
             <button
               type="button"
               onClick={collapseAll}
-              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+              className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
               title="Collapse all findings"
             >
               COLLAPSE ALL
@@ -109,10 +79,10 @@ export default function FindingsSection({
               <button
                 key={sev}
                 onClick={() => setSelectedSeverity(sev)}
-                className={`px-2.5 py-1 text-xs font-bold uppercase cursor-pointer border rounded-lg transition ${
+                className={`px-2.5 py-1 text-xs font-bold uppercase cursor-pointer border rounded-xs transition ${
                   selectedSeverity === sev
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-xs'
-                    : 'border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-technical)]'
+                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--accent-btn-text)]'
+                    : 'border-[var(--border-technical)] bg-[var(--bg-panel-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
                 }`}
               >
                 {sev}
@@ -153,8 +123,6 @@ export default function FindingsSection({
         ) : (
           filteredFindings.map((finding) => {
             const isExpanded = !collapsedIds.has(finding.id);
-            const sev = SEVERITY_CONFIG[finding.severity] || SEVERITY_CONFIG.informational;
-            const Icon = sev.icon;
             const analysis = finding.analysis;
             const obsStatus =
               finding.observationStatus ??
@@ -180,39 +148,41 @@ export default function FindingsSection({
               statusLabel = 'NOT APPLICABLE';
             }
 
-            const borderSeverityClass =
+            const sevTagClass =
               finding.severity === 'high'
-                ? 'border-l-4 border-l-[var(--sev-critical)]'
+                ? 'console-tag console-tag-sev-high'
                 : finding.severity === 'medium'
-                ? 'border-l-4 border-l-[var(--sev-medium)]'
-                : 'border-l-4 border-l-[var(--sev-low)]';
+                ? 'console-tag console-tag-sev-medium'
+                : finding.severity === 'low'
+                ? 'console-tag console-tag-sev-low'
+                : 'console-tag console-tag-sev-info';
 
             return (
-              <div key={finding.id} className={`p-4 sm:p-5 bg-[var(--bg-panel)] hover:bg-[var(--bg-panel-subtle)] transition-colors ${borderSeverityClass}`}>
+              <div key={finding.id} className="p-4 sm:p-5 bg-[var(--bg-panel)] hover:bg-[var(--bg-panel-subtle)] transition-colors border-b border-[var(--border-technical)]">
                 <div
                   onClick={() => toggleCollapse(finding.id)}
                   className="cursor-pointer flex items-start justify-between gap-4"
                 >
-                  <div className="space-y-1.5 flex-1">
+                  <div className="space-y-2 flex-1">
+                    {/* Header Row: Severity tag before title + Status / Category / Confidence badges */}
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className={`px-2 py-0.5 border font-bold flex items-center gap-1 rounded-md text-[11px] ${sev.borderClass} ${sev.textClass}`}>
-                        <Icon size={12} />
-                        {sev.label}
+                      <span className={sevTagClass}>
+                        {finding.severity.toUpperCase()}
                       </span>
-                      <span className={`px-2 py-0.5 border font-bold rounded-md text-[11px] ${statusBorder}`}>
+                      <span className={`px-2 py-0.5 border font-mono font-medium rounded-xs text-[11px] ${statusBorder}`}>
                         STATUS: {statusLabel}
                       </span>
                       <span className="text-[var(--text-muted)] text-[11px] font-mono">
                         CATEGORY: {finding.category.toUpperCase()}
                       </span>
-                      <span className={`px-2 py-0.5 border font-bold rounded-md text-[11px] font-mono ${getConfidenceBadgeClass(finding.confidence)}`}>
+                      <span className={`px-2 py-0.5 border font-mono font-medium rounded-xs text-[11px] ${getConfidenceBadgeClass(finding.confidence)}`}>
                         {formatConfidence(finding.confidence)}
                       </span>
                     </div>
 
-                    <div className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
+                    <h3 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] leading-snug">
                       {finding.title}
-                    </div>
+                    </h3>
 
                     <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
                       {finding.description}
@@ -225,7 +195,7 @@ export default function FindingsSection({
                       e.stopPropagation();
                       toggleCollapse(finding.id);
                     }}
-                    className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 rounded-lg transition cursor-pointer"
+                    className="border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 rounded-xs transition cursor-pointer"
                     title={isExpanded ? 'Collapse this finding' : 'Expand full detail'}
                   >
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -234,7 +204,7 @@ export default function FindingsSection({
 
                 {/* ─── Full Technical Detail Rendered Inline by Default ────────── */}
                 {isExpanded && (
-                  <div className="mt-4 bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-4 sm:p-6 space-y-5 text-xs rounded-xl shadow-xs animate-in fade-in duration-200">
+                  <div className="mt-4 bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] p-4 sm:p-6 space-y-5 text-xs rounded-xs animate-fade-in">
                     {/* [01] What is this? */}
                     <div className="space-y-1">
                       <div className="text-[11px] font-mono text-[var(--accent-primary)] uppercase font-bold tracking-wider">

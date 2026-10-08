@@ -33,20 +33,20 @@ export default function LegalPageLayout({
 
       <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
         {/* Masthead */}
-        <header className="border-b border-[var(--border-technical)] pb-6 mb-8 font-mono">
-          <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent-primary)] mb-1 uppercase tracking-wider">
+        <header className="border-b border-[var(--border-technical)] pb-6 mb-8">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--accent-primary)] mb-1 uppercase tracking-wider">
             <Shield size={14} />
             <span>{category}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)] font-sans">
+          <h1 className="text-3xl sm:text-4xl font-normal font-display italic text-[var(--text-primary)] tracking-normal mt-1 mb-2">
             {title}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-secondary)] mt-2">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[var(--text-secondary)] mt-2">
             <span>EFFECTIVE: {effectiveDate}</span>
             <span>&middot;</span>
             <span>LAST UPDATED: {lastUpdated}</span>
             <span>&middot;</span>
-            <span className="console-tag console-tag-cyan text-[10px]">{badge}</span>
+            <span className="console-tag text-[10px]">{badge}</span>
           </div>
         </header>
 
@@ -54,8 +54,8 @@ export default function LegalPageLayout({
         <div className="lg:grid lg:grid-cols-[240px_1fr] gap-8">
           {toc.length > 0 && (
             <aside className="mb-6 lg:mb-0">
-              <div className="sticky top-6 console-panel p-4 space-y-2 text-xs font-mono">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-muted)] pb-2 mb-2">
+              <div className="sticky top-6 console-panel rounded-xs p-4 space-y-2 text-xs font-mono">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-technical)] pb-2 mb-2">
                   <BookOpen size={12} className="text-[var(--accent-primary)]" />
                   <span>TABLE OF CONTENTS</span>
                 </div>
@@ -64,7 +64,7 @@ export default function LegalPageLayout({
                     <a
                       key={item.id}
                       href={`#${item.id}`}
-                      className="px-2 py-1.5 rounded hover:bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] text-[var(--text-secondary)] transition truncate block"
+                      className="px-2 py-1.5 rounded-xs hover:bg-[var(--bg-panel-subtle)] hover:text-[var(--accent-primary)] text-[var(--text-secondary)] transition truncate block"
                     >
                       <span className="text-[var(--text-muted)] mr-1.5 font-mono">{String(idx + 1).padStart(2, '0')}.</span>
                       {item.title}

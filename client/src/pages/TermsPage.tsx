@@ -23,8 +23,8 @@ export default function TermsPage() {
       toc={TOC}
     >
       {/* Critical Authorization Warning Banner */}
-      <div id="sec-authorized" className="bg-[var(--bg-panel-inset)] border-l-4 border-l-amber-500 p-4 text-xs text-[var(--text-primary)] space-y-1 rounded-r-lg scroll-mt-20">
-        <div className="flex items-center gap-2 font-bold text-amber-500 font-mono">
+      <div id="sec-authorized" className="bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] p-4 text-xs text-[var(--text-primary)] space-y-1 rounded-xs scroll-mt-20">
+        <div className="flex items-center gap-2 font-bold text-[var(--sev-medium)] font-mono">
           <AlertTriangle size={15} className="shrink-0" />
           <span>MANDATORY AUTHORIZED SCANNING REQUIREMENT</span>
         </div>
@@ -35,9 +35,9 @@ export default function TermsPage() {
 
       {/* Section 1: Service Description */}
       <section id="sec-service" className="space-y-3 scroll-mt-20">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-1.5 border-b border-[var(--border-technical)] pb-2 font-mono">
-          <span className="text-[var(--accent-primary)]">[01]</span>
-          <span>SERVICE DESCRIPTION AND NATURE OF THE TOOL</span>
+        <h2 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
+          <span className="text-[var(--accent-primary)] font-mono not-italic text-xs font-bold">[01]</span>
+          <span>Service Description and Nature of the Tool</span>
         </h2>
         <div className="space-y-2 text-[var(--text-secondary)] font-sans text-xs leading-relaxed">
           <p>

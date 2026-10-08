@@ -23,12 +23,12 @@ export default function SecurityPage() {
           <span className="text-[var(--accent-primary)]">[01]</span>
           <span>REPORTING A VULNERABILITY IN THIS PROJECT</span>
         </h2>
-        <div className="bg-[var(--bg-panel-subtle)] border border-[var(--border-muted)] p-4 text-xs font-sans text-[var(--text-secondary)] space-y-3 leading-relaxed rounded-lg">
+        <div className="bg-[var(--bg-panel-subtle)] border border-[var(--border-muted)] p-4 text-xs font-sans text-[var(--text-secondary)] space-y-3 leading-relaxed rounded-xs">
           <p>
             If you identify a security vulnerability in DomainAttackSurfaceScanner itself (e.g., an SSRF bypass, denial-of-service vector, or injection flaw), we welcome and appreciate responsible disclosure.
           </p>
-          <div className="bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-3.5 space-y-2 font-mono text-[11px] rounded-lg">
-            <strong className="text-emerald-500 flex items-center gap-1.5">
+          <div className="bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] p-3.5 space-y-2 font-mono text-[11px] rounded-xs">
+            <strong className="text-[var(--accent-teal)] flex items-center gap-1.5">
               <Bug size={14} />
               <span>HOW TO SUBMIT A SECURITY REPORT:</span>
             </strong>
@@ -54,9 +54,9 @@ export default function SecurityPage() {
 
       {/* Section 2: Built-in Architectural Safeguards */}
       <section id="sec-safeguards" className="space-y-3 scroll-mt-20">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-1.5 border-b border-[var(--border-technical)] pb-2 font-mono">
-          <span className="text-[var(--accent-primary)]">[02]</span>
-          <span>ARCHITECTURAL SAFEGUARDS &amp; ABUSE PREVENTION</span>
+        <h2 className="text-base sm:text-lg font-normal font-display italic text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border-technical)] pb-2">
+          <span className="text-[var(--accent-primary)] font-mono not-italic text-xs font-bold">[02]</span>
+          <span>Architectural Safeguards &amp; Abuse Prevention</span>
         </h2>
         <div className="space-y-3 text-xs font-sans text-[var(--text-secondary)] leading-relaxed">
           <p>

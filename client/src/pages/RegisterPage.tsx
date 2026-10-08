@@ -65,29 +65,29 @@ export default function RegisterPage() {
 
   if (registeredEmail) {
     return (
-      <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
+      <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col">
         <WorkstationNav />
 
         <main className="flex-1 flex items-center justify-center p-4">
-          <div className="w-full max-w-[460px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)] text-center">
+          <div className="w-full max-w-[460px] console-panel p-6 sm:p-8 rounded-xs font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)] text-center">
             <div className="space-y-5">
-              <div className="w-14 h-14 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--accent-primary)]/20">
-                <Mail size={32} />
+              <div className="w-12 h-12 rounded-xs bg-[var(--bg-panel-subtle)] text-[var(--accent-primary)] flex items-center justify-center mx-auto border border-[var(--border-technical)]">
+                <Mail size={24} />
               </div>
 
               <div>
                 <span className="text-[11px] font-bold text-[var(--accent-primary)] uppercase tracking-wider block">
                   REGISTRATION COMPLETE
                 </span>
-                <h1 className="text-lg font-extrabold text-[var(--text-primary)] mt-1">
-                  Check Your Inbox
+                <h1 className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)] mt-1">
+                  Check your inbox
                 </h1>
                 <p className="text-xs text-[var(--text-secondary)] font-sans mt-2 leading-relaxed">
                   We sent a verification link to <strong className="text-[var(--text-primary)] font-mono">{registeredEmail}</strong>.
                 </p>
               </div>
 
-              <div className="p-3.5 bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] rounded-lg text-left text-[11px] space-y-1.5 font-sans">
+              <div className="p-3.5 bg-[var(--bg-panel-inset)] border border-[var(--border-technical)] rounded-xs text-left text-[11px] space-y-1.5 font-sans">
                 <div className="font-bold flex items-center gap-1.5 text-[var(--accent-primary)]">
                   <Shield size={14} />
                   <span>UNVERIFIED ACCOUNT STATUS</span>
@@ -100,7 +100,7 @@ export default function RegisterPage() {
               <div className="space-y-3 pt-2">
                 <Link
                   to="/history"
-                  className="console-btn console-btn-primary w-full h-[44px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2"
+                  className="console-btn console-btn-primary w-full h-[40px] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 rounded-xs"
                 >
                   <span>Continue without verifying (5 scans/hr)</span>
                   <ArrowRight size={14} />
@@ -130,21 +130,24 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-panel-subtle)] workstation-grid-bg text-[var(--text-primary)] font-sans flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans flex flex-col">
       <WorkstationNav />
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-[420px] console-panel shadow-2xl p-6 sm:p-8 rounded-xl font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)]">
+        <div className="w-full max-w-[420px] console-panel p-6 sm:p-8 rounded-xs font-mono text-xs border border-[var(--border-technical)] bg-[var(--bg-panel)]">
           {/* Header */}
-          <div className="flex items-center gap-2 border-b border-[var(--border-technical)] pb-3 mb-4">
-            <UserPlus size={16} className="text-[var(--accent-primary)]" />
-            <h1 className="text-sm font-bold tracking-wider uppercase text-[var(--text-primary)]">
-              REGISTER WORKSTATION ACCOUNT
+          <div className="border-b border-[var(--border-technical)] pb-3 mb-4">
+            <div className="flex items-center gap-1.5 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider mb-1 font-mono">
+              <UserPlus size={14} />
+              <span>ACCOUNT CREATION</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)]">
+              Register workstation account
             </h1>
           </div>
 
           {/* Data Minimization Notice */}
-          <div className="mb-4 p-2.5 bg-[var(--bg-panel-subtle)] border border-[var(--border-muted)] rounded-lg text-[11px] text-[var(--text-secondary)] space-y-1">
+          <div className="mb-4 p-2.5 bg-[var(--bg-panel-subtle)] border border-[var(--border-technical)] rounded-xs text-[11px] text-[var(--text-secondary)] space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
               <Lock size={12} className="text-[var(--accent-primary)]" />
               <span>PRIVACY &amp; DATA MINIMIZATION NOTICE</span>
@@ -157,7 +160,7 @@ export default function RegisterPage() {
           {error && (
             <div
               role="alert"
-              className="mb-4 p-3 border border-[#dc2626] dark:border-[#ff4d5e] bg-[#dc2626]/10 dark:bg-[#ff4d5e]/10 text-[#dc2626] dark:text-[#ff4d5e] rounded-lg flex items-start gap-2 text-xs"
+              className="mb-4 p-3 border border-[var(--sev-high)] bg-[var(--bg-panel-subtle)] text-[var(--sev-high)] rounded-xs flex items-start gap-2 text-xs"
             >
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>
@@ -181,11 +184,11 @@ export default function RegisterPage() {
                   if (emailError) setEmailError(null);
                 }}
                 className={`console-input h-10 ${
-                  emailError ? 'border-[#dc2626] focus:border-[#dc2626] ring-1 ring-[#dc2626]' : ''
+                  emailError ? 'border-[var(--sev-high)] focus:border-[var(--sev-high)] ring-1 ring-[var(--sev-high)]' : ''
                 }`}
               />
               {emailError && (
-                <span className="text-[10px] text-[#dc2626] dark:text-[#ff4d5e] mt-1 block font-mono">
+                <span className="text-[10px] text-[var(--sev-high)] mt-1 block font-mono">
                   {emailError}
                 </span>
               )}
@@ -208,7 +211,7 @@ export default function RegisterPage() {
                     if (passwordError) setPasswordError(null);
                   }}
                   className={`console-input h-10 pr-10 ${
-                    passwordError ? 'border-[#dc2626] focus:border-[#dc2626] ring-1 ring-[#dc2626]' : ''
+                    passwordError ? 'border-[var(--sev-high)] focus:border-[var(--sev-high)] ring-1 ring-[var(--sev-high)]' : ''
                   }`}
                 />
                 <button
@@ -221,7 +224,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {passwordError && (
-                <span className="text-[10px] text-[#dc2626] dark:text-[#ff4d5e] mt-1 block font-mono">
+                <span className="text-[10px] text-[var(--sev-high)] mt-1 block font-mono">
                   {passwordError}
                 </span>
               )}
@@ -244,7 +247,7 @@ export default function RegisterPage() {
                     if (confirmPasswordError) setConfirmPasswordError(null);
                   }}
                   className={`console-input h-10 pr-10 ${
-                    confirmPasswordError ? 'border-[#dc2626] focus:border-[#dc2626] ring-1 ring-[#dc2626]' : ''
+                    confirmPasswordError ? 'border-[var(--sev-high)] focus:border-[var(--sev-high)] ring-1 ring-[var(--sev-high)]' : ''
                   }`}
                 />
                 <button
@@ -257,7 +260,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {confirmPasswordError && (
-                <span className="text-[10px] text-[#dc2626] dark:text-[#ff4d5e] mt-1 block font-mono">
+                <span className="text-[10px] text-[var(--sev-high)] mt-1 block font-mono">
                   {confirmPasswordError}
                 </span>
               )}
@@ -266,7 +269,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="console-btn console-btn-primary w-full h-[44px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer mt-2"
+              className="console-btn console-btn-primary w-full h-[44px] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer mt-2 rounded-xs"
             >
               {loading ? (
                 <>
@@ -293,11 +296,11 @@ export default function RegisterPage() {
               <span>INSTANT OPERATOR PRIVILEGES</span>
             </div>
             <div className="flex items-center gap-1.5 text-[10px]">
-              <CheckCircle size={11} className="text-[var(--accent-teal)] shrink-0" />
+              <CheckCircle size={11} className="text-[var(--accent-primary)] shrink-0" />
               <span>50 scans/hour quota allocation</span>
             </div>
             <div className="flex items-center gap-1.5 text-[10px]">
-              <CheckCircle size={11} className="text-[var(--accent-teal)] shrink-0" />
+              <CheckCircle size={11} className="text-[var(--accent-primary)] shrink-0" />
               <span>Persistent cloud scan history &amp; comparison</span>
             </div>
           </div>

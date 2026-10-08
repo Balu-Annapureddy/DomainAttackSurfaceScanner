@@ -41,12 +41,12 @@ export default function AssetsInventoryTable({
   }, [assets]);
 
   return (
-    <div className="console-panel rounded-xl overflow-hidden shadow-sm">
+    <div className="console-panel rounded-xs overflow-hidden">
       {/* ─── Workstation Dossier Header ─────────────────────────────── */}
       <div className="dossier-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5">
         <div className="flex items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
-          <span className="font-bold tracking-wide">ASSET INVENTORY</span>
+          <span className="font-bold tracking-wide font-display italic text-sm">ASSET INVENTORY</span>
           <span className="text-xs text-[var(--text-secondary)] font-mono ml-2">
             {filteredAssets.length} ENTITIES
           </span>
@@ -64,11 +64,11 @@ export default function AssetsInventoryTable({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-9 w-full sm:w-56 border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-lg shadow-inner"
+              className="h-8 w-full sm:w-56 border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--border-strong)] rounded-xs"
             />
           </div>
 
-          <div className="flex items-center border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] px-2.5 h-9 rounded-lg shadow-inner">
+          <div className="flex items-center border border-[var(--border-technical)] bg-[var(--bg-panel-inset)] px-2.5 h-8 rounded-xs">
             <Filter size={13} className="text-[var(--text-muted)] mr-1.5" />
             <select
               value={typeFilter}
@@ -92,7 +92,7 @@ export default function AssetsInventoryTable({
       {/* ─── Desktop View: Sticky Header + Expandable Rows ─────── */}
       <div className="hidden md:block overflow-x-auto max-h-[640px] overflow-y-auto">
         <table className="console-table w-full">
-          <thead className="sticky top-0 z-10 bg-[var(--bg-panel-subtle)] backdrop-blur-xs border-b border-[var(--border-technical)]">
+          <thead className="sticky top-0 z-10 bg-[var(--bg-panel-subtle)] border-t-2 border-t-[var(--border-strong)] border-b border-[var(--border-technical)]">
             <tr>
               <th className="w-10"></th>
               <th className="w-32">TYPE</th>
@@ -110,7 +110,7 @@ export default function AssetsInventoryTable({
                 </td>
               </tr>
             ) : (
-              paginatedAssets.map((asset, idx) => {
+              paginatedAssets.map((asset) => {
                 const isGeo = asset.type === 'GEOLOCATION';
                 const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
                 const statusClass = isGeo
@@ -127,9 +127,9 @@ export default function AssetsInventoryTable({
                     <tr
                       key={asset.id}
                       onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
-                      className={`cursor-pointer transition-colors hover:bg-[var(--accent-active-bg)] ${
-                        idx % 2 === 1 ? 'bg-[var(--bg-panel-subtle)]/40' : ''
-                      } ${isExpanded ? 'bg-[var(--accent-active-bg)]/60' : ''}`}
+                      className={`cursor-pointer transition-colors hover:bg-[var(--bg-panel-subtle)] border-b border-[var(--border-technical)] ${
+                        isExpanded ? 'bg-[var(--bg-panel-subtle)]' : ''
+                      }`}
                     >
                       <td className="text-center pl-3 pr-1">
                         <button
@@ -140,8 +140,8 @@ export default function AssetsInventoryTable({
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       </td>
-                      <td>
-                        <span className="console-tag console-tag-phosphor">
+                      <td className="font-mono text-xs">
+                        <span className="console-tag">
                           {asset.type}
                         </span>
                       </td>
@@ -151,11 +151,11 @@ export default function AssetsInventoryTable({
                         </span>
                       </td>
                       <td>
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                        <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-xs border ${statusClass}`}>
                           {statusLabel}
                         </span>
                       </td>
-                      <td className="text-[var(--text-secondary)] text-xs truncate max-w-xs lg:max-w-sm">
+                      <td className="text-[var(--text-secondary)] font-mono text-xs truncate max-w-xs lg:max-w-sm">
                         {sources}
                       </td>
                       <td className="text-right">
@@ -177,7 +177,7 @@ export default function AssetsInventoryTable({
                     {isExpanded && (
                       <tr key={`${asset.id}-expanded`} className="bg-[var(--bg-panel-inset)] border-b border-[var(--border-technical)]">
                         <td colSpan={6} className="p-4 sm:p-5">
-                          <div className="space-y-3.5 bg-[var(--bg-panel)] p-4 rounded-xl border border-[var(--border-technical)] shadow-sm">
+                          <div className="space-y-3.5 bg-[var(--bg-panel)] p-4 rounded-xs border border-[var(--border-technical)]">
                             <div className="flex items-center justify-between gap-2 border-b border-[var(--border-muted)] pb-2.5">
                               <span className="font-mono text-xs font-bold text-[var(--accent-primary)] flex items-center gap-1.5">
                                 <Info size={13} />
@@ -185,11 +185,11 @@ export default function AssetsInventoryTable({
                               </span>
                               <div className="flex items-center gap-2">
                                 {explanation.isHighRisk && (
-                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
+                                  <span className="px-2 py-0.5 rounded-xs text-[10px] font-bold font-mono bg-red-500/10 text-red-500 border border-red-500/30">
                                     HIGH RISK
                                   </span>
                                 )}
-                                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
+                                <span className={`px-2 py-0.5 rounded-xs border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
                                   {formatConfidence(explanation.confidence)}
                                 </span>
                               </div>
@@ -227,7 +227,7 @@ export default function AssetsInventoryTable({
                             {explanation.recommendedAction && (
                               <div className="pt-2.5 border-t border-[var(--border-muted)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                                 <div className="leading-relaxed">
-                                  <span className="font-mono text-[10px] uppercase font-bold text-[#16a34a] dark:text-[#2ee59d] mr-1.5">
+                                  <span className="font-mono text-[10px] uppercase font-bold text-[#16a34a] dark:text-[#52B788] mr-1.5">
                                     DEFENSIVE ACTION:
                                   </span>
                                   <span className="text-[var(--text-primary)] font-medium">
@@ -240,7 +240,7 @@ export default function AssetsInventoryTable({
                                     e.stopPropagation();
                                     onSelectAsset?.(asset);
                                   }}
-                                  className="console-btn py-1 px-3 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1 cursor-pointer"
+                                  className="console-btn py-1 px-3 text-xs font-semibold rounded-xs shrink-0 flex items-center gap-1 cursor-pointer"
                                 >
                                   <span>TOPOLOGY MODAL</span>
                                   <ArrowUpRight size={12} />
@@ -289,17 +289,17 @@ export default function AssetsInventoryTable({
                   onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="console-tag console-tag-phosphor">
+                    <span className="console-tag">
                       {asset.type}
                     </span>
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                    <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-xs border ${statusClass}`}>
                       {statusLabel}
                     </span>
                   </div>
                   <button
                     type="button"
                     aria-label="Toggle explanation"
-                    className="text-[var(--text-muted)] p-1"
+                    className="text-[var(--text-muted)] p-1 cursor-pointer"
                   >
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
@@ -315,7 +315,7 @@ export default function AssetsInventoryTable({
 
                 {/* Evidence source & inspect button */}
                 <div className="flex items-center justify-between pt-1 border-t border-[var(--border-muted)] text-xs">
-                  <span className="text-[var(--text-secondary)] text-[11px] truncate max-w-[200px]">
+                  <span className="text-[var(--text-secondary)] font-mono text-[11px] truncate max-w-[200px]">
                     {sources}
                   </span>
                   <button
@@ -333,7 +333,7 @@ export default function AssetsInventoryTable({
 
                 {/* Mobile Inline Explanation */}
                 {isExpanded && (
-                  <div className="pt-3 space-y-2.5 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-3 rounded-lg text-xs">
+                  <div className="pt-3 space-y-2.5 border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] p-3 rounded-xs text-xs">
                     <div className="space-y-0.5">
                       <span className="font-mono text-[10px] uppercase font-bold text-[var(--text-muted)] block">
                         WHAT IS THIS
