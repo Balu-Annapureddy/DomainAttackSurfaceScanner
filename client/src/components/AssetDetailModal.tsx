@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Asset, Relationship } from '../../../shared/types';
 import { explainAsset } from '../../../shared/assetExplanation';
+import { formatConfidence, getConfidenceBadgeClass } from '../lib/confidence';
 
 interface AssetDetailModalProps {
   asset: Asset | null;
@@ -91,8 +92,8 @@ export default function AssetDetailModal({
                     HIGH RISK EXPOSURE
                   </span>
                 )}
-                <span className="console-tag text-[10px] font-bold px-2 py-0.5 rounded-md">
-                  {explanation.confidence.toUpperCase()}_CONFIDENCE
+                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
+                  {formatConfidence(explanation.confidence)}
                 </span>
               </div>
             </div>
@@ -132,6 +133,19 @@ export default function AssetDetailModal({
                 <p className="text-xs text-[var(--text-primary)] leading-relaxed">
                   {explanation.recommendedAction}
                 </p>
+              </div>
+            )}
+
+            {asset.type === 'BREACH_EXPOSURE' && (
+              <div className="pt-2 border-t border-[var(--border-muted)]">
+                <a
+                  href="https://haveibeenpwned.com/DomainSearch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono font-semibold text-[var(--accent-primary)] hover:underline inline-flex items-center gap-1"
+                >
+                  Check this yourself →
+                </a>
               </div>
             )}
           </div>
@@ -215,8 +229,8 @@ export default function AssetDetailModal({
                 <div key={idx} className="console-panel p-3.5 space-y-1.5 text-xs rounded-xl border border-[var(--border-muted)] shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[var(--accent-primary)] font-bold text-xs">{ev.source}</span>
-                    <span className="console-tag text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                      {ev.confidence.toUpperCase()}_CONFIDENCE
+                    <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(ev.confidence)}`}>
+                      {formatConfidence(ev.confidence)}
                     </span>
                   </div>
                   <p className="text-[var(--text-secondary)] text-xs leading-relaxed">{ev.description}</p>

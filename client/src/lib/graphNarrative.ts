@@ -1,9 +1,19 @@
 import type { Asset, Relationship } from '../../../shared/types';
-import { explainAsset } from '../../../shared/assetExplanation';
+
+function canonicalAsn(val: string): string {
+  const match = val.trim().match(/^(?:AS)?(\d+)/i);
+  return match ? `AS${match[1]}` : val.trim();
+}
 
 /**
  * Generates an analytical text narrative walking through the assets and relationships
  * represented in the attack surface topology graph.
+ *
+ * Plain-language rules applied:
+ * - One idea per sentence.
+ * - Inline gloss for acronyms/technical terms on first appearance.
+ * - "This means..." framing.
+ * - No unevidenced marketing jargon ("DDoS resilience", "hybrid infrastructure footprint").
  */
 export function generateGraphNarrative(assets: Asset[], relationships: Relationship[]): string {
   if (!assets || assets.length === 0) {
@@ -45,12 +55,14 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
     parts.push(`${mailServers.length} mail exchanger${mailServers.length > 1 ? 's' : ''}`);
   }
   if (asns.length > 0) {
-    const asnNames = asns.slice(0, 2).map((a) => a.value).join(', ');
-    parts.push(`${asns.length} autonomous system${asns.length > 1 ? 's' : ''} (${asnNames})`);
+    const uniqueAsnList = Array.from(new Set(asns.map((a) => canonicalAsn(a.value))));
+    const asnNames = uniqueAsnList.slice(0, 2).join(', ');
+    parts.push(`${uniqueAsnList.length} autonomous system${uniqueAsnList.length > 1 ? 's' : ''} (${asnNames})`);
   }
   if (orgs.length > 0) {
-    const orgNames = orgs.slice(0, 2).map((o) => o.value).join(', ');
-    parts.push(`${orgs.length} owning organization${orgs.length > 1 ? 's' : ''} (${orgNames})`);
+    const uniqueOrgList = Array.from(new Set(orgs.map((o) => o.value.trim())));
+    const orgNames = uniqueOrgList.slice(0, 2).join(', ');
+    parts.push(`${uniqueOrgList.length} owning organization${uniqueOrgList.length > 1 ? 's' : ''} (${orgNames})`);
   }
   if (cloudStorage.length > 0) {
     parts.push(`${cloudStorage.length} cloud storage namespace${cloudStorage.length > 1 ? 's' : ''}`);
@@ -59,27 +71,27 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
     parts.push(`${vulns.length} correlated vulnerability record${vulns.length > 1 ? 's' : ''}`);
   }
 
-  let narrative = `This scan identified ${assets.length} connected assets and ${relationships.length} operational relationships across the public perimeter: ${parts.join(', ')}.`;
+  let narrative = `This scan discovered ${assets.length} connected assets and ${relationships.length} operational relationships across this domain's perimeter: ${parts.join(', ')}.`;
 
   // Network consolidation vs multi-provider distribution analysis
   if (ips.length > 0) {
-    const uniqueAsns = Array.from(new Set(asns.map((a) => a.value)));
-    const uniqueOrgs = Array.from(new Set(orgs.map((o) => o.value)));
+    const uniqueAsns = Array.from(new Set(asns.map((a) => canonicalAsn(a.value))));
+    const uniqueOrgs = Array.from(new Set(orgs.map((o) => o.value.trim())));
 
     if (uniqueAsns.length <= 1 && uniqueOrgs.length <= 1) {
-      const providerName = uniqueOrgs[0] || uniqueAsns[0] || 'a single network provider';
-      narrative += ` All resolved IP addresses route to the same Autonomous System (${uniqueAsns[0] || 'AS'}), indicating this domain's perimeter is consolidated under ${providerName} rather than fragmented across multiple independent hosting facilities.`;
+      const providerName = uniqueOrgs[0] || (uniqueAsns[0] ? `autonomous system ${uniqueAsns[0]}` : 'a single network provider');
+      narrative += ` All of this domain's infrastructure is run by a single provider, ${providerName}. This means its internet traffic is routed through one central network rather than spread across different hosting companies.`;
     } else {
-      narrative += ` Resolved host endpoints span ${uniqueAsns.length} autonomous systems and ${uniqueOrgs.length} operating organizations, demonstrating a distributed multi-cloud or hybrid infrastructure footprint.`;
+      narrative += ` Resolved host endpoints span ${uniqueAsns.length} autonomous systems and ${uniqueOrgs.length} operating organizations. This demonstrates a multi-cloud or hybrid infrastructure footprint, with servers hosted by different providers.`;
     }
   }
 
   // Authoritative routing & DNS context
   if (nameservers.length > 0) {
-    const primaryNs = nameservers[0];
-    const nsExplanation = primaryNs ? explainAsset(primaryNs) : null;
-    if (nsExplanation && nameservers.length >= 2) {
-      narrative += ` Authoritative zone control is split across ${nameservers.length} redundant nameservers for continuous availability and DDoS resilience.`;
+    if (nameservers.length >= 2) {
+      narrative += ` Two separate servers manage this domain's DNS (the Domain Name System that translates domain names into IP addresses) — if one goes down, the other keeps it working.`;
+    } else {
+      narrative += ` A single server manages this domain's DNS (the Domain Name System that translates domain names into IP addresses). This means there is no backup nameserver if that server goes down.`;
     }
   }
 

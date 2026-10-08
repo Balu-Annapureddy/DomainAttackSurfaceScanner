@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, Filter, ChevronLeft, ChevronRight, ArrowUpRight, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import type { Asset } from '../../../shared/types';
 import { explainAsset } from '../../../shared/assetExplanation';
+import { formatConfidence, getConfidenceBadgeClass } from '../lib/confidence';
 
 interface AssetsInventoryTableProps {
   assets: Asset[];
@@ -188,8 +189,8 @@ export default function AssetsInventoryTable({
                                     HIGH RISK
                                   </span>
                                 )}
-                                <span className="console-tag text-[10px] font-bold px-2 py-0.5 rounded-md">
-                                  {explanation.confidence.toUpperCase()}_CONFIDENCE
+                                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(explanation.confidence)}`}>
+                                  {formatConfidence(explanation.confidence)}
                                 </span>
                               </div>
                             </div>

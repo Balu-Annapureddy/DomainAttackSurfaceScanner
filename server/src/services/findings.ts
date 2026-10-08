@@ -49,34 +49,34 @@ function finding(
 
 const HEADER_EXPLANATIONS: Record<string, { purpose: string; risk: string; advice: string }> = {
   'content-security-policy': {
-    purpose: 'Restricts the resources (scripts, images, styles) that the browser is permitted to load.',
-    risk: 'Without CSP, the site lacks a secondary defense layer against cross-site scripting (XSS) and content injection.',
-    advice: 'Define a Content-Security-Policy that restricts script origins and object loading.',
+    purpose: 'Controls which external resources (such as scripts, images, and fonts) the browser is permitted to load.',
+    risk: 'Without CSP (Content-Security-Policy), the site lacks a backup defense against cross-site scripting (XSS, where malicious scripts run in visitors\' browsers). This means injected scripts execute unrestricted.',
+    advice: 'Add a Content-Security-Policy header restricting script sources to trusted origins.',
   },
   'strict-transport-security': {
-    purpose: 'Instructs browsers to always use HTTPS, preventing man-in-the-middle SSL stripping.',
-    risk: 'Without HSTS, unencrypted HTTP requests can be intercepted before being redirected.',
-    advice: 'Enable Strict-Transport-Security (HSTS) with a sensible max-age once HTTPS stability is confirmed.',
+    purpose: 'Instructs web browsers to always connect to this domain using encrypted HTTPS.',
+    risk: 'Without HSTS (HTTP Strict-Transport-Security), initial web connections can travel in plaintext. This means attackers on the same network can intercept or downgrade traffic.',
+    advice: 'Enable Strict-Transport-Security (HSTS) with a max-age of at least one year once HTTPS is verified.',
   },
   'x-frame-options': {
-    purpose: 'Determines whether the page may be embedded within frames, iframes, or objects.',
-    risk: 'Without clickjacking protection, pages could be embedded inside deceptive third-party frames.',
-    advice: 'Configure X-Frame-Options to DENY or SAMEORIGIN (or use CSP frame-ancestors).',
+    purpose: 'Controls whether this webpage can be embedded inside invisible frames on other websites.',
+    risk: 'Without X-Frame-Options, attackers can embed this page inside a hidden frame. This means visitors can be tricked into clicking hidden buttons (clickjacking).',
+    advice: 'Configure X-Frame-Options to DENY or SAMEORIGIN.',
   },
   'x-content-type-options': {
-    purpose: 'Prevents browsers from MIME-sniffing responses away from the declared Content-Type.',
-    risk: 'MIME-type sniffing can lead to arbitrary script execution from uploaded non-executable files.',
-    advice: 'Configure X-Content-Type-Options: nosniff across all web server responses.',
+    purpose: 'Prevents web browsers from guessing file types when downloading content.',
+    risk: 'Without this header, browsers might interpret uploaded files as executable scripts. This means attackers could upload non-executable files that execute as malicious code.',
+    advice: 'Add X-Content-Type-Options: nosniff across all web server responses.',
   },
   'referrer-policy': {
-    purpose: 'Governs how much referrer metadata is transmitted to external destinations.',
-    risk: 'Sensitive path parameters or internal URL tokens may leak to external referrers.',
-    advice: 'Set Referrer-Policy to strict-origin-when-cross-origin or no-referrer.',
+    purpose: 'Governs how much address information is passed when visitors click external links.',
+    risk: 'Without a Referrer-Policy, internal webpage addresses and parameters leak to destination sites. This means sensitive internal tokens or user parameters can be exposed.',
+    advice: 'Set Referrer-Policy to strict-origin-when-cross-origin.',
   },
   'permissions-policy': {
-    purpose: 'Selectively enables or disables browser features and APIs.',
-    risk: 'Third-party components could potentially access browser APIs if not restricted.',
-    advice: 'Add a Permissions-Policy header restricting camera, microphone, and geolocation.',
+    purpose: 'Controls whether webpage components can access device features like the camera or microphone.',
+    risk: 'Without Permissions-Policy, embedded third-party scripts could access browser features. This means unauthorized components might request device permissions.',
+    advice: 'Add a Permissions-Policy header restricting camera, microphone, and geolocation access.',
   },
 };
 
@@ -1355,6 +1355,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
           remediation: `1. Mandate phishing-resistant Multi-Factor Authentication (MFA) across all corporate accounts.\n2. Disallow common passwords and check new passwords against known breached password lists.`,
           safeValidation: `Review identity provider (IdP) logs for anomalous login attempts from unusual geographic regions.`,
           references: [
+            'https://haveibeenpwned.com/DomainSearch',
             'https://haveibeenpwned.com/',
             'https://csrc.nist.gov/publications/detail/sp/800-63b/final',
           ],

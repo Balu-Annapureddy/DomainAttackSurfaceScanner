@@ -65,7 +65,8 @@ describe('ipIntelligence service', () => {
     expect(result[0]!.city).toBe('San Francisco');
     expect(result[0]!.latitude).toBe(37.7749);
     expect(result[0]!.longitude).toBe(-122.4194);
-    expect(result[0]!.asn).toBe('AS13335 Cloudflare, Inc.');
+    expect(result[0]!.asn).toBe('AS13335');
+    expect(result[0]!.asNumber).toBe('AS13335');
     expect(result[0]!.organization).toBe('Cloudflare, Inc.');
     expect(result[0]!.anycastLikely).toBe(true);
   });

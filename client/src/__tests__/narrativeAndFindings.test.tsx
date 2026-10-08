@@ -103,11 +103,10 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       };
 
       const narrative = generateNarrativeSummary(scan);
-      expect(narrative).toContain('A passive external security evaluation of example.com');
-      expect(narrative).toContain('7 connected attack surface assets');
+      expect(narrative).toContain('This scan evaluated the public attack surface of example.com');
       expect(narrative).toContain('external hygiene score of 95/100');
-      expect(narrative).toContain('hardened configuration posture');
-      expect(narrative).toContain('contemporary public security best practices');
+      expect(narrative).toContain('falls in the strong range');
+      expect(narrative).toContain('No security weaknesses or configuration issues were observed during this scan.');
     });
 
     it('generates alert prose for domains with high-severity findings and poor scores', () => {
@@ -127,9 +126,10 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       };
 
       const narrative = generateNarrativeSummary(scan);
-      expect(narrative).toContain('hygiene score of 40/100');
-      expect(narrative).toContain('1 high-severity condition');
-      expect(narrative).toContain('“Exposed Database Management Port”');
+      expect(narrative).toContain('external hygiene score of 40/100');
+      expect(narrative).toContain('falls in the weak range');
+      expect(narrative).toContain('Exposed Database Management Port');
+      expect(narrative).toContain('Missing Content-Security-Policy (CSP)');
     });
 
     it('handles edge cases gracefully when assets and findings are empty', () => {
@@ -150,7 +150,9 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
 
       const narrative = generateNarrativeSummary(emptyScan);
       expect(narrative).toBeDefined();
-      expect(narrative).toContain('empty.com mapped 0 connected attack surface assets.');
+      expect(narrative).toContain('This scan evaluated the public attack surface of empty.com');
+      expect(narrative).toContain('No security weaknesses or configuration issues were observed during this scan.');
+      expect(narrative).toContain('No confirmed defensive security controls');
     });
   });
 
@@ -160,8 +162,25 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       expect(narrative).toContain('1 apex domain');
       expect(narrative).toContain('2 IP addresses (1 IPv4, 1 IPv6)');
       expect(narrative).toContain('a.iana-servers.net');
-      expect(narrative).toContain('consolidated under Edgecast Inc.');
+      expect(narrative).toContain("All of this domain's infrastructure is run by a single provider, Edgecast Inc.");
       expect(narrative).toContain('Edgecast Inc.');
+      expect(narrative.toLowerCase()).not.toContain('multi-cloud');
+      expect(narrative.toLowerCase()).not.toContain('hybrid');
+    });
+
+    it('scans a single-provider domain and explicitly asserts the narrative does NOT contain multi-cloud or hybrid', () => {
+      const singleProviderAssets: Asset[] = [
+        { id: '1', type: 'DOMAIN', value: 'cloudflare-only.com', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '2', type: 'IP', value: '104.21.5.1', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '3', type: 'IP', value: '172.67.140.2', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '4', type: 'ASN', value: 'AS13335', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '5', type: 'ASN', value: 'AS13335 Cloudflare, Inc.', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '6', type: 'ORGANIZATION', value: 'Cloudflare, Inc.', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+      ];
+      const narrative = generateGraphNarrative(singleProviderAssets, []);
+      expect(narrative).toContain("All of this domain's infrastructure is run by a single provider, Cloudflare, Inc.");
+      expect(narrative.toLowerCase()).not.toContain('multi-cloud');
+      expect(narrative.toLowerCase()).not.toContain('hybrid');
     });
 
     it('identifies multi-cloud distributed network when multiple organizations are involved', () => {
@@ -171,7 +190,7 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         { id: '9', type: 'ASN', value: 'AS13335', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
       ];
       const narrative = generateGraphNarrative(multiAssets, mockRelationships);
-      expect(narrative).toContain('distributed multi-cloud or hybrid infrastructure footprint');
+      expect(narrative).toContain('multi-cloud or hybrid infrastructure footprint');
     });
 
     it('handles empty asset array cleanly', () => {

@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { Finding, FindingSeverity } from '../../../shared/types';
+import { formatConfidence, getConfidenceBadgeClass } from '../lib/confidence';
 
 interface FindingDetailPanelProps {
   finding: Finding | null;
@@ -98,8 +99,8 @@ export default function FindingDetailPanel({ finding, onClose, onOpenGlossary }:
               <span className="text-xs font-mono text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-0.5 rounded-md bg-[var(--bg-panel-inset)]">
                 CATEGORY: {finding.category.toUpperCase()}
               </span>
-              <span className="text-xs font-mono text-[var(--accent-primary)] border border-[var(--border-muted)] px-2 py-0.5 rounded-md bg-[var(--bg-panel-inset)]">
-                CONFIDENCE: {(finding.confidence || 'high').toUpperCase()}
+              <span className={`text-xs font-mono font-bold border px-2 py-0.5 rounded-md ${getConfidenceBadgeClass(finding.confidence)}`}>
+                {formatConfidence(finding.confidence)}
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-black text-[var(--text-primary)] leading-snug">
@@ -164,7 +165,9 @@ export default function FindingDetailPanel({ finding, onClose, onOpenGlossary }:
                   >
                     <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                       <span className="font-bold text-[var(--accent-primary)]">{ev.source}</span>
-                      <span>{ev.confidence?.toUpperCase()}_CONFIDENCE</span>
+                      <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(ev.confidence)}`}>
+                        {formatConfidence(ev.confidence)}
+                      </span>
                     </div>
                     <div className="text-[var(--text-primary)]">{ev.description}</div>
                     {ev.observedAt && (

@@ -120,32 +120,32 @@ export default function AssetChainVisualizer({
       {/* ─── One-Time Plain-Language Chain Architecture Explainer (A.6) ── */}
       <div className="bg-[var(--bg-panel-subtle)] border-b border-[var(--border-technical)] px-4 sm:px-6 py-4 text-xs text-[var(--text-secondary)] space-y-2">
         <p className="text-[var(--text-primary)] font-medium leading-relaxed">
-          Each routing chain traces one operational path from a public hostname down to its physical and network hosting infrastructure:
+          Each chain traces how traffic flows from a public web address down to its physical and cloud infrastructure:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[11px] font-sans pt-1">
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
             <span className="font-bold text-[var(--accent-primary)] font-mono block mb-0.5">1. DOMAIN</span>
-            The apex or child hostname that clients request via authoritative DNS.
+            The domain name or subdomain that visitors enter into their browser.
           </div>
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
             <span className="font-bold text-[#8b5cf6] font-mono block mb-0.5">2. IP ADDRESS</span>
-            The IPv4 or IPv6 network address where incoming traffic terminates.
+            The IP (Internet Protocol) address that connects visitors to the host server.
           </div>
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
             <span className="font-bold text-[#10b981] font-mono block mb-0.5">3. AUTONOMOUS SYSTEM</span>
-            The BGP routing network (ASN) controlling backbone internet traffic.
+            The ASN (Autonomous System Number, a large network operator) managing internet routing.
           </div>
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
             <span className="font-bold text-[#14b8a6] font-mono block mb-0.5">4. ORGANIZATION</span>
-            The cloud provider, CDN, or hosting provider operating that address pool.
+            The cloud provider or hosting company that operates the server network.
           </div>
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-2.5 rounded-lg shadow-2xs">
             <span className="font-bold text-[#f43f5e] font-mono block mb-0.5">5. LOCATION</span>
-            The approximate datacenter or regional edge registry coordinates.
+            The estimated geographic network registration location of the infrastructure.
           </div>
         </div>
         <p className="text-[11px] text-[var(--text-muted)] pt-1">
-          Multiple rows appear when a domain resolves to dual-stack IPv4/IPv6 endpoints, when CDN load-balancing publishes redundant IPs, or when subdomains route to distinct cloud providers.
+          Multiple rows appear when a domain supports both IPv4 and IPv6 addresses, uses content delivery networks (CDNs) with multiple endpoints, or routes subdomains to different providers.
         </p>
       </div>
 

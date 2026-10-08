@@ -3,10 +3,21 @@ import { config } from '../config';
 import { fetchProviderJson } from './providerHttp';
 import type { ScanRequestBudget } from './scanBudget';
 
+export function parseAsn(rawAsn?: string): { asNumber?: string; organization?: string } {
+  if (!rawAsn || typeof rawAsn !== 'string') return {};
+  const trimmed = rawAsn.trim();
+  const match = trimmed.match(/^(?:AS)?(\d+)(?:\s+(.*))?$/i);
+  if (!match) return { asNumber: trimmed };
+  const asNumber = `AS${match[1]}`;
+  const organization = match[2]?.trim() || undefined;
+  return { asNumber, organization };
+}
+
 export interface IpIntelligence {
   ip: string;
   version: 4 | 6;
   asn?: string;
+  asNumber?: string;
   organization?: string;
   network?: string;
   country?: string;
@@ -73,11 +84,14 @@ async function queryPrimaryProvider(ip: string, options: IpIntelligenceOptions):
     throw new Error(errorMsg);
   }
 
-  const asn = typeof data.asn === 'string' ? data.asn : undefined;
-  const org = typeof data.org === 'string' ? data.org : undefined;
+  const rawAsn = typeof data.asn === 'string' ? data.asn : undefined;
+  const { asNumber, organization: orgFromAsn } = parseAsn(rawAsn);
+  const org = (typeof data.org === 'string' ? data.org : undefined) || orgFromAsn;
+  const asn = asNumber;
 
   return {
     asn,
+    asNumber,
     organization: org,
     network: typeof data.network === 'string' ? data.network : undefined,
     country: typeof data.country_name === 'string' ? data.country_name : undefined,
@@ -101,11 +115,14 @@ async function queryFallbackProvider(ip: string, options: IpIntelligenceOptions)
     throw new Error(typeof data.message === 'string' ? data.message : 'Fallback IP provider lookup failed');
   }
 
-  const asn = typeof data.as === 'string' ? data.as : undefined;
-  const org = typeof data.org === 'string' ? data.org : typeof data.isp === 'string' ? data.isp : undefined;
+  const rawAsn = typeof data.as === 'string' ? data.as : undefined;
+  const { asNumber, organization: orgFromAsn } = parseAsn(rawAsn);
+  const org = (typeof data.org === 'string' ? data.org : typeof data.isp === 'string' ? data.isp : undefined) || orgFromAsn;
+  const asn = asNumber;
 
   return {
     asn,
+    asNumber,
     organization: org,
     country: typeof data.country === 'string' ? data.country : undefined,
     region: typeof data.regionName === 'string' ? data.regionName : undefined,

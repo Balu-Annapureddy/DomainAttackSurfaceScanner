@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import type { Asset, DomainScan, Evidence, Relationship, ShodanHostData } from '../../../shared/types';
-import type { IpIntelligence } from './ipIntelligence';
+import { parseAsn, type IpIntelligence } from './ipIntelligence';
 import type { OrgProfile } from './orgProfile';
 import type { DisclosedCve } from './cveLookup';
 import type { CloudStorageCheckResult } from './cloudStorage';
@@ -40,7 +40,12 @@ export function buildNormalizedAssets(
     confidence: Evidence['confidence'],
     metadata?: Asset['metadata'],
   ): Asset => {
-    const key = `${type}:${value}`;
+    let canonicalValue = value;
+    if (type === 'ASN') {
+      const parsed = parseAsn(value);
+      canonicalValue = parsed.asNumber || value;
+    }
+    const key = `${type}:${canonicalValue}`;
     const existing = ids.get(key);
     if (existing) {
       const asset = assets.find((entry) => entry.id === existing);
@@ -55,7 +60,7 @@ export function buildNormalizedAssets(
     const asset: Asset = {
       id: randomUUID(),
       type,
-      value,
+      value: canonicalValue,
       targetDomain: scan.domain,
       discoveredAt: new Date().toISOString(),
       evidence: [makeEvidence(source, description, confidence)],
@@ -171,23 +176,38 @@ export function buildNormalizedAssets(
     const ipAsset = assets.find((asset) => asset.type === 'IP' && asset.value === info.ip);
     if (!ipAsset) continue;
 
-    if (info.asn) {
-      const asn = add('ASN', info.asn, 'IP intelligence provider', 'Observed network association; provider data may change', 'medium');
+    const rawAsn = info.asNumber || info.asn;
+    if (rawAsn) {
+      const parsed = parseAsn(rawAsn);
+      const canonicalAsn = parsed.asNumber || rawAsn;
+      const orgName = info.organization || parsed.organization;
+      const asn = add(
+        'ASN',
+        canonicalAsn,
+        'IP intelligence provider',
+        'Observed network association; provider data may change',
+        'medium',
+        {
+          asNumber: canonicalAsn,
+          organization: orgName ?? null,
+        },
+      );
       relationships.push({
         fromAssetId: ipAsset.id,
         toAssetId: asn.id,
         type: 'belongs_to_asn',
-        evidence: makeEvidence('IP intelligence provider', `Observed ${info.asn}`, 'medium'),
+        evidence: makeEvidence('IP intelligence provider', `Observed ${canonicalAsn}`, 'medium'),
       });
     }
 
-    if (info.organization) {
-      const organization = add('ORGANIZATION', info.organization, 'IP intelligence provider', 'Observed network organization; attribution is not proof of ownership', 'medium');
+    const effectiveOrg = info.organization || (rawAsn ? parseAsn(rawAsn).organization : undefined);
+    if (effectiveOrg) {
+      const organization = add('ORGANIZATION', effectiveOrg, 'IP intelligence provider', 'Observed network organization; attribution is not proof of ownership', 'medium');
       relationships.push({
         fromAssetId: ipAsset.id,
         toAssetId: organization.id,
         type: 'operated_by',
-        evidence: makeEvidence('IP intelligence provider', `Observed ${info.organization}`, 'medium'),
+        evidence: makeEvidence('IP intelligence provider', `Observed ${effectiveOrg}`, 'medium'),
       });
     }
 
@@ -429,15 +449,48 @@ export function buildNormalizedAssets(
     }
   }
 
-  if (assets.length > config.maxAssets) {
-    warnings.push(`Asset output was capped at ${config.maxAssets} assets.`);
-    assets.length = config.maxAssets;
+  // Deduplicate any assets with matching canonical keys and remap relationships
+  const deduplicatedAssets: Asset[] = [];
+  const seenKeys = new Map<string, Asset>();
+  const idRemap = new Map<string, string>();
+
+  for (const asset of assets) {
+    let val = asset.value;
+    if (asset.type === 'ASN') {
+      const parsed = parseAsn(asset.value);
+      val = parsed.asNumber || asset.value;
+    }
+    const key = `${asset.type}:${val}`;
+    const existing = seenKeys.get(key);
+    if (existing) {
+      existing.evidence = [...existing.evidence, ...asset.evidence];
+      if (asset.metadata) {
+        existing.metadata = { ...(existing.metadata ?? {}), ...asset.metadata };
+      }
+      idRemap.set(asset.id, existing.id);
+    } else {
+      const canonicalAsset = { ...asset, value: val };
+      seenKeys.set(key, canonicalAsset);
+      deduplicatedAssets.push(canonicalAsset);
+    }
   }
 
+  const finalAssets = deduplicatedAssets;
+  if (finalAssets.length > config.maxAssets) {
+    warnings.push(`Asset output was capped at ${config.maxAssets} assets.`);
+    finalAssets.length = config.maxAssets;
+  }
+
+  const remappedRelationships = relationships.map((rel) => ({
+    ...rel,
+    fromAssetId: idRemap.get(rel.fromAssetId) ?? rel.fromAssetId,
+    toAssetId: idRemap.get(rel.toAssetId) ?? rel.toAssetId,
+  }));
+
   return {
-    assets,
-    relationships: relationships.filter(
-      (rel) => assets.some((a) => a.id === rel.fromAssetId) && assets.some((a) => a.id === rel.toAssetId),
+    assets: finalAssets,
+    relationships: remappedRelationships.filter(
+      (rel) => finalAssets.some((a) => a.id === rel.fromAssetId) && finalAssets.some((a) => a.id === rel.toAssetId),
     ),
     warnings,
   };

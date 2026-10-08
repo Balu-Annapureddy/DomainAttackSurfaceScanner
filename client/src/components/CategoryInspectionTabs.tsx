@@ -451,6 +451,64 @@ export default function CategoryInspectionTabs({
                     </p>
                   )}
                 </div>
+
+                {/* Breach Exposure Intelligence (HaveIBeenPwned) */}
+                {Boolean(data.breachData) && (
+                  <div className="console-panel-inset p-4 space-y-3 rounded-xs border border-[var(--border-muted)]">
+                    <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-primary)] block">
+                        Public Breach Exposure Records
+                      </span>
+                      <a
+                        href="https://haveibeenpwned.com/DomainSearch"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-mono font-semibold text-[var(--accent-primary)] hover:underline inline-flex items-center gap-1"
+                      >
+                        Check this yourself →
+                      </a>
+                    </div>
+                    {(() => {
+                      const breach = data.breachData as {
+                        hasBreaches?: boolean;
+                        breachCount?: number;
+                        breaches?: Array<{ name: string; title: string; breachDate: string; pwnCount?: number }>;
+                      };
+                      if (!breach || !breach.hasBreaches || !breach.breaches || breach.breaches.length === 0) {
+                        return (
+                          <p className="text-[11px] text-[var(--text-muted)] font-mono">
+                            No public breach disclosure incidents recorded for this domain.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="space-y-2">
+                          <div className="text-[11px] text-[var(--text-secondary)] font-mono">
+                            {breach.breachCount || breach.breaches.length} historical breach incident(s) indexed:
+                          </div>
+                          <div className="space-y-1.5">
+                            {breach.breaches.map((b, i) => (
+                              <div
+                                key={i}
+                                className="bg-[var(--bg-panel)] p-2.5 rounded-lg border border-[var(--border-muted)] flex items-center justify-between gap-2"
+                              >
+                                <div>
+                                  <span className="font-bold text-[var(--text-primary)]">{b.title || b.name}</span>
+                                  <span className="text-[10px] text-[var(--text-muted)] ml-2">Date: {b.breachDate}</span>
+                                </div>
+                                {typeof b.pwnCount === 'number' && (
+                                  <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                                    {b.pwnCount.toLocaleString()} accounts
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             )}
           </div>

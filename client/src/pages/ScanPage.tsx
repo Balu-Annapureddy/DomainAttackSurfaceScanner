@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { getScan } from '../lib/api';
 import type { DomainScan, Asset, ScanCategory } from '../../../shared/types';
-import { generateNarrativeSummary } from '../lib/narrativeSummary';
+import { generateDetailedFindingsOverview } from '../lib/narrativeSummary';
 import ScanOverviewCard from '../components/ScanOverviewCard';
 import ScanProgressStepper from '../components/ScanProgressStepper';
 import InfrastructureMap from '../components/InfrastructureMap';
@@ -239,9 +239,71 @@ export default function ScanPage() {
               </div>
             )}
           </div>
-          <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed sm:leading-loose font-sans">
-            {generateNarrativeSummary(scan)}
-          </p>
+          {(() => {
+            const overview = generateDetailedFindingsOverview(scan);
+            return (
+              <div className="space-y-4 pt-1 font-sans">
+                {/* 1 & 2: What was scanned and when + Score range meaning */}
+                <div className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed space-y-1.5">
+                  <p>{overview.scanSentence}</p>
+                  <p>{overview.scoreSentence}</p>
+                </div>
+
+                {/* 3: Walkthrough of every finding */}
+                <div className="border-t border-[var(--border-muted)] pt-3.5 space-y-2">
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--accent-primary)] flex items-center justify-between">
+                    <span>FINDINGS OVERVIEW ({overview.findingsWalkthrough.length})</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-normal">PLAIN-LANGUAGE SUMMARY</span>
+                  </div>
+                  {overview.findingsWalkthrough.length === 0 ? (
+                    <p className="text-xs sm:text-sm text-[#16a34a] dark:text-[#2ee59d] font-medium">
+                      No security weaknesses or configuration issues were observed during this scan.
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {overview.findingsWalkthrough.map((item) => (
+                        <div
+                          key={item.id}
+                          className="bg-[var(--bg-panel-inset)] p-3 rounded-lg border border-[var(--border-muted)] text-xs space-y-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[var(--text-primary)]">{item.title}</span>
+                            <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.2 rounded border bg-[var(--bg-panel)] text-[var(--text-secondary)]">
+                              {item.severity}
+                            </span>
+                          </div>
+                          <p className="text-[var(--text-secondary)] leading-relaxed">
+                            {item.plainSummary}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4: What's good (confirmed positive controls) or plain statement if 0 */}
+                <div className="border-t border-[var(--border-muted)] pt-3.5 space-y-2">
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#16a34a] dark:text-[#2ee59d]">
+                    CONFIRMED SECURITY CONTROLS ({overview.positiveControls.length})
+                  </div>
+                  {overview.positiveControls.length === 0 ? (
+                    <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+                      No confirmed defensive security controls (such as HTTPS enforcement, defensive HTTP headers, or email authentication records) were observed during this scan.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+                      {overview.positiveControls.map((ctrl, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-[#16a34a] dark:text-[#2ee59d] font-bold mt-0.5 shrink-0">✓</span>
+                          <span>{ctrl}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Dense Telemetry Strip + Transparent Hygiene Score Breakdown */}

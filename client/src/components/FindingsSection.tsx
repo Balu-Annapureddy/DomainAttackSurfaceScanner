@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, ShieldCheck, HelpCircle, ArrowRight } from 'lucide-react';
 import type { Finding, FindingSeverity } from '../../../shared/types';
 import FindingDetailPanel from './FindingDetailPanel';
+import { formatConfidence, getConfidenceBadgeClass } from '../lib/confidence';
 
 interface FindingsSectionProps {
   findings: Finding[];
@@ -204,8 +205,8 @@ export default function FindingsSection({
                       <span className="text-[var(--text-muted)] text-[11px] font-mono">
                         CATEGORY: {finding.category.toUpperCase()}
                       </span>
-                      <span className="text-[var(--accent-primary)] text-[11px] font-mono">
-                        CONFIDENCE: {(finding.confidence || 'high').toUpperCase()}
+                      <span className={`px-2 py-0.5 border font-bold rounded-md text-[11px] font-mono ${getConfidenceBadgeClass(finding.confidence)}`}>
+                        {formatConfidence(finding.confidence)}
                       </span>
                     </div>
 
@@ -282,8 +283,8 @@ export default function FindingsSection({
                               </div>
                               <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono text-[var(--text-muted)]">
                                 {ev.observedAt && <span>{new Date(ev.observedAt).toISOString().slice(0, 19)}Z</span>}
-                                <span className="uppercase px-1.5 py-0.5 rounded bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] font-bold">
-                                  {ev.confidence}_CONFIDENCE
+                                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getConfidenceBadgeClass(ev.confidence)}`}>
+                                  {formatConfidence(ev.confidence)}
                                 </span>
                               </div>
                             </div>

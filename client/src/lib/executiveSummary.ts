@@ -100,34 +100,34 @@ export function generateExecutiveSummary(scan: DomainScan): ExecutiveSummaryData
   const keyTakeaways: string[] = [];
 
   if (httpData?.httpsEnforced) {
-    keyTakeaways.push('HTTPS redirect enforcement is active across public HTTP entrypoints.');
+    keyTakeaways.push('The site automatically forwards unencrypted web requests to encrypted HTTPS (Hypertext Transfer Protocol Secure).');
   } else if (httpData?.httpsEnforced === false) {
-    keyTakeaways.push('HTTP does not enforce redirection to HTTPS, allowing unencrypted transit.');
+    keyTakeaways.push('The site does not automatically forward web requests to HTTPS (encrypted connection). This means traffic could travel unencrypted on public networks.');
   }
 
   if (tlsData?.available) {
     if (typeof tlsData.daysUntilExpiration === 'number' && tlsData.daysUntilExpiration <= 30) {
-      keyTakeaways.push(`TLS certificate is approaching expiration in ${tlsData.daysUntilExpiration} days.`);
+      keyTakeaways.push(`The TLS (website security) certificate will expire soon in ${tlsData.daysUntilExpiration} days.`);
     } else {
-      keyTakeaways.push(`TLS encryption is active (${tlsData.protocol || 'Modern TLS'}).`);
+      keyTakeaways.push(`TLS (Transport Layer Security, the technology behind HTTPS) encryption is active and working.`);
     }
   } else {
-    keyTakeaways.push('Direct TLS handshake on port 443 could not be established.');
+    keyTakeaways.push('A secure TLS (HTTPS encryption) connection could not be established on port 443.');
   }
 
   if (dnsData?.dmarc?.record) {
-    keyTakeaways.push('DMARC domain email policy is published.');
+    keyTakeaways.push('A DMARC (email spoofing defense) policy is published in DNS. This helps prevent scammers from sending fake emails using this domain.');
   } else {
-    keyTakeaways.push('No DMARC email protection record was observed, leaving domain spoofing unmitigated.');
+    keyTakeaways.push('No DMARC (email protection policy) record was found in DNS. This means scammers can send fake emails pretending to come from this domain without being blocked.');
   }
 
   const missingHeaders = httpData?.missingSecurityHeaders || [];
   if (missingHeaders.length > 0) {
-    keyTakeaways.push(`${missingHeaders.length} defensive HTTP security header${missingHeaders.length > 1 ? 's are' : ' is'} omitted.`);
+    keyTakeaways.push(`${missingHeaders.length} recommended HTTP security header${missingHeaders.length > 1 ? 's are' : ' is'} missing. These headers instruct web browsers to enforce security protections.`);
   }
 
   if (highCount > 0) {
-    keyTakeaways.push(`${highCount} high-priority security hygiene observation${highCount > 1 ? 's require' : ' requires'} administrative review.`);
+    keyTakeaways.push(`${highCount} high-priority security issue${highCount > 1 ? 's were' : ' was'} found. These should be addressed first.`);
   }
 
   return {
