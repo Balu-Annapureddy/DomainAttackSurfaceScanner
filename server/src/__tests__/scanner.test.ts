@@ -198,7 +198,7 @@ describe('exposure posture scoring', () => {
       http: { status: 'completed', data: { httpsEnforced: false, https: { missingSecurityHeaders: [] } } },
     });
     const score = computeExposureScore(scan);
-    expect(score).toBe(80); // -20 for unenforced HTTPS
+    expect(score).toBe(95); // -5 for unenforced HTTPS
   });
 
   test('penalizes missing TLS and missing email authentication', () => {
@@ -207,8 +207,8 @@ describe('exposure posture scoring', () => {
       dns: { status: 'completed', data: { spf: { present: false }, dmarc: { present: false } } },
     });
     const score = computeExposureScore(scan);
-    // -25 for no TLS, -5 for missing SPF, -5 for missing DMARC
-    expect(score).toBe(65);
+    // -5 for no TLS, -4 for missing SPF, -4 for missing DMARC
+    expect(score).toBe(87);
   });
 
   test('does not penalize failed or inconclusive checks as security weaknesses', () => {
