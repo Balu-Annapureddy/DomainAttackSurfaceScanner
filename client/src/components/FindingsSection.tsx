@@ -46,9 +46,9 @@ export default function FindingsSection({
       <div className="dossier-header px-4 sm:px-5 py-3.5 flex-col sm:flex-row gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="dossier-num">[{sectionNumber}]</span>
-          <span className="font-bold tracking-wide text-sm font-display italic">DETAILED FINDINGS &amp; HYGIENE EVALUATION</span>
+          <span className="font-bold tracking-wide text-sm font-display italic">Detailed Security Findings &amp; Technical Analysis</span>
           <span className="text-xs text-[var(--text-secondary)] ml-1 font-sans">
-            {findings.length} RECORDED SIGNALS (EXPANDED BY DEFAULT)
+            {findings.length} Observed Item{findings.length === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -92,10 +92,10 @@ export default function FindingsSection({
         </div>
       </div>
 
-      {/* ─── Epistemology Bar ───────────────────────────────────────── */}
+      {/* ─── Evidence Notice Bar ────────────────────────────────────── */}
       <div className="border-b border-[var(--border-muted)] bg-[var(--bg-panel-subtle)] px-4 sm:px-5 py-2.5 text-xs text-[var(--text-secondary)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <span className="leading-relaxed">
-          <strong className="text-[var(--text-primary)]">EPISTEMOLOGY NOTICE:</strong> <em>“We did not observe X” &ne; “X does not exist.”</em> Missing evidence represents an unobserved public control, not a confirmed vulnerability.
+          <strong className="text-[var(--text-primary)]">Assessment Transparency:</strong> <em>“We did not observe X” does not mean “X does not exist.”</em> If a public check did not return evidence, DASS marks it unobserved or unverified rather than assuming a vulnerability exists.
         </span>
         {onOpenGlossary && (
           <button
@@ -103,7 +103,7 @@ export default function FindingsSection({
             onClick={() => onOpenGlossary('passive_osint')}
             className="text-[var(--accent-primary)] font-bold hover:underline shrink-0 cursor-pointer"
           >
-            [?] GUIDE
+            [?] Field Manual
           </button>
         )}
       </div>
