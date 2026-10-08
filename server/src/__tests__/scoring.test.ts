@@ -1,7 +1,7 @@
 import { computeExposureScore, computeScoreBreakdown, SCORING_VERSION } from '../services/scoring';
 import type { DomainScan } from '../../../shared/types';
 
-describe('Scoring & Score Breakdown', () => {
+describe('External Hygiene Score v2', () => {
   const createBaseScan = (): DomainScan => ({
     scanId: 'test-scan-1',
     domain: 'example.com',
@@ -17,226 +17,238 @@ describe('Scoring & Score Breakdown', () => {
         status: 'completed',
         data: {
           available: true,
+          authorized: true,
           validTo: new Date(Date.now() + 90 * 86400000).toISOString(),
+          protocol: 'TLSv1.3',
+          subjectAltNames: ['example.com'],
         },
       },
       http: {
         status: 'completed',
         data: {
           httpsEnforced: true,
-          https: {
-            missingSecurityHeaders: [],
-          },
+          https: { missingSecurityHeaders: [] },
         },
       },
       dns: {
         status: 'completed',
         data: {
-          spf: { present: true },
-          dmarc: { present: true },
+          addresses: ['93.184.216.34'],
+          mx: ['mail.example.com (10)'],
+          ns: ['ns1.example.com', 'ns2.example.com'],
+          txt: ['v=spf1 -all'],
+          cname: [],
+          spf: { present: true, policy: 'v=spf1 -all' },
+          dmarc: { present: true, policy: 'reject', record: 'v=DMARC1; p=reject' },
           dnssec: { observed: true },
         },
       },
       whois: { status: 'completed' },
       subdomains: { status: 'completed' },
-      exposure: {
-        status: 'completed',
-        data: {
-          shodan: [],
-        },
-      },
+      exposure: { status: 'completed', data: { shodan: [] } },
       scoring: { status: 'completed' },
     },
   });
 
-  it('computes 100 for a perfectly configured domain with 0 deductions', () => {
+  it('returns 100 for a fully evidenced strong posture', () => {
     const scan = createBaseScan();
-    const score = computeExposureScore(scan);
     const breakdown = computeScoreBreakdown(scan);
 
-    expect(score).toBe(100);
+    expect(computeExposureScore(scan)).toBe(100);
     expect(breakdown.scoringVersion).toBe(SCORING_VERSION);
+    expect(breakdown.totalDeducted).toBe(0);
+    expect(Object.values(breakdown.dimensions).reduce((n, d) => n + d.maxDeduction, 0)).toBe(100);
+  });
+
+  it('uses nuanced partial deductions instead of the old coarse 20/25-point penalties', () => {
+    const scan = createBaseScan();
+    (scan.categories.http.data as any).https.missingSecurityHeaders = [
+      'content-security-policy',
+    ];
+    (scan.categories.dns.data as any).spf = { present: false };
+    (scan.categories.dns.data as any).dmarc = { present: false };
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    // CSP -5, SPF -4, DMARC -4 => 13 total, score 87.
+    expect(breakdown.totalDeducted).toBe(13);
+    expect(breakdown.total).toBe(87);
+    expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(5);
+    expect(breakdown.dimensions.emailSecurity.deducted).toBe(8);
+  });
+
+  it('does not double-count HSTS as both transport and headers', () => {
+    const scan = createBaseScan();
+    (scan.categories.http.data as any).https.missingSecurityHeaders = [
+      'strict-transport-security',
+      'content-security-policy',
+    ];
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.httpsEnforcement.deducted).toBe(4);
+    expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(5);
+    expect(breakdown.totalDeducted).toBe(9);
+    expect(breakdown.total).toBe(91);
+  });
+
+  it('deducts only 5 for HTTP without HTTPS enforcement', () => {
+    const scan = createBaseScan();
+    (scan.categories.http.data as any).httpsEnforced = false;
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.httpsEnforcement.deducted).toBe(5);
+    expect(breakdown.total).toBe(95);
+  });
+
+  it('handles TLS certificate expiry proportionally', () => {
+    const scan = createBaseScan();
+    (scan.categories.tls.data as any).validTo =
+      new Date(Date.now() + 20 * 86400000).toISOString();
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.tlsHygiene.deducted).toBe(1);
+    expect(breakdown.total).toBe(99);
+  });
+
+  it('scores invalid certificate authorization without treating it as TLS absence', () => {
+    const scan = createBaseScan();
+    (scan.categories.tls.data as any).authorized = false;
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.tlsHygiene.deducted).toBe(4);
+    expect(breakdown.total).toBe(96);
+  });
+
+  it('scores legacy TLS protocol when the protocol is actually observed', () => {
+    const scan = createBaseScan();
+    (scan.categories.tls.data as any).protocol = 'TLSv1.1';
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.tlsHygiene.deducted).toBe(4);
+  });
+
+  it('scores DNSSEC, nameserver redundancy, and DNS observations in the DNS dimension', () => {
+    const scan = createBaseScan();
+    (scan.categories.dns.data as any).dnssec = { observed: false };
+    (scan.categories.dns.data as any).ns = ['ns1.example.com'];
+    (scan.categories.dns.data as any).addresses = [];
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.dnssecHygiene.deducted).toBe(8);
+    expect(breakdown.total).toBe(92);
+  });
+
+  it('distinguishes SPF and DMARC policy strength', () => {
+    const scan = createBaseScan();
+    (scan.categories.dns.data as any).spf = { present: true, policy: 'v=spf1 +all' };
+    (scan.categories.dns.data as any).dmarc = { present: true, policy: 'none' };
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.emailSecurity.deducted).toBe(7);
+    expect(breakdown.total).toBe(93);
+  });
+
+  it('deduplicates CVEs and bounds exposure deductions', () => {
+    const scan = createBaseScan();
+    (scan.categories.exposure.data as any).shodan = [
+      { ports: [80, 3306], vulns: ['CVE-2024-1234', 'CVE-2024-1234'] },
+      { ports: [3389], vulns: ['CVE-2024-1234'] },
+    ];
+
+    const breakdown = computeScoreBreakdown(scan);
+
+    expect(breakdown.dimensions.networkExposure.deducted).toBe(13);
+    expect(breakdown.dimensions.networkExposure.observations).toHaveLength(3);
+    expect(breakdown.total).toBe(87);
+  });
+
+  it('never deducts from failed or incomplete categories', () => {
+    const scan = createBaseScan();
+    scan.categories.tls = {
+      status: 'failed',
+      data: { available: false, authorized: false, protocol: 'TLSv1.1' },
+    };
+    scan.categories.http = {
+      status: 'failed',
+      data: {
+        httpsEnforced: false,
+        https: { missingSecurityHeaders: ['hsts', 'csp', 'x-frame-options'] },
+      },
+    };
+    scan.categories.dns = {
+      status: 'pending',
+      data: {
+        spf: { present: false },
+        dmarc: { present: false },
+        dnssec: { observed: false },
+        ns: [],
+      },
+    };
+    scan.categories.exposure = {
+      status: 'failed',
+      data: { shodan: [{ ports: [3306], vulns: ['CVE-2024-1234'] }] },
+    };
+
+    const breakdown = computeScoreBreakdown(scan);
+
     expect(breakdown.total).toBe(100);
     expect(breakdown.totalDeducted).toBe(0);
-    expect(breakdown.dimensions.tlsHygiene.deducted).toBe(0);
-    expect(breakdown.dimensions.httpsEnforcement.deducted).toBe(0);
-    expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(0);
-    expect(breakdown.dimensions.emailSecurity.deducted).toBe(0);
+  });
+
+  it('does not penalize unknown CAA or DKIM status because those signals are not collected', () => {
+    const scan = createBaseScan();
+    const breakdown = computeScoreBreakdown(scan);
+
     expect(breakdown.dimensions.dnssecHygiene.deducted).toBe(0);
-    expect(breakdown.dimensions.networkExposure.deducted).toBe(0);
+    expect(breakdown.dimensions.emailSecurity.deducted).toBe(0);
   });
 
-  describe('Epistemic Safety Guarantees', () => {
-    it('does NOT deduct points when category checks fail or are incomplete', () => {
-      const scan = createBaseScan();
-      // Set categories to failed or pending with data that would otherwise trigger deductions
-      scan.categories.tls = {
-        status: 'failed',
-        data: { available: false },
-        error: 'Connection timeout',
-      };
-      scan.categories.http = {
-        status: 'failed',
-        data: { httpsEnforced: false, worryingHeaders: ['hsts', 'csp', 'xfo'] },
-        error: 'Network unreachable',
-      };
-      scan.categories.dns = {
-        status: 'pending',
-        data: { spf: { present: false }, dmarc: { present: false }, dnssec: { observed: false } },
-      };
-      scan.categories.exposure = {
-        status: 'failed',
-        data: { shodan: [{ ports: [3306], vulns: ['CVE-2023-1234'] }] },
-      };
+  it('keeps computeExposureScore and the detailed breakdown identical', () => {
+    const scan = createBaseScan();
+    (scan.categories.http.data as any).httpsEnforced = false;
+    (scan.categories.dns.data as any).dnssec = { observed: false };
 
-      const score = computeExposureScore(scan);
-      const breakdown = computeScoreBreakdown(scan);
-
-      // Incomplete or failed categories must never deduct points
-      expect(score).toBe(100);
-      expect(breakdown.totalDeducted).toBe(0);
-      expect(breakdown.dimensions.tlsHygiene.deducted).toBe(0);
-      expect(breakdown.dimensions.httpsEnforcement.deducted).toBe(0);
-      expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(0);
-      expect(breakdown.dimensions.emailSecurity.deducted).toBe(0);
-      expect(breakdown.dimensions.dnssecHygiene.deducted).toBe(0);
-      expect(breakdown.dimensions.networkExposure.deducted).toBe(0);
-    });
+    expect(computeExposureScore(scan)).toBe(computeScoreBreakdown(scan).total);
   });
 
-  describe('Dimension Deductions & Explanations', () => {
-    it('deducts points transparently and matches overall score', () => {
-      const scan = createBaseScan();
-      (scan.categories.http.data as any).https.missingSecurityHeaders = [
-        'strict-transport-security',
-        'content-security-policy',
-      ];
-      (scan.categories.dns.data as any).spf.present = false;
-      (scan.categories.dns.data as any).dmarc.present = false;
+  it('clamps the score to the 0–100 range', () => {
+    const scan = createBaseScan();
+    (scan.categories.tls.data as any).available = false;
+    (scan.categories.tls.data as any).authorized = false;
+    (scan.categories.tls.data as any).validTo =
+      new Date(Date.now() - 2 * 86400000).toISOString();
+    (scan.categories.http.data as any).httpsEnforced = false;
+    (scan.categories.http.data as any).https.missingSecurityHeaders = [
+      'strict-transport-security',
+      'content-security-policy',
+      'x-content-type-options',
+      'x-frame-options',
+      'referrer-policy',
+      'permissions-policy',
+      'other-header',
+    ];
+    (scan.categories.dns.data as any).spf = { present: false };
+    (scan.categories.dns.data as any).dmarc = { present: false };
+    (scan.categories.dns.data as any).dnssec = { observed: false };
+    (scan.categories.dns.data as any).ns = ['ns1.example.com'];
+    (scan.categories.dns.data as any).addresses = [];
+    (scan.categories.exposure.data as any).shodan = [
+      { ports: [21, 3306], vulns: ['CVE-1', 'CVE-2'] },
+      { ports: [3389], vulns: ['CVE-3'] },
+      { ports: [23], vulns: [] },
+    ];
 
-      const score = computeExposureScore(scan);
-      const breakdown = computeScoreBreakdown(scan);
+    const breakdown = computeScoreBreakdown(scan);
 
-      expect(breakdown.total).toBe(score);
-      expect(breakdown.totalDeducted).toBe(20);
-      expect(breakdown.total).toBe(80);
-
-      expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(10);
-      expect(breakdown.dimensions.webSecurityHeaders.observations).toHaveLength(2);
-
-      expect(breakdown.dimensions.emailSecurity.deducted).toBe(10);
-      expect(breakdown.dimensions.emailSecurity.observations).toHaveLength(2);
-    });
-
-    it('deducts 20 when HTTPS is not enforced', () => {
-      const scan = createBaseScan();
-      (scan.categories.http.data as any).httpsEnforced = false;
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.httpsEnforcement.deducted).toBe(20);
-      expect(breakdown.dimensions.httpsEnforcement.observations[0]?.description).toContain('not redirected to HTTPS');
-      expect(computeExposureScore(scan)).toBe(80);
-    });
-
-    it('deducts 25 when TLS service is unavailable', () => {
-      const scan = createBaseScan();
-      (scan.categories.tls.data as any).available = false;
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.tlsHygiene.deducted).toBe(25);
-      expect(computeExposureScore(scan)).toBe(75);
-    });
-
-    it('deducts 25 when TLS certificate expires in 7 days or less', () => {
-      const scan = createBaseScan();
-      (scan.categories.tls.data as any).validTo = new Date(Date.now() + 5 * 86400000).toISOString();
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.tlsHygiene.deducted).toBe(25);
-      expect(breakdown.dimensions.tlsHygiene.observations[0]?.description).toContain('immediate renewal required');
-    });
-
-    it('deducts 10 when TLS certificate expires between 8 and 30 days', () => {
-      const scan = createBaseScan();
-      (scan.categories.tls.data as any).validTo = new Date(Date.now() + 20 * 86400000).toISOString();
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.tlsHygiene.deducted).toBe(10);
-      expect(computeExposureScore(scan)).toBe(90);
-    });
-
-    it('caps Web Security Headers deductions at 25 points', () => {
-      const scan = createBaseScan();
-      (scan.categories.http.data as any).https.missingSecurityHeaders = [
-        'strict-transport-security',
-        'content-security-policy',
-        'x-content-type-options',
-        'x-frame-options',
-        'referrer-policy',
-        'permissions-policy',
-        'cross-origin-opener-policy',
-      ];
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.webSecurityHeaders.deducted).toBe(25);
-      expect(breakdown.dimensions.webSecurityHeaders.observations).toHaveLength(5);
-    });
-
-    it('deducts 3 points when DNSSEC is not observed', () => {
-      const scan = createBaseScan();
-      (scan.categories.dns.data as any).dnssec = { observed: false };
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.dnssecHygiene.deducted).toBe(3);
-      expect(computeExposureScore(scan)).toBe(97);
-    });
-
-    it('deducts 10 points for risky ports and 10 points for known CVEs in exposure', () => {
-      const scan = createBaseScan();
-      (scan.categories.exposure.data as any).shodan = [
-        {
-          ports: [80, 443, 3306], // 3306 is MySQL (risky port)
-          vulns: ['CVE-2021-34527'],
-        },
-      ];
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.dimensions.networkExposure.deducted).toBe(20);
-      expect(breakdown.dimensions.networkExposure.observations).toHaveLength(2);
-      expect(computeExposureScore(scan)).toBe(80);
-    });
-  });
-
-  describe('Boundary and Clamp Validation', () => {
-    it('clamps worst-case maximum deductions to a floor of 0', () => {
-      const scan = createBaseScan();
-      // Trigger all possible deductions:
-      // TLS (-25), HTTPS (-20), Headers (-25), Email (-10), DNSSEC (-3), Exposure (-20) = -103 pts
-      (scan.categories.tls.data as any).available = false;
-      (scan.categories.http.data as any).httpsEnforced = false;
-      (scan.categories.http.data as any).https.missingSecurityHeaders = [
-        'hsts', 'csp', 'xcto', 'xfo', 'rp', 'extra',
-      ];
-      (scan.categories.dns.data as any).spf.present = false;
-      (scan.categories.dns.data as any).dmarc.present = false;
-      (scan.categories.dns.data as any).dnssec = { observed: false };
-      (scan.categories.exposure.data as any).shodan = [
-        { ports: [22, 3389], vulns: ['CVE-2023-9999'] },
-      ];
-
-      const breakdown = computeScoreBreakdown(scan);
-      expect(breakdown.totalDeducted).toBe(103);
-      expect(breakdown.total).toBe(0);
-      expect(computeExposureScore(scan)).toBe(0);
-    });
-
-    it('guarantees computeExposureScore matches computeScoreBreakdown.total in all cases', () => {
-      const scan = createBaseScan();
-      (scan.categories.tls.data as any).validTo = new Date(Date.now() + 15 * 86400000).toISOString();
-      (scan.categories.dns.data as any).spf.present = false;
-
-      expect(computeExposureScore(scan)).toBe(computeScoreBreakdown(scan).total);
-    });
+    expect(breakdown.total).toBeGreaterThanOrEqual(0);
+    expect(breakdown.total).toBeLessThanOrEqual(100);
+    expect(breakdown.totalDeducted).toBeLessThanOrEqual(100);
   });
 });
-
