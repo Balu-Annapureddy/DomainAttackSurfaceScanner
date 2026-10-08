@@ -1,43 +1,33 @@
 /**
- * External Hygiene Score — v1 scoring engine
+ * External Hygiene Score — v2 weighted hygiene model
  *
- * Design principles
- * ─────────────────
- * 1. Single source of truth: `computeScoreBreakdown` collects all observations
- *    in one pass. `computeExposureScore` delegates entirely to it — the two
- *    functions can never silently diverge.
+ * The score is a deterministic 0–100 configuration-hygiene summary based only
+ * on completed, evidence-backed observations. It is NOT an exploitability score.
  *
- * 2. Epistemic safety: a check that is pending, running, or failed does NOT
- *    contribute a deduction. Only a category with status === 'completed' is
- *    eligible for scoring. Absence of evidence ≠ evidence of weakness.
+ * Model:
+ *   TLS & Certificate       20
+ *   HTTPS & Transport       15
+ *   HTTP Security Headers   20
+ *   DNS & Domain Integrity  15
+ *   Email Security          15
+ *   Internet Exposure       15
  *
- * 3. Deterministic + bounded: every dimension has an explicit maxDeduction cap.
- *    Sum of all caps = 103 (TLS 25 + HTTPS 20 + Headers 25 + Email 10 +
- *    DNSSEC 3 + Exposure 20). The final score is clamped to [0, 100].
+ * Total possible deduction = 100, so a perfect posture remains 100 while
+ * partial weaknesses produce proportional deductions instead of the old
+ * coarse 20/25-point penalties.
  *
- * 4. No double-counting: each signal is recorded in exactly one dimension.
+ * Epistemic safety:
+ * - failed/pending categories never deduct;
+ * - unknown/unavailable fields never deduct;
+ * - HSTS is scored in HTTPS & Transport and is excluded from header scoring;
+ * - exposure signals are deduplicated and bounded.
  *
- * Scoring Version: 1
- *
- * Dimension table
- * ───────────────
- * | Dimension            | Max deduction | Notes                              |
- * |----------------------|---------------|------------------------------------|
- * | TLS Hygiene          | 25            | No TLS: −25. Expiring ≤7d: −25.    |
- * |                      |               | Expiring ≤30d: −10.                |
- * | HTTPS Enforcement    | 20            | HTTP not redirecting to HTTPS: −20 |
- * | Web Security Headers | 25            | −5 per missing header, capped at 5 |
- * | Email Security       | 10            | No SPF: −5. No DMARC: −5.         |
- * | DNSSEC Hygiene       |  3            | No DNSKEY/DS records: −3           |
- * | Network Exposure     | 20            | Risky port: −10. Known CVE: −10.  |
+ * Scoring Version: 2
  */
 
 import type { DomainScan, DimensionScore, ScoreBreakdown, ScoreObservation } from '../../../shared/types';
 
-/** Current scoring model version. Increment when deduction weights change. */
-export const SCORING_VERSION = 1 as const;
-
-// ── Utilities ──────────────────────────────────────────────────────────────
+export const SCORING_VERSION = 2 as const;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -47,8 +37,7 @@ function parseExpiryDays(value: string | undefined | null): number | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  const diffMs = date.getTime() - Date.now();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.ceil((date.getTime() - Date.now()) / 86400000);
 }
 
 function buildDimension(
@@ -56,170 +45,326 @@ function buildDimension(
   maxDeduction: number,
   observations: ScoreObservation[],
 ): DimensionScore {
-  const deducted = Math.min(maxDeduction, observations.reduce((sum, o) => sum + o.pointsDeducted, 0));
+  const deducted = Math.min(
+    maxDeduction,
+    observations.reduce((sum, observation) => sum + observation.pointsDeducted, 0),
+  );
   return { label, maxDeduction, deducted, observations: observations.slice() };
 }
 
-// ── Risky ports: publicly-exposed management or database surfaces ───────────
 const RISKY_PORTS = new Set([
-  21,    // FTP
-  23,    // Telnet
-  445,   // SMB
-  1433,  // MSSQL
-  1521,  // Oracle DB
-  3306,  // MySQL/MariaDB
-  3389,  // RDP
-  5432,  // PostgreSQL
-  5900,  // VNC
-  6379,  // Redis
-  8086,  // InfluxDB
-  9200,  // Elasticsearch
-  27017, // MongoDB
+  21, 23, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8086, 9200, 27017,
 ]);
 
-// ── Observation collectors ─────────────────────────────────────────────────
-
-function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
-  const tlsCat = scan.categories.tls;
-  if (tlsCat?.status !== 'completed') return []; // epistemic safety
-
-  const tls = tlsCat.data as { available?: boolean; validTo?: string | null } | undefined;
-
-  if (tls?.available === false) {
-    return [{ description: 'No TLS/HTTPS service observed on port 443', pointsDeducted: 25 }];
-  }
-
-  if (tls?.available === true) {
-    const days = parseExpiryDays(tls.validTo ?? null);
-    if (days !== null && days <= 7) {
-      return [{
-        description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'} — immediate renewal required`,
-        pointsDeducted: 25,
-      }];
-    }
-    if (days !== null && days <= 30) {
-      return [{
-        description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'}`,
-        pointsDeducted: 10,
-      }];
-    }
-  }
-
-  return [];
-}
-
-function collectHttpsObservations(scan: DomainScan): ScoreObservation[] {
+function getMissingHeaders(scan: DomainScan): string[] {
   const httpCat = scan.categories.http;
-  if (httpCat?.status !== 'completed') return []; // epistemic safety
-
-  const http = httpCat.data as { httpsEnforced?: boolean } | undefined;
-  if (http?.httpsEnforced === false) {
-    return [{ description: 'HTTP requests are not redirected to HTTPS', pointsDeducted: 20 }];
-  }
-  return [];
-}
-
-function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
-  const httpCat = scan.categories.http;
-  if (httpCat?.status !== 'completed') return []; // epistemic safety
+  if (httpCat?.status !== 'completed') return [];
 
   const http = httpCat.data as {
     https?: { missingSecurityHeaders?: string[] };
     worryingHeaders?: string[];
   } | undefined;
 
-  // Prefer the structured missingSecurityHeaders list; fall back to worryingHeaders
-  const missing = http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
-  // Cap at 5 headers × 5 pts = 25 (also enforced by buildDimension)
-  return missing.slice(0, 5).map((h) => ({
-    description: `Missing HTTP security header: ${h}`,
-    pointsDeducted: 5,
-  }));
+  return http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
+}
+
+function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.tls;
+  if (cat?.status !== 'completed') return [];
+
+  const tls = cat.data as {
+    available?: boolean;
+    validTo?: string | null;
+    protocol?: string;
+    authorized?: boolean;
+    authorizationError?: string;
+    subjectAltNames?: string[];
+  } | undefined;
+
+  const observations: ScoreObservation[] = [];
+
+  if (tls?.available === false) {
+    observations.push({
+      description: 'TLS/HTTPS service was not observed on port 443',
+      pointsDeducted: 5,
+    });
+    return observations;
+  }
+
+  if (tls?.available !== true) return observations;
+
+  if (tls.authorized === false) {
+    observations.push({
+      description: 'TLS certificate chain was not authorized by the client trust store',
+      pointsDeducted: 4,
+    });
+  }
+
+  const days = parseExpiryDays(tls.validTo);
+  if (days !== null) {
+    if (days <= 7) {
+      observations.push({
+        description: `TLS certificate expires in ${days} day${days === 1 ? '' : 's'}`,
+        pointsDeducted: 3,
+      });
+    } else if (days <= 30) {
+      observations.push({
+        description: `TLS certificate expires in ${days} days`,
+        pointsDeducted: 1,
+      });
+    }
+  }
+
+  if (tls.protocol && !['TLSv1.2', 'TLSv1.3'].includes(tls.protocol)) {
+    observations.push({
+      description: `Observed legacy TLS protocol: ${tls.protocol}`,
+      pointsDeducted: 4,
+    });
+  }
+
+  // If the scanner supplied SANs, require the target hostname to be represented.
+  // Do not penalize when SAN data is unavailable.
+  if (Array.isArray(tls.subjectAltNames) && tls.subjectAltNames.length > 0) {
+    const target = scan.domain.toLowerCase().replace(/\.$/, '');
+    const matches = tls.subjectAltNames.some((san) => {
+      const normalized = san.toLowerCase().replace(/^\*\./, '').replace(/\.$/, '');
+      return normalized === target || (san.startsWith('*.') && target.endsWith(`.${normalized}`));
+    });
+    if (!matches) {
+      observations.push({
+        description: 'TLS certificate SANs do not include the scanned hostname',
+        pointsDeducted: 4,
+      });
+    }
+  }
+
+  return observations;
+}
+
+function collectHttpsObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.http;
+  if (cat?.status !== 'completed') return [];
+
+  const http = cat.data as { httpsEnforced?: boolean } | undefined;
+  const observations: ScoreObservation[] = [];
+
+  if (http?.httpsEnforced === false) {
+    observations.push({
+      description: 'HTTP requests are not redirected to HTTPS',
+      pointsDeducted: 5,
+    });
+  }
+
+  const missing = getMissingHeaders(scan).map((h) => h.toLowerCase());
+  const hasHsts = !missing.some((h) => h === 'strict-transport-security' || h === 'hsts');
+  if (missing.length > 0 && !hasHsts) {
+    observations.push({
+      description: 'Strict-Transport-Security (HSTS) was not observed',
+      pointsDeducted: 4,
+    });
+  }
+
+  return observations;
+}
+
+function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
+  const missing = getMissingHeaders(scan);
+  if (missing.length === 0) return [];
+
+  const observations: ScoreObservation[] = [];
+  const normalized = new Set(missing.map((h) => h.toLowerCase()));
+
+  // HSTS belongs to HTTPS & Transport, so it is intentionally excluded here.
+  if (normalized.has('content-security-policy') || normalized.has('csp')) {
+    observations.push({ description: 'Content-Security-Policy is missing', pointsDeducted: 5 });
+  }
+  if (normalized.has('x-content-type-options') || normalized.has('x-content-type')) {
+    observations.push({ description: 'X-Content-Type-Options is missing', pointsDeducted: 3 });
+  }
+  if (normalized.has('x-frame-options') || normalized.has('x-frame')) {
+    observations.push({ description: 'X-Frame-Options or an equivalent framing control is missing', pointsDeducted: 3 });
+  }
+  if (normalized.has('referrer-policy')) {
+    observations.push({ description: 'Referrer-Policy is missing', pointsDeducted: 2 });
+  }
+  if (normalized.has('permissions-policy')) {
+    observations.push({ description: 'Permissions-Policy is missing', pointsDeducted: 2 });
+  }
+
+  // Other explicitly reported missing security headers receive a small bounded
+  // deduction rather than all being treated as equally critical.
+  const known = new Set([
+    'strict-transport-security', 'hsts', 'content-security-policy', 'csp',
+    'x-content-type-options', 'x-content-type', 'x-frame-options', 'x-frame',
+    'referrer-policy', 'permissions-policy',
+  ]);
+  const otherCount = missing.filter((h) => !known.has(h.toLowerCase())).length;
+  for (let i = 0; i < Math.min(otherCount, 5); i += 1) {
+    observations.push({
+      description: `Additional HTTP security header is missing: ${missing.filter((h) => !known.has(h.toLowerCase()))[i]}`,
+      pointsDeducted: 1,
+    });
+  }
+
+  return observations;
+}
+
+function collectDnsObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.dns;
+  if (cat?.status !== 'completed') return [];
+
+  const dns = cat.data as {
+    dnssec?: { observed?: boolean };
+    ns?: string[];
+    addresses?: string[];
+    cname?: string[];
+    txt?: string[];
+  } | undefined;
+
+  const observations: ScoreObservation[] = [];
+
+  if (dns?.dnssec?.observed === false) {
+    observations.push({
+      description: 'No DNSSEC (DNSKEY/DS) records were observed',
+      pointsDeducted: 4,
+    });
+  }
+
+  if (Array.isArray(dns?.ns) && dns.ns.length === 1) {
+    observations.push({
+      description: 'Only one authoritative nameserver was observed',
+      pointsDeducted: 2,
+    });
+  }
+
+  // The current DNS collector does not expose CAA as a structured field.
+  // Do not infer a missing CAA record from absent data.
+  if (Array.isArray(dns?.addresses) && dns.addresses.length === 0 && (dns?.cname?.length ?? 0) === 0) {
+    observations.push({
+      description: 'No public A/AAAA address or CNAME was observed for the target',
+      pointsDeducted: 2,
+    });
+  }
+
+  if (Array.isArray(dns?.txt) && dns.txt.length > 20) {
+    observations.push({
+      description: 'Large TXT record surface was observed; review unnecessary public TXT records',
+      pointsDeducted: 1,
+    });
+  }
+
+  return observations;
 }
 
 function collectEmailObservations(scan: DomainScan): ScoreObservation[] {
-  const dnsCat = scan.categories.dns;
-  if (dnsCat?.status !== 'completed') return []; // epistemic safety
+  const cat = scan.categories.dns;
+  if (cat?.status !== 'completed') return [];
 
-  const dns = dnsCat.data as {
-    spf?: { present?: boolean };
-    dmarc?: { present?: boolean };
+  const dns = cat.data as {
+    mx?: unknown[];
+    spf?: { present?: boolean; policy?: string };
+    dmarc?: { present?: boolean; policy?: string };
   } | undefined;
 
-  const obs: ScoreObservation[] = [];
-  if (dns?.spf && !dns.spf.present) {
-    obs.push({ description: 'No SPF record observed in DNS', pointsDeducted: 5 });
-  }
-  if (dns?.dmarc && !dns.dmarc.present) {
-    obs.push({ description: 'No DMARC record observed in DNS', pointsDeducted: 5 });
-  }
-  return obs;
-}
+  const observations: ScoreObservation[] = [];
 
-function collectDnssecObservations(scan: DomainScan): ScoreObservation[] {
-  const dnsCat = scan.categories.dns;
-  if (dnsCat?.status !== 'completed') return []; // epistemic safety
-
-  const dns = dnsCat.data as { dnssec?: { observed?: boolean } } | undefined;
-  if (dns?.dnssec?.observed === false) {
-    return [{ description: 'No DNSSEC (DNSKEY/DS) records observed in DNS', pointsDeducted: 3 }];
+  if (dns?.spf) {
+    if (!dns.spf.present) {
+      observations.push({ description: 'No SPF record observed in DNS', pointsDeducted: 4 });
+    } else if (dns.spf.policy) {
+      const policy = dns.spf.policy.toLowerCase();
+      if (policy.includes('+all')) {
+        observations.push({ description: 'SPF uses the permissive +all policy', pointsDeducted: 4 });
+      } else if (policy.includes('?all')) {
+        observations.push({ description: 'SPF uses a neutral ?all policy', pointsDeducted: 2 });
+      } else if (policy.includes('~all')) {
+        observations.push({ description: 'SPF uses a softfail ~all policy', pointsDeducted: 1 });
+      }
+    }
   }
-  return [];
+
+  if (dns?.dmarc) {
+    if (!dns.dmarc.present) {
+      observations.push({ description: 'No DMARC record observed in DNS', pointsDeducted: 4 });
+    } else {
+      const policy = dns.dmarc.policy?.toLowerCase();
+      if (policy === 'none') {
+        observations.push({ description: 'DMARC policy is set to p=none', pointsDeducted: 3 });
+      } else if (policy === 'quarantine') {
+        observations.push({ description: 'DMARC policy is set to p=quarantine rather than reject', pointsDeducted: 1 });
+      }
+    }
+  }
+
+  if (Array.isArray(dns?.mx) && dns.mx.length === 0) {
+    observations.push({
+      description: 'No MX records were observed; verify that this domain does not require inbound email',
+      pointsDeducted: 1,
+    });
+  }
+
+  return observations;
 }
 
 function collectExposureObservations(scan: DomainScan): ScoreObservation[] {
-  const expCat = scan.categories.exposure;
-  if (expCat?.status !== 'completed') return []; // epistemic safety
+  const cat = scan.categories.exposure;
+  if (cat?.status !== 'completed') return [];
 
-  const exposure = expCat.data as { shodan?: Array<{ ports?: number[]; vulns?: string[] }> } | undefined;
-  if (!exposure?.shodan) return [];
+  const exposure = cat.data as {
+    shodan?: Array<{ ports?: number[]; vulns?: string[] }>;
+  } | undefined;
+  if (!Array.isArray(exposure?.shodan)) return [];
 
-  let hasRiskyPort = false;
-  let hasVuln = false;
+  let riskyHostCount = 0;
+  let vulnerabilityHostCount = 0;
+  const vulnerabilityIds = new Set<string>();
 
   for (const host of exposure.shodan) {
-    if (host.ports?.some((p) => RISKY_PORTS.has(p))) hasRiskyPort = true;
-    if (host.vulns && host.vulns.length > 0) hasVuln = true;
+    if (host.ports?.some((port) => RISKY_PORTS.has(port))) riskyHostCount += 1;
+    for (const vuln of host.vulns ?? []) vulnerabilityIds.add(vuln);
+    if ((host.vulns?.length ?? 0) > 0) vulnerabilityHostCount += 1;
   }
 
-  const obs: ScoreObservation[] = [];
-  if (hasRiskyPort) {
-    obs.push({
-      description: 'Potentially risky database or remote management service port exposed to public internet',
-      pointsDeducted: 10,
+  const observations: ScoreObservation[] = [];
+
+  if (riskyHostCount > 0) {
+    observations.push({
+      description: `Potentially risky database/management ports observed on ${riskyHostCount} public host${riskyHostCount === 1 ? '' : 's'}`,
+      pointsDeducted: 5,
     });
   }
-  if (hasVuln) {
-    obs.push({
-      description: 'Host running software version with confirmed CVE vulnerability in Shodan records',
-      pointsDeducted: 10,
+
+  if (vulnerabilityIds.size > 0) {
+    observations.push({
+      description: `${vulnerabilityIds.size} distinct CVE identifier${vulnerabilityIds.size === 1 ? '' : 's'} observed in passive exposure data`,
+      pointsDeducted: 5,
     });
   }
-  return obs;
+
+  if (riskyHostCount + vulnerabilityHostCount >= 3) {
+    observations.push({
+      description: 'Exposure signals were observed across multiple public hosts',
+      pointsDeducted: 3,
+    });
+  }
+
+  return observations;
 }
 
-// ── Public API ─────────────────────────────────────────────────────────────
-
-/**
- * Compute the full per-dimension score breakdown.
- *
- * This is the single authoritative implementation. `computeExposureScore`
- * derives its result from this function to guarantee they never diverge.
- */
 export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
-  const tlsDim      = buildDimension('TLS Hygiene',          25, collectTlsObservations(scan));
-  const httpsDim    = buildDimension('HTTPS Enforcement',    20, collectHttpsObservations(scan));
-  const headersDim  = buildDimension('Web Security Headers', 25, collectHeaderObservations(scan));
-  const emailDim    = buildDimension('Email Security',       10, collectEmailObservations(scan));
-  const dnssecDim   = buildDimension('DNSSEC Hygiene',        3, collectDnssecObservations(scan));
-  const exposureDim = buildDimension('Network Exposure',     20, collectExposureObservations(scan));
+  const tlsDim = buildDimension('TLS & Certificate', 20, collectTlsObservations(scan));
+  const httpsDim = buildDimension('HTTPS & Transport', 15, collectHttpsObservations(scan));
+  const headersDim = buildDimension('HTTP Security Headers', 20, collectHeaderObservations(scan));
+  const dnsDim = buildDimension('DNS & Domain Integrity', 15, collectDnsObservations(scan));
+  const emailDim = buildDimension('Email Security', 15, collectEmailObservations(scan));
+  const exposureDim = buildDimension('Internet Exposure', 15, collectExposureObservations(scan));
 
   const totalDeducted =
     tlsDim.deducted +
     httpsDim.deducted +
     headersDim.deducted +
+    dnsDim.deducted +
     emailDim.deducted +
-    dnssecDim.deducted +
     exposureDim.deducted;
 
   const total = clamp(100 - totalDeducted, 0, 100);
@@ -229,20 +374,16 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
     total,
     totalDeducted,
     dimensions: {
-      tlsHygiene:         tlsDim,
-      httpsEnforcement:   httpsDim,
+      tlsHygiene: tlsDim,
+      httpsEnforcement: httpsDim,
       webSecurityHeaders: headersDim,
-      emailSecurity:      emailDim,
-      dnssecHygiene:      dnssecDim,
-      networkExposure:    exposureDim,
+      emailSecurity: emailDim,
+      dnssecHygiene: dnsDim,
+      networkExposure: exposureDim,
     },
   };
 }
 
-/**
- * Convenience wrapper that returns only the integer score (0–100).
- * Delegates entirely to `computeScoreBreakdown` to guarantee consistency.
- */
 export function computeExposureScore(scan: DomainScan): number {
   return computeScoreBreakdown(scan).total;
 }
