@@ -14,19 +14,20 @@ export function createSampleScan(): DomainScan {
     score: 88,
     scoreLabel: 'External Hygiene Score',
     scoreBreakdown: {
-      scoringVersion: 1,
+      scoringVersion: 2,
       total: 88,
       totalDeducted: 12,
       dimensions: {
-        tlsHygiene: { label: 'TLS Hygiene', maxDeduction: 25, deducted: 0, observations: [] },
-        httpsEnforcement: { label: 'HTTPS Enforcement', maxDeduction: 20, deducted: 0, observations: [] },
+        tlsHygiene: { label: 'TLS Hygiene', maxDeduction: 20, deducted: 0, observations: [] },
+        httpsEnforcement: { label: 'HTTPS Enforcement', maxDeduction: 15, deducted: 0, observations: [] },
         webSecurityHeaders: {
           label: 'Web Security Headers',
-          maxDeduction: 25,
+          maxDeduction: 15,
           deducted: 10,
           observations: [
-            { description: 'Missing HTTP security header: strict-transport-security', pointsDeducted: 5 },
-            { description: 'Missing HTTP security header: content-security-policy', pointsDeducted: 5 },
+            { description: 'Content-Security-Policy is missing', pointsDeducted: 5 },
+            { description: 'X-Content-Type-Options is missing', pointsDeducted: 3 },
+            { description: 'Referrer-Policy is missing', pointsDeducted: 2 },
           ],
         },
         emailSecurity: {
@@ -34,11 +35,17 @@ export function createSampleScan(): DomainScan {
           maxDeduction: 10,
           deducted: 2,
           observations: [
-            { description: 'SPF softfail (~all) observed instead of strict reject (-all)', pointsDeducted: 2 },
+            { description: 'SPF uses a neutral ?all policy', pointsDeducted: 2 },
           ],
         },
         dnssecHygiene: { label: 'DNSSEC Hygiene', maxDeduction: 3, deducted: 0, observations: [] },
-        networkExposure: { label: 'Network Exposure', maxDeduction: 20, deducted: 0, observations: [] },
+        networkExposure: { label: 'Network Exposure', maxDeduction: 15, deducted: 0, observations: [] },
+        certificateChain: { label: 'Certificate Chain Correctness', maxDeduction: 7, deducted: 0, observations: [] },
+        subdomainTakeover: { label: 'Subdomain Takeover Risk', maxDeduction: 15, deducted: 0, observations: [] },
+        whoisHygiene: { label: 'Domain & WHOIS Hygiene', maxDeduction: 5, deducted: 0, observations: [] },
+        cookieSecurity: { label: 'Cookie Security', maxDeduction: 5, deducted: 0, observations: [] },
+        corsConfiguration: { label: 'CORS Misconfiguration', maxDeduction: 5, deducted: 0, observations: [] },
+        breachExposure: { label: 'Breach Exposure', maxDeduction: 5, deducted: 0, observations: [] },
       },
     },
 

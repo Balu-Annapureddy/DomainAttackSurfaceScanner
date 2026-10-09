@@ -10,6 +10,7 @@ export interface SafeHttpResponse {
   url: string;
   status: number;
   headers: Record<string, string>;
+  setCookies?: string[];
   body: string;
   redirectChain: string[];
 }
@@ -116,11 +117,18 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
           for (const [key, value] of Object.entries(response.headers)) {
             headers[key] = Array.isArray(value) ? value.join(', ') : value ?? '';
           }
+          const rawSetCookies = response.headers['set-cookie'];
+          const setCookies = Array.isArray(rawSetCookies)
+            ? rawSetCookies
+            : rawSetCookies
+            ? [rawSetCookies]
+            : [];
           const body = method === 'HEAD' ? '' : await readBody(response, options.signal);
           resolve({
             url: url.toString(),
             status: response.statusCode ?? 0,
             headers,
+            setCookies,
             body,
             redirectChain: [url.toString()],
           });

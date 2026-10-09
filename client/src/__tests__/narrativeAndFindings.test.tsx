@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach } from 'vitest';
-import { generateNarrativeSummary } from '../lib/narrativeSummary';
+import { generateNarrativeSummary, generateHumanSecurityAssessment } from '../lib/narrativeSummary';
 import { generateGraphNarrative } from '../lib/graphNarrative';
 import FindingsSection from '../components/FindingsSection';
 import type { DomainScan, Asset, Relationship, Finding } from '../../../shared/types';
@@ -153,6 +153,72 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       expect(narrative).toContain('This scan evaluated the public attack surface of empty.com');
       expect(narrative).toContain('No security weaknesses or configuration issues were observed during this scan.');
       expect(narrative).toContain('No confirmed defensive security controls');
+    });
+
+    describe('Infrastructure & Footprint sentence formatting (Phase 7.2)', () => {
+      const baseScan: DomainScan = {
+        scanId: 'test-infra',
+        domain: 'example.com',
+        createdAt: '2026-10-07T00:00:00Z',
+        expiresAt: '2026-10-08T00:00:00Z',
+        status: 'completed',
+        score: 90,
+        scoreLabel: 'External Hygiene Score',
+        categories: { scoring: { status: 'completed' } } as unknown as DomainScan['categories'],
+        assets: [],
+        findings: [],
+        relationships: [],
+        warnings: [],
+      };
+
+      it('correctly includes BOTH subdomains and IPs without dropping subdomains', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          assets: [
+            { id: '1', type: 'SUBDOMAIN', value: 'sub1.example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+            { id: '2', type: 'SUBDOMAIN', value: 'sub2.example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+            { id: '3', type: 'IP', value: '93.184.216.34', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+          ],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).toContain('Our passive discovery identified 2 subdomains through public certificate records and 1 public server address.');
+      });
+
+      it('correctly handles only subdomains present', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          assets: [
+            { id: '1', type: 'SUBDOMAIN', value: 'sub1.example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+          ],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).toContain('Our passive discovery identified 1 subdomain through public certificate records.');
+        expect(narrative).not.toContain('and');
+      });
+
+      it('correctly handles only IPs present', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          assets: [
+            { id: '1', type: 'IP', value: '93.184.216.34', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+            { id: '2', type: 'IP', value: '93.184.216.35', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+          ],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).toContain('Our passive discovery identified 2 public server addresses.');
+        expect(narrative).not.toContain('subdomain');
+      });
+
+      it('produces no infrastructure sentence when neither subdomains nor IPs are present', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          assets: [
+            { id: '1', type: 'DOMAIN', value: 'example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+          ],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).not.toContain('Our passive discovery identified');
+      });
     });
   });
 

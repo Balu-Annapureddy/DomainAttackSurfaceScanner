@@ -250,9 +250,17 @@ export function buildFindings(scan: DomainScan): Finding[] {
         httpsEnforced?: boolean;
         httpAvailable?: boolean;
         httpsAvailable?: boolean;
+        httpOutcome?: 'completed' | 'confirmed_absent' | 'inconclusive';
+        httpsOutcome?: 'completed' | 'confirmed_absent' | 'inconclusive';
         httpRedirectsToHttps?: boolean;
         worryingHeaders?: string[];
-        http?: { available?: boolean };
+        cookies?: Array<{ name: string; hasSecure: boolean; hasHttpOnly: boolean; sameSite: string | null; isSessionLikely: boolean; missingFlags: string[] }>;
+        corsMisconfiguration?: boolean;
+        http?: {
+          available?: boolean;
+          cookies?: Array<{ name: string; hasSecure: boolean; hasHttpOnly: boolean; sameSite: string | null; isSessionLikely: boolean; missingFlags: string[] }>;
+          corsMisconfiguration?: boolean;
+        };
         https?: {
           headers?: Record<string, string>;
           missingSecurityHeaders?: string[];
@@ -260,6 +268,8 @@ export function buildFindings(scan: DomainScan): Finding[] {
           server?: string;
           poweredBy?: string | null;
           authorized?: boolean;
+          cookies?: Array<{ name: string; hasSecure: boolean; hasHttpOnly: boolean; sameSite: string | null; isSessionLikely: boolean; missingFlags: string[] }>;
+          corsMisconfiguration?: boolean;
         };
       } | undefined)
     : undefined;
@@ -267,6 +277,8 @@ export function buildFindings(scan: DomainScan): Finding[] {
   const tls = tlsCategory?.status === 'completed'
     ? (tlsCategory.data as {
         available?: boolean;
+        outcome?: 'confirmed_absent' | 'connection_failed' | 'available';
+        reason?: string;
         authorized?: boolean;
         validTo?: string;
         validFrom?: string;
@@ -275,6 +287,10 @@ export function buildFindings(scan: DomainScan): Finding[] {
         protocol?: string;
         subjectAltNames?: string[];
         signatureAlgorithm?: string;
+        chainLength?: number;
+        chainComplete?: boolean;
+        hasIntermediateCertificate?: boolean;
+        hostnameMismatch?: boolean;
       } | undefined)
     : undefined;
 
@@ -290,10 +306,12 @@ export function buildFindings(scan: DomainScan): Finding[] {
 
   const whois = whoisCategory?.status === 'completed'
     ? (whoisCategory.data as {
+        available?: boolean;
         expiryDate?: string | null;
         registrar?: string | null;
         creationDate?: string | null;
         nameservers?: string[];
+        privacyStatus?: 'public' | 'redacted' | 'unknown';
       } | undefined)
     : undefined;
 
@@ -302,12 +320,14 @@ export function buildFindings(scan: DomainScan): Finding[] {
         subdomains?: string[];
         total?: number;
         available?: boolean;
+        takeoverRisks?: Array<{ subdomain: string; cname: string; service: string; matchedFingerprint: string; confirmed: boolean }>;
       } | undefined)
     : undefined;
 
   const exposure = exposureCategory?.status === 'completed'
     ? (exposureCategory.data as {
         checks?: Array<{ path: string; status: number; present: boolean }>;
+        takeoverRisks?: Array<{ subdomain: string; cname: string; service: string; matchedFingerprint: string; confirmed: boolean }>;
         shodan?: Array<{
           ip: string;
           ports: number[];
@@ -333,7 +353,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
   // FINDING 1: HTTPS enforcement was not observed
   // ════════════════════════════════════════════════════════════════════════════
 
-  if (http && http.httpAvailable === true && http.httpsEnforced === false) {
+  if (http && http.httpAvailable === true && http.httpsEnforced === false && http.httpOutcome !== 'inconclusive') {
     findings.push(finding({
       title: 'HTTPS enforcement was not observed',
       severity: 'medium',
@@ -375,36 +395,68 @@ export function buildFindings(scan: DomainScan): Finding[] {
   // ════════════════════════════════════════════════════════════════════════════
 
   if (http?.httpAvailable && !tls?.available) {
-    findings.push(finding({
-      title: 'Web service operates exclusively over unencrypted HTTP',
-      severity: 'high',
-      kind: 'configuration_weakness',
-      category: 'http',
-      description: `An HTTP service was observed at http://${domain} but no HTTPS endpoint is available. All communication with this domain occurs over an unencrypted channel.`,
-      recommendation: 'Obtain a TLS certificate (e.g., from Let\'s Encrypt at no cost) and configure HTTPS. Redirect all HTTP traffic to HTTPS and add HSTS.',
-      confidence: 'high',
-      observationStatus: 'observed',
-      evidence: [
-        ev('HTTP probe', `HTTP service observed responding at http://${domain}.`),
-        ev('TLS probe', `No TLS/HTTPS service was observed at https://${domain}.`),
-      ],
-      analysis: {
-        whatIsThis: 'TLS (Transport Layer Security) encrypts data in transit between a browser and a web server, preventing passive eavesdropping and active tampering. A service without HTTPS transmits all data — including any credentials, session tokens, and page content — as readable plaintext.',
-        whatWasObserved: `An HTTP web service was observed responding at http://${domain}. No TLS certificate or HTTPS endpoint was observed when probing port 443.`,
-        howDiscovered: 'DASS performed a passive HTTP probe (port 80) and a TLS handshake probe (port 443) and recorded the results.',
-        technicalExplanation: 'HTTP transmits all data as plaintext. Any device between the client and server — including ISP routers, Wi-Fi access points, and corporate proxies — can read or modify the content in transit. This affects all users of the service, not just those on untrusted networks.',
-        whyItMatters: 'Without encryption, authentication credentials, session tokens, and sensitive data transmitted by users are exposed to anyone who can observe network traffic on the path between the user and the server.',
-        securityImpact: 'All users of this domain are exposed to passive traffic observation by network intermediaries. Any authentication performed over HTTP can be captured. Form data, session cookies, and page content are all readable in transit.',
-        potentialAbuse: 'A passive network observer (e.g., on the same Wi-Fi network, or at an ISP level) can record credentials, session tokens, and sensitive user data without any active attack. An active attacker can modify page content in transit (e.g., inject scripts).',
-        remediation: 'Obtain a free TLS certificate from Let\'s Encrypt (https://letsencrypt.org/) using Certbot. Configure your web server for HTTPS and redirect all HTTP traffic to HTTPS. Add HSTS.',
-        safeValidation: `After deploying TLS, verify with: curl -I https://${domain} (should return 200 or redirect). Check the certificate using: openssl s_client -connect ${domain}:443.`,
-        references: [
-          'https://letsencrypt.org/',
-          'https://www.rfc-editor.org/rfc/rfc8446',
-          'https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/',
+    if (tls?.outcome === 'confirmed_absent' || (tls?.reason && tls.reason.toLowerCase().includes('refused'))) {
+      findings.push(finding({
+        title: 'Web service operates exclusively over unencrypted HTTP',
+        severity: 'high',
+        kind: 'configuration_weakness',
+        category: 'http',
+        description: `An HTTP service was observed at http://${domain} but no HTTPS endpoint is available. All communication with this domain occurs over an unencrypted channel.`,
+        recommendation: 'Obtain a TLS certificate (e.g., from Let\'s Encrypt at no cost) and configure HTTPS. Redirect all HTTP traffic to HTTPS and add HSTS.',
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('HTTP probe', `HTTP service observed responding at http://${domain}.`),
+          ev('TLS probe', `No TLS/HTTPS service was observed at https://${domain}.`),
         ],
-      },
-    }));
+        analysis: {
+          whatIsThis: 'TLS (Transport Layer Security) encrypts data in transit between a browser and a web server, preventing passive eavesdropping and active tampering. A service without HTTPS transmits all data — including any credentials, session tokens, and page content — as readable plaintext.',
+          whatWasObserved: `An HTTP web service was observed responding at http://${domain}. No TLS certificate or HTTPS endpoint was observed when probing port 443.`,
+          howDiscovered: 'DASS performed a passive HTTP probe (port 80) and a TLS handshake probe (port 443) and recorded the results.',
+          technicalExplanation: 'HTTP transmits all data as plaintext. Any device between the client and server — including ISP routers, Wi-Fi access points, and corporate proxies — can read or modify the content in transit. This affects all users of the service, not just those on untrusted networks.',
+          whyItMatters: 'Without encryption, authentication credentials, session tokens, and sensitive data transmitted by users are exposed to anyone who can observe network traffic on the path between the user and the server.',
+          securityImpact: 'All users of this domain are exposed to passive traffic observation by network intermediaries. Any authentication performed over HTTP can be captured. Form data, session cookies, and page content are all readable in transit.',
+          potentialAbuse: 'A passive network observer (e.g., on the same Wi-Fi network, or at an ISP level) can record credentials, session tokens, and sensitive user data without any active attack. An active attacker can modify page content in transit (e.g., inject scripts).',
+          remediation: 'Obtain a free TLS certificate from Let\'s Encrypt (https://letsencrypt.org/) using Certbot. Configure your web server for HTTPS and redirect all HTTP traffic to HTTPS. Add HSTS.',
+          safeValidation: `After deploying TLS, verify with: curl -I https://${domain} (should return 200 or redirect). Check the certificate using: openssl s_client -connect ${domain}:443.`,
+          references: [
+            'https://letsencrypt.org/',
+            'https://www.rfc-editor.org/rfc/rfc8446',
+            'https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/',
+          ],
+        },
+      }));
+    } else {
+      findings.push(finding({
+        title: 'TLS availability could not be verified during this scan',
+        severity: 'informational',
+        kind: 'configuration_weakness',
+        category: 'http',
+        description: `An HTTP service was observed at http://${domain}, but TLS/HTTPS verification could not be completed due to connection timeout or network error.`,
+        recommendation: 'Verify port 443 connectivity and ensure external firewall rules permit HTTPS traffic.',
+        confidence: 'low',
+        observationStatus: 'not_observed',
+        evidence: [
+          ev('HTTP probe', `HTTP service observed responding at http://${domain}.`),
+          ev('TLS probe', 'TLS could not be verified during this scan due to connection failure or timeout.', 'low'),
+        ],
+        analysis: {
+          whatIsThis: 'TLS (Transport Layer Security) encrypts data in transit between a browser and a web server, preventing passive eavesdropping and active tampering.',
+          whatWasObserved: 'TLS could not be verified during this scan due to connection timeout or network error.',
+          howDiscovered: 'DASS attempted a TLS handshake probe on port 443 which failed to complete.',
+          technicalExplanation: 'The probe timed out or encountered a network-level connection failure before completing a TLS handshake. This does not confirm whether a TLS listener is present or absent.',
+          whyItMatters: 'If TLS is present but slow or protected by geoblocking/rate-limiting, false alarms should not be raised.',
+          securityImpact: 'Unknown until connectivity on port 443 can be verified.',
+          potentialAbuse: 'Inconclusive.',
+          remediation: 'Ensure port 443 is accessible and accepts incoming HTTPS connections.',
+          safeValidation: `Verify with: curl -v https://${domain}`,
+          references: [
+            'https://letsencrypt.org/',
+            'https://www.rfc-editor.org/rfc/rfc8446',
+          ],
+        },
+      }));
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -1231,16 +1283,16 @@ export function buildFindings(scan: DomainScan): Finding[] {
           category: 'exposure',
           description: `Software running on host ${host.ip} was identified as vulnerable to ${cve} in Shodan's passive vulnerability correlation database.`,
           recommendation: `Identify the software component running on ${host.ip} associated with ${cve} and apply vendor security patches or upgrade to the latest stable release.`,
-          confidence: 'high',
+          confidence: 'medium',
           observationStatus: 'observed',
           evidence: [
-            ev('Shodan InternetDB', `CVE ${cve} recorded against host ${host.ip} in passive scan database.`),
+            ev('Shodan InternetDB', `CVE ${cve} recorded against host ${host.ip} in passive scan database.`, 'medium'),
           ],
           analysis: {
             whatIsThis: `${cve} is a publicly documented security flaw catalogued in the National Vulnerability Database (NVD) with known exploitation vectors.`,
-            whatWasObserved: `Host ${host.ip} was correlated with ${cve} in Shodan's internet database based on software banner and version fingerprinting.`,
+            whatWasObserved: `Host ${host.ip} was correlated with ${cve} in Shodan's internet database based on software banner and version fingerprinting. This is an automated correlation based on service banner and version fingerprinting, not a confirmed exploit test — verify the actual software version running on this host before treating this as certain.`,
             howDiscovered: `DASS performed a passive lookup against Shodan InternetDB for ${host.ip} without active scanning.`,
-            technicalExplanation: `Software versions with public CVEs have publicly available technical descriptions of how their defenses can be circumvented, and in many cases exploit proof-of-concepts (PoCs) exist. Automated exploitation frameworks continuously scan the internet for hosts matching these signatures.`,
+            technicalExplanation: `Software versions with public CVEs have publicly available technical descriptions of how their defenses can be circumvented, and in many cases exploit proof-of-concepts (PoCs) exist. Automated exploitation frameworks continuously scan the internet for hosts matching these signatures. This is an automated correlation based on service banner and version fingerprinting, not a confirmed exploit test — verify the actual software version running on this host before treating this as certain.`,
             whyItMatters: `Known unpatched CVEs on internet-facing assets are the single most common entry point for opportunistic ransomware groups and automated threat actors.`,
             securityImpact: `Depending on the vulnerability's specific CVSS vector, exploitation may lead to remote code execution (RCE), information disclosure, privilege escalation, or denial of service.`,
             potentialAbuse: `Threat actors search Shodan or run automated vulnerability scanners targeting ${cve} to locate vulnerable hosts and deploy exploit payloads.`,
@@ -1397,6 +1449,268 @@ export function buildFindings(scan: DomainScan): Finding[] {
           },
         }));
       }
+    }
+
+    // ── Phase 6: Certificate Chain Correctness ─────────────────────────────
+    if (tls?.available) {
+      // Hostname mismatch
+      let isMismatch = tls.hostnameMismatch === true;
+      if (tls.hostnameMismatch === undefined && Array.isArray(tls.subjectAltNames) && tls.subjectAltNames.length > 0) {
+        const target = domain.toLowerCase().replace(/\.$/, '');
+        const matches = tls.subjectAltNames.some((san) => {
+          const normalized = san.toLowerCase().replace(/^\*\./, '').replace(/\.$/, '');
+          return normalized === target || (san.startsWith('*.') && target.endsWith(`.${normalized}`));
+        });
+        if (!matches) isMismatch = true;
+      }
+
+      if (isMismatch) {
+        findings.push(finding({
+          title: `TLS certificate hostname mismatch observed for ${domain}`,
+          severity: 'high',
+          kind: 'configuration_weakness',
+          category: 'tls',
+          description: `The cryptographic certificate presented on port 443 does not list ${domain} in its Subject Alternative Names (SANs) or Common Name. Connecting browsers and clients will reject HTTPS connections with a certificate name mismatch error.`,
+          recommendation: `Reissue the TLS certificate to explicitly include ${domain} (and any required subdomains) in the Subject Alternative Names list.`,
+          confidence: 'high',
+          observationStatus: 'observed',
+          evidence: [
+            ev('TLS certificate inspection', `Certificate SANs (${(tls.subjectAltNames ?? []).join(', ') || 'none'}) do not cover ${domain}.`),
+          ],
+          analysis: {
+            whatIsThis: 'A TLS certificate contains Subject Alternative Names (SANs) defining the exact web domains the certificate is valid for.',
+            whatWasObserved: `The certificate served on port 443 does not cover ${domain} in its Subject Alternative Names list.`,
+            howDiscovered: 'DASS inspected the peer certificate during the TLS handshake and verified the hostname against all listed SAN entries.',
+            technicalExplanation: 'Browsers strictly compare the requested URL domain against the certificate’s Subject Alternative Names. If the requested domain is not listed, the browser treats the connection as invalid.',
+            whyItMatters: 'A hostname mismatch is a visible trust failure. Browsers display full-page security warning screens that prevent normal visitor traffic.',
+            securityImpact: 'Visitors cannot securely access the website without clicking through severe browser security warnings. Many automated API clients refuse to connect entirely.',
+            potentialAbuse: 'Attackers can exploit visitor confusion when certificate warnings are common, creating opportunities for credential harvesting or phishing.',
+            remediation: `Obtain a new TLS certificate (e.g. via Let's Encrypt or your CA) that includes ${domain} in the SAN extension.`,
+            safeValidation: `Inspect certificate SANs with: openssl s_client -connect ${domain}:443 -servername ${domain} | openssl x509 -noout -text | grep DNS:`,
+            references: [
+              'https://www.rfc-editor.org/rfc/rfc6125',
+              'https://letsencrypt.org/docs/faq/',
+            ],
+          },
+        }));
+      }
+
+      // Incomplete certificate chain
+      if (tls.chainComplete === false || (tls.hasIntermediateCertificate === false && (tls.chainLength ?? 1) <= 1)) {
+        findings.push(finding({
+          title: 'TLS certificate chain is incomplete (missing intermediate CA certificate)',
+          severity: 'low',
+          kind: 'configuration_weakness',
+          category: 'tls',
+          description: `The web server presented only the leaf certificate on port 443 without intermediate CA certificates. While modern desktop browsers may cache intermediates, mobile browsers and automated API clients often reject incomplete chains.`,
+          recommendation: 'Configure your web server to serve the full certificate chain bundle (commonly fullchain.pem) including all intermediate certificates.',
+          confidence: 'high',
+          observationStatus: 'observed',
+          evidence: [
+            ev('TLS handshake', 'Only the leaf certificate was served without intermediate certificates in the TLS peer chain.'),
+          ],
+          analysis: {
+            whatIsThis: 'A TLS certificate chain links your server certificate to a trusted root Certificate Authority through one or more intermediate certificates.',
+            whatWasObserved: 'The web server returned only the leaf certificate during the handshake rather than the complete intermediate certificate bundle.',
+            howDiscovered: 'DASS traversed the peer certificate chain presented by the socket during the TLS handshake.',
+            technicalExplanation: 'Standard web servers must provide intermediate certificates because clients do not pre-install intermediate CAs in their local trust stores.',
+            whyItMatters: 'Without intermediate certificates, mobile devices, command-line tools, and automated integration clients will fail TLS verification.',
+            securityImpact: 'Intermittent connection failures occur for visitors whose devices have not cached the intermediate certificate.',
+            potentialAbuse: 'An incomplete chain causes reliability and trust failures rather than direct exploitation, but may disrupt API integrations.',
+            remediation: 'Update web server configuration to point to the full certificate chain file (e.g. fullchain.pem instead of cert.pem in Nginx or Apache).',
+            safeValidation: `Verify the presented chain: openssl s_client -connect ${domain}:443 -servername ${domain} -showcerts`,
+            references: [
+              'https://www.rfc-editor.org/rfc/rfc5280',
+              'https://ssl-config.mozilla.org/',
+            ],
+          },
+        }));
+      }
+    }
+
+    // ── Phase 6: Subdomain Takeover Risk ────────────────────────────────────
+    const takeoverRisks = subdomains?.takeoverRisks ?? exposure?.takeoverRisks ?? [];
+    for (const t of takeoverRisks) {
+      if (!t.confirmed) continue;
+      findings.push(finding({
+        title: `Confirmed subdomain takeover vulnerability on ${t.subdomain}`,
+        severity: 'high',
+        kind: 'potential_risk',
+        category: 'subdomains',
+        description: `Subdomain ${t.subdomain} points via DNS CNAME to ${t.cname} (${t.service}), but the third-party provider returned an unclaimed resource response ("${t.matchedFingerprint}"). An attacker can claim this resource with ${t.service} and host arbitrary content on your subdomain.`,
+        recommendation: `Immediately remove the dangling DNS CNAME record for ${t.subdomain} in your authoritative DNS zone, or claim and configure the resource in your ${t.service} account.`,
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('Dangling DNS / HTTP probe', `CNAME points to ${t.cname} (${t.service}) and returned unclaimed resource fingerprint: "${t.matchedFingerprint}".`),
+        ],
+        analysis: {
+          whatIsThis: 'A subdomain takeover occurs when a DNS record points to an external cloud service where the backing project or bucket has been deleted or is not yet registered.',
+          whatWasObserved: `DNS CNAME for ${t.subdomain} resolves to ${t.cname} (${t.service}), and a passive HTTP request confirmed an unclaimed resource fingerprint: "${t.matchedFingerprint}".`,
+          howDiscovered: 'DASS checked CNAME records against known vulnerable cloud provider patterns and verified the HTTP response against the can-i-take-over-xyz fingerprint database.',
+          technicalExplanation: 'Because the DNS record remains active after the cloud resource was deprovisioned, any user can register the corresponding name on the third-party provider and hijack traffic destined for your subdomain.',
+          whyItMatters: 'This represents an exploitable security vulnerability rather than passive configuration hygiene. An attacker can host arbitrary pages under your branded domain.',
+          securityImpact: 'Attackers can harvest credentials, steal parent domain authentication cookies, bypass cross-origin protections, and perform convincing phishing attacks under your domain.',
+          potentialAbuse: 'An adversary creates a new account on ${t.service}, claims the orphaned ${t.cname} identifier, and serves malicious content or phishing forms directly under ${t.subdomain}.',
+          remediation: `1. Remove the dangling DNS CNAME record for ${t.subdomain} from your DNS management console.\n2. Alternatively, claim the corresponding resource name inside your organization's ${t.service} account.`,
+          safeValidation: `Check DNS resolution: dig ${t.subdomain} CNAME. Confirm the record no longer points to an orphaned endpoint.`,
+          references: [
+            'https://github.com/EdOverflow/can-i-take-over-xyz',
+            'https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/10-Test_for_Subdomain_Takeover',
+          ],
+        },
+      }));
+    }
+
+    // ── Phase 6: Domain & WHOIS Hygiene ─────────────────────────────────────
+    if (whois?.available) {
+      // Recent registration
+      if (whois.creationDate) {
+        const creationMs = Date.parse(whois.creationDate);
+        if (!isNaN(creationMs)) {
+          const ageDays = Math.floor((Date.now() - creationMs) / (1000 * 60 * 60 * 24));
+          if (ageDays >= 0 && ageDays < 30) {
+            findings.push(finding({
+              title: `Domain registered recently (${ageDays} day${ageDays === 1 ? '' : 's'} old)`,
+              severity: 'low',
+              kind: 'observation',
+              category: 'whois',
+              description: `Domain registration records show this domain was registered ${ageDays} day${ageDays === 1 ? '' : 's'} ago on ${whois.creationDate}. Newly created domains are statistically correlated with temporary infrastructure, though legitimate new organizations start here too. This is a soft signal on its own, not a confirmed issue.`,
+              recommendation: 'Ensure standard security controls (SPF, DMARC, TLS) are configured early to establish domain reputation.',
+              confidence: 'medium',
+              observationStatus: 'observed',
+              evidence: [
+                ev('WHOIS registry query', `Domain creation date: ${whois.creationDate} (${ageDays} days ago).`),
+              ],
+              analysis: {
+                whatIsThis: 'The domain creation date recorded by the authoritative registrar indicates how long the domain name has been registered.',
+                whatWasObserved: `Domain was created ${ageDays} days ago on ${whois.creationDate}.`,
+                howDiscovered: 'DASS queried authoritative WHOIS registries and parsed the domain creation timestamp.',
+                technicalExplanation: 'Threat detection engines often assign lower initial trust scores to newly registered domains because disposable attack domains are frequently registered shortly before campaigns.',
+                whyItMatters: 'This is an informational context signal. Some enterprise security gateways apply stricter automated inspection to traffic from domains under 30 days old.',
+                securityImpact: 'Potential temporary deliverability or categorization delays with external email gateways and threat intelligence feeds until positive reputation is established.',
+                potentialAbuse: 'Attackers frequently register new domains for single-use phishing campaigns to avoid pre-existing reputation blocklists.',
+                remediation: 'No defensive reconfiguration needed. Configure strict SPF and DMARC policies early to accelerate legitimate reputation building.',
+                safeValidation: `Review WHOIS records with: whois ${domain}`,
+                references: [
+                  'https://www.icann.org/resources/pages/whois-2012-02-25-en',
+                ],
+              },
+            }));
+          }
+        }
+      }
+
+      // Public WHOIS contact details
+      if (whois.privacyStatus === 'public') {
+        findings.push(finding({
+          title: 'Registrant contact information publicly visible in WHOIS records',
+          severity: 'low',
+          kind: 'observation',
+          category: 'whois',
+          description: 'Authoritative WHOIS records display unredacted registrant contact details. While standard for certain enterprise domains, lack of registrar privacy exposes administrative contact data to automated scrapers and unsolicited spam. This is a soft signal on its own, not a confirmed issue.',
+          recommendation: 'Enable registrar privacy proxy protection if public disclosure of administrator contact details is not required.',
+          confidence: 'medium',
+          observationStatus: 'observed',
+          evidence: [
+            ev('WHOIS query', 'Registrant details returned without privacy proxy or redaction patterns.'),
+          ],
+          analysis: {
+            whatIsThis: 'WHOIS privacy protection shields personal names, email addresses, and phone numbers in public domain registry lookups.',
+            whatWasObserved: 'Registrant contact information was returned in plaintext without privacy proxy or redaction masking.',
+            howDiscovered: 'DASS inspected registrant contact fields returned from public WHOIS lookups.',
+            technicalExplanation: 'Without registrar privacy masking, administrative contact details are accessible to anyone on the internet querying port 43.',
+            whyItMatters: 'Public contact details are frequently harvested by automated scrapers for spam, fraudulent renewal notices, and spear-phishing campaigns targeting domain owners.',
+            securityImpact: 'Increased risk of social engineering, targeted phishing, or fraudulent domain transfer requests sent to the listed administrative email.',
+            potentialAbuse: 'Attackers harvest the listed administrator contact details to launch convincing social engineering or domain renewal phishing attacks.',
+            remediation: 'Contact your domain registrar and activate WHOIS privacy or ID protection to mask public registrant details.',
+            safeValidation: `Verify privacy status: whois ${domain}`,
+            references: [
+              'https://www.icann.org/resources/pages/privacy-proxy-2013-03-22-en',
+            ],
+          },
+        }));
+      }
+    }
+
+    // ── Phase 6: Cookie Security ────────────────────────────────────────────
+    const observedCookies = [
+      ...(http?.cookies ?? []),
+      ...(http?.https?.cookies ?? []),
+      ...(http?.http?.cookies ?? []),
+    ];
+    const flaggedCookieNames = new Set<string>();
+    for (const cookie of observedCookies) {
+      if (!cookie.isSessionLikely || flaggedCookieNames.has(cookie.name)) continue;
+      flaggedCookieNames.add(cookie.name);
+
+      if (!cookie.hasSecure || !cookie.hasHttpOnly) {
+        findings.push(finding({
+          title: `Sensitive session cookie missing security attributes (${cookie.name})`,
+          severity: 'medium',
+          kind: 'configuration_weakness',
+          category: 'http',
+          description: `The cookie "${cookie.name}" appears to store authentication or session state (identified via heuristic name matching) and is missing the ${cookie.missingFlags.join(' and ')} flag(s).`,
+          recommendation: `Configure the Set-Cookie header for "${cookie.name}" with Secure and HttpOnly flags, and specify SameSite=Lax or SameSite=Strict.`,
+          confidence: 'high',
+          observationStatus: 'observed',
+          evidence: [
+            ev('HTTP Set-Cookie inspection', `Cookie "${cookie.name}" missing flags: ${cookie.missingFlags.join(', ')}.`),
+          ],
+          analysis: {
+            whatIsThis: 'HTTP cookie attributes control browser security policies regarding how cookies are transmitted and accessed.',
+            whatWasObserved: `Cookie "${cookie.name}" is missing ${cookie.missingFlags.join(' and ')} attributes (session-like cookie identified via heuristic name matching).`,
+            howDiscovered: 'DASS parsed Set-Cookie headers in passive HTTP and HTTPS responses.',
+            technicalExplanation: 'The Secure flag instructs browsers never to send the cookie over unencrypted HTTP. The HttpOnly flag prevents client-side JavaScript from accessing the cookie value.',
+            whyItMatters: 'If a session cookie lacks Secure, network eavesdroppers can capture it over plaintext. If it lacks HttpOnly, cross-site scripting (XSS) attacks can steal it directly.',
+            securityImpact: 'Unauthorized session hijacking if an attacker intercepts plaintext traffic or successfully exploits an XSS vulnerability.',
+            potentialAbuse: 'An adversary on a shared local network captures unencrypted cookies, or executes injected script to read document.cookie and exfiltrate the session token.',
+            remediation: `Update server cookie configuration to include Secure, HttpOnly, and SameSite=Lax flags when setting "${cookie.name}".`,
+            safeValidation: `Inspect cookie headers with: curl -I https://${domain} | grep -i Set-Cookie`,
+            references: [
+              'https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies',
+              'https://owasp.org/www-community/controls/SecureCookieAttribute',
+            ],
+          },
+        }));
+      }
+    }
+
+    // ── Phase 6: CORS Misconfiguration ──────────────────────────────────────
+    const corsMisconfigured = Boolean(
+      http?.corsMisconfiguration ||
+      http?.https?.corsMisconfiguration ||
+      http?.http?.corsMisconfiguration,
+    );
+    if (corsMisconfigured) {
+      findings.push(finding({
+        title: 'Insecure CORS configuration (wildcard origin with credentials enabled)',
+        severity: 'high',
+        kind: 'configuration_weakness',
+        category: 'http',
+        description: 'The web server returned Access-Control-Allow-Origin: * combined with Access-Control-Allow-Credentials: true. While invalid per browser specifications, misconfigured servers often allow third-party origins to access authenticated data.',
+        recommendation: 'Remove the wildcard origin if credentials are required. Explicitly validate and echo only trusted origin domains in the Access-Control-Allow-Origin header.',
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('HTTP CORS header inspection', 'Observed Access-Control-Allow-Origin: * combined with Access-Control-Allow-Credentials: true.'),
+        ],
+        analysis: {
+          whatIsThis: 'Cross-Origin Resource Sharing (CORS) defines how web browsers permit client-side web applications on other domains to read sensitive response data.',
+          whatWasObserved: 'The HTTP server returned Access-Control-Allow-Origin: * combined with Access-Control-Allow-Credentials: true.',
+          howDiscovered: 'DASS inspected cross-origin HTTP response headers returned by the server.',
+          technicalExplanation: 'The CORS specification prohibits pairing a wildcard origin (*) with credentials because it would allow any website to access user-authenticated private data.',
+          whyItMatters: 'A bare wildcard on public APIs is normal for public data, but combining wildcards with credentials exposes private user responses to third-party web pages.',
+          securityImpact: 'Third-party websites visited by authenticated users could issue background requests to your service and read sensitive user data.',
+          potentialAbuse: 'An attacker lures an authenticated user to a malicious site that executes cross-origin fetch requests, capturing private account data.',
+          remediation: 'Do not configure Access-Control-Allow-Origin: * on endpoints that process authenticated sessions. Whitelist trusted origins explicitly.',
+          safeValidation: `Check CORS response headers: curl -H "Origin: https://example.com" -I https://${domain} | grep -i Access-Control-`,
+          references: [
+            'https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS',
+            'https://portswigger.net/web-security/cors',
+          ],
+        },
+      }));
     }
 
     return findings;

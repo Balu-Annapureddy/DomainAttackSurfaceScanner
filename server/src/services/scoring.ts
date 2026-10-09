@@ -1,31 +1,40 @@
 /**
- * External Hygiene Score — v2 weighted hygiene model
+ * External Hygiene Score — v2 expanded 12-category hygiene scoring model
  *
  * The score is a deterministic 0–100 configuration-hygiene summary based only
  * on completed, evidence-backed observations. It is NOT an exploitability score.
  *
- * Model:
- *   TLS & Certificate       20
- *   HTTPS & Transport       15
- *   HTTP Security Headers   20
- *   DNS & Domain Integrity  15
- *   Email Security          15
- *   Internet Exposure       15
+ * 12-Category Model & Weights:
+ *   1.  TLS Hygiene                      20 pts max
+ *   2.  HTTPS Enforcement                15 pts max
+ *   3.  Web Security Headers             15 pts max
+ *   4.  Email Security (SPF/DMARC)       10 pts max
+ *   5.  DNSSEC Hygiene                    3 pts max
+ *   6.  Network Exposure (ports/CVEs)    15 pts max
+ *   7.  Certificate Chain Correctness     7 pts max (NEW)
+ *   8.  Subdomain Takeover Risk          15 pts max (NEW)
+ *   9.  Domain & WHOIS Hygiene            5 pts max (NEW)
+ *   10. Cookie Security                   5 pts max (NEW)
+ *   11. CORS Misconfiguration             5 pts max (NEW)
+ *   12. Breach Exposure                   5 pts max (NEW)
  *
- * Total possible deduction = 100, so a perfect posture remains 100 while
- * partial weaknesses produce proportional deductions instead of the old
- * coarse 20/25-point penalties.
+ * Total theoretical maximum deduction across all 12 categories: 110 points.
+ * Final score = clamp(100 - totalDeducted, 0, 100).
  *
- * Epistemic safety:
- * - failed/pending categories never deduct;
- * - unknown/unavailable fields never deduct;
- * - HSTS is scored in HTTPS & Transport and is excluded from header scoring;
- * - exposure signals are deduplicated and bounded.
+ * Epistemic safety principles:
+ * - Failed, pending, or incomplete check categories NEVER deduct points.
+ * - Missing or unknown data fields never deduct points (unknown is not absent).
+ * - Soft signals (WHOIS age, WHOIS privacy) are weighted lightly (<= 3 pts) and
+ *   explicitly labeled as soft signals in observations.
+ * - Confirmed vulnerabilities (subdomain takeover) carry substantial weight (15 pts).
+ * - Single source of truth: computeExposureScore() delegates directly to computeScoreBreakdown().
  *
  * Scoring Version: 2
  */
 
 import type { DomainScan, DimensionScore, ScoreBreakdown, ScoreObservation } from '../../../shared/types';
+import type { CookieObservation } from './httpFingerprint';
+import type { TakeoverMatch } from './takeoverCheck';
 
 export const SCORING_VERSION = 2 as const;
 
@@ -38,6 +47,13 @@ function parseExpiryDays(value: string | undefined | null): number | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return Math.ceil((date.getTime() - Date.now()) / 86400000);
+}
+
+function parseAgeDays(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
 }
 
 function buildDimension(
@@ -68,24 +84,32 @@ function getMissingHeaders(scan: DomainScan): string[] {
   return http?.https?.missingSecurityHeaders ?? http?.worryingHeaders ?? [];
 }
 
+// ── 1. TLS Hygiene (Max: 20) ────────────────────────────────────────────────
 function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
   const cat = scan.categories.tls;
   if (cat?.status !== 'completed') return [];
 
   const tls = cat.data as {
     available?: boolean;
+    outcome?: 'confirmed_absent' | 'connection_failed' | 'available';
+    reason?: string;
     validTo?: string | null;
     protocol?: string;
     authorized?: boolean;
     authorizationError?: string;
-    subjectAltNames?: string[];
   } | undefined;
 
   const observations: ScoreObservation[] = [];
 
-  if (tls?.available === false) {
+  // Phase 7.1: Connection failures (timeouts, network errors) are inconclusive and must never deduct
+  if (tls?.outcome === 'connection_failed') {
+    return observations;
+  }
+
+  // Only deduct when definitively confirmed absent (e.g. connection refused on port 443)
+  if (tls?.outcome === 'confirmed_absent' || (tls?.available === false && tls?.reason?.toLowerCase().includes('refused'))) {
     observations.push({
-      description: 'TLS/HTTPS service was not observed on port 443',
+      description: 'TLS/HTTPS service was not observed on port 443 (connection refused)',
       pointsDeducted: 5,
     });
     return observations;
@@ -95,7 +119,7 @@ function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
 
   if (tls.authorized === false) {
     observations.push({
-      description: 'TLS certificate chain was not authorized by the client trust store',
+      description: 'TLS certificate was not authorized by the client trust store',
       pointsDeducted: 4,
     });
   }
@@ -122,33 +146,23 @@ function collectTlsObservations(scan: DomainScan): ScoreObservation[] {
     });
   }
 
-  // If the scanner supplied SANs, require the target hostname to be represented.
-  // Do not penalize when SAN data is unavailable.
-  if (Array.isArray(tls.subjectAltNames) && tls.subjectAltNames.length > 0) {
-    const target = scan.domain.toLowerCase().replace(/\.$/, '');
-    const matches = tls.subjectAltNames.some((san) => {
-      const normalized = san.toLowerCase().replace(/^\*\./, '').replace(/\.$/, '');
-      return normalized === target || (san.startsWith('*.') && target.endsWith(`.${normalized}`));
-    });
-    if (!matches) {
-      observations.push({
-        description: 'TLS certificate SANs do not include the scanned hostname',
-        pointsDeducted: 4,
-      });
-    }
-  }
-
   return observations;
 }
 
+// ── 2. HTTPS Enforcement (Max: 15) ──────────────────────────────────────────
 function collectHttpsObservations(scan: DomainScan): ScoreObservation[] {
   const cat = scan.categories.http;
   if (cat?.status !== 'completed') return [];
 
-  const http = cat.data as { httpsEnforced?: boolean } | undefined;
+  const http = cat.data as {
+    httpsEnforced?: boolean;
+    httpOutcome?: 'completed' | 'confirmed_absent' | 'inconclusive';
+    httpAvailable?: boolean;
+  } | undefined;
   const observations: ScoreObservation[] = [];
 
-  if (http?.httpsEnforced === false) {
+  // Phase 7.1b: Inconclusive check must never deduct for unenforced HTTPS
+  if (http?.httpsEnforced === false && http?.httpOutcome !== 'inconclusive' && http?.httpAvailable !== false) {
     observations.push({
       description: 'HTTP requests are not redirected to HTTPS',
       pointsDeducted: 5,
@@ -167,6 +181,7 @@ function collectHttpsObservations(scan: DomainScan): ScoreObservation[] {
   return observations;
 }
 
+// ── 3. Web Security Headers (Max: 15) ───────────────────────────────────────
 function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
   const missing = getMissingHeaders(scan);
   if (missing.length === 0) return [];
@@ -174,7 +189,7 @@ function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
   const observations: ScoreObservation[] = [];
   const normalized = new Set(missing.map((h) => h.toLowerCase()));
 
-  // HSTS belongs to HTTPS & Transport, so it is intentionally excluded here.
+  // HSTS belongs to HTTPS Enforcement, excluded here
   if (normalized.has('content-security-policy') || normalized.has('csp')) {
     observations.push({ description: 'Content-Security-Policy is missing', pointsDeducted: 5 });
   }
@@ -182,7 +197,7 @@ function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
     observations.push({ description: 'X-Content-Type-Options is missing', pointsDeducted: 3 });
   }
   if (normalized.has('x-frame-options') || normalized.has('x-frame')) {
-    observations.push({ description: 'X-Frame-Options or an equivalent framing control is missing', pointsDeducted: 3 });
+    observations.push({ description: 'X-Frame-Options or equivalent framing control is missing', pointsDeducted: 3 });
   }
   if (normalized.has('referrer-policy')) {
     observations.push({ description: 'Referrer-Policy is missing', pointsDeducted: 2 });
@@ -191,17 +206,15 @@ function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
     observations.push({ description: 'Permissions-Policy is missing', pointsDeducted: 2 });
   }
 
-  // Other explicitly reported missing security headers receive a small bounded
-  // deduction rather than all being treated as equally critical.
   const known = new Set([
     'strict-transport-security', 'hsts', 'content-security-policy', 'csp',
     'x-content-type-options', 'x-content-type', 'x-frame-options', 'x-frame',
     'referrer-policy', 'permissions-policy',
   ]);
-  const otherCount = missing.filter((h) => !known.has(h.toLowerCase())).length;
-  for (let i = 0; i < Math.min(otherCount, 5); i += 1) {
+  const otherHeaders = missing.filter((h) => !known.has(h.toLowerCase()));
+  for (let i = 0; i < Math.min(otherHeaders.length, 5); i += 1) {
     observations.push({
-      description: `Additional HTTP security header is missing: ${missing.filter((h) => !known.has(h.toLowerCase()))[i]}`,
+      description: `Additional HTTP security header is missing: ${otherHeaders[i]}`,
       pointsDeducted: 1,
     });
   }
@@ -209,53 +222,7 @@ function collectHeaderObservations(scan: DomainScan): ScoreObservation[] {
   return observations;
 }
 
-function collectDnsObservations(scan: DomainScan): ScoreObservation[] {
-  const cat = scan.categories.dns;
-  if (cat?.status !== 'completed') return [];
-
-  const dns = cat.data as {
-    dnssec?: { observed?: boolean };
-    ns?: string[];
-    addresses?: string[];
-    cname?: string[];
-    txt?: string[];
-  } | undefined;
-
-  const observations: ScoreObservation[] = [];
-
-  if (dns?.dnssec?.observed === false) {
-    observations.push({
-      description: 'No DNSSEC (DNSKEY/DS) records were observed',
-      pointsDeducted: 4,
-    });
-  }
-
-  if (Array.isArray(dns?.ns) && dns.ns.length === 1) {
-    observations.push({
-      description: 'Only one authoritative nameserver was observed',
-      pointsDeducted: 2,
-    });
-  }
-
-  // The current DNS collector does not expose CAA as a structured field.
-  // Do not infer a missing CAA record from absent data.
-  if (Array.isArray(dns?.addresses) && dns.addresses.length === 0 && (dns?.cname?.length ?? 0) === 0) {
-    observations.push({
-      description: 'No public A/AAAA address or CNAME was observed for the target',
-      pointsDeducted: 2,
-    });
-  }
-
-  if (Array.isArray(dns?.txt) && dns.txt.length > 20) {
-    observations.push({
-      description: 'Large TXT record surface was observed; review unnecessary public TXT records',
-      pointsDeducted: 1,
-    });
-  }
-
-  return observations;
-}
-
+// ── 4. Email Security (Max: 10) ─────────────────────────────────────────────
 function collectEmailObservations(scan: DomainScan): ScoreObservation[] {
   const cat = scan.categories.dns;
   if (cat?.status !== 'completed') return [];
@@ -306,6 +273,28 @@ function collectEmailObservations(scan: DomainScan): ScoreObservation[] {
   return observations;
 }
 
+// ── 5. DNSSEC Hygiene (Max: 3) ──────────────────────────────────────────────
+function collectDnssecObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.dns;
+  if (cat?.status !== 'completed') return [];
+
+  const dns = cat.data as {
+    dnssec?: { observed?: boolean };
+  } | undefined;
+
+  const observations: ScoreObservation[] = [];
+
+  if (dns?.dnssec?.observed === false) {
+    observations.push({
+      description: 'No DNSSEC (DNSKEY/DS) cryptographic records were observed in DNS',
+      pointsDeducted: 3,
+    });
+  }
+
+  return observations;
+}
+
+// ── 6. Network Exposure (Max: 15) ───────────────────────────────────────────
 function collectExposureObservations(scan: DomainScan): ScoreObservation[] {
   const cat = scan.categories.exposure;
   if (cat?.status !== 'completed') return [];
@@ -351,21 +340,265 @@ function collectExposureObservations(scan: DomainScan): ScoreObservation[] {
   return observations;
 }
 
+// ── 7. Certificate Chain Correctness (Max: 7) ───────────────────────────────
+function collectCertificateChainObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.tls;
+  if (cat?.status !== 'completed') return [];
+
+  const tls = cat.data as {
+    available?: boolean;
+    subjectAltNames?: string[];
+    hostnameMismatch?: boolean;
+    chainComplete?: boolean;
+    hasIntermediateCertificate?: boolean;
+    chainLength?: number;
+  } | undefined;
+
+  if (tls?.available !== true) return [];
+
+  const observations: ScoreObservation[] = [];
+
+  // Check hostname mismatch against SANs
+  let isMismatch = tls.hostnameMismatch === true;
+  if (tls.hostnameMismatch === undefined && Array.isArray(tls.subjectAltNames) && tls.subjectAltNames.length > 0) {
+    const target = scan.domain.toLowerCase().replace(/\.$/, '');
+    const matches = tls.subjectAltNames.some((san) => {
+      const normalized = san.toLowerCase().replace(/^\*\./, '').replace(/\.$/, '');
+      return normalized === target || (san.startsWith('*.') && target.endsWith(`.${normalized}`));
+    });
+    if (!matches) isMismatch = true;
+  }
+
+  if (isMismatch) {
+    observations.push({
+      description: 'TLS certificate Subject Alternative Names do not cover the target domain (hostname mismatch)',
+      pointsDeducted: 5,
+    });
+  }
+
+  // Check certificate chain completeness
+  if (tls.chainComplete === false || (tls.hasIntermediateCertificate === false && (tls.chainLength ?? 1) <= 1)) {
+    observations.push({
+      description: 'TLS certificate chain is incomplete (intermediate CA certificate not served by host)',
+      pointsDeducted: 2,
+    });
+  }
+
+  return observations;
+}
+
+// ── 8. Subdomain Takeover Risk (Max: 15) ─────────────────────────────────────
+function collectSubdomainTakeoverObservations(scan: DomainScan): ScoreObservation[] {
+  const subCat = scan.categories.subdomains;
+  const expCat = scan.categories.exposure;
+
+  // Check if check completed
+  if (subCat?.status !== 'completed' && expCat?.status !== 'completed') {
+    return [];
+  }
+
+  const subData = subCat?.data as { takeoverRisks?: TakeoverMatch[] } | undefined;
+  const expData = expCat?.data as { takeoverRisks?: TakeoverMatch[] } | undefined;
+  const takeovers: TakeoverMatch[] = subData?.takeoverRisks ?? expData?.takeoverRisks ?? [];
+
+  if (!Array.isArray(takeovers) || takeovers.length === 0) {
+    return [];
+  }
+
+  const confirmed = takeovers.filter((t) => t.confirmed);
+  if (confirmed.length === 0) return [];
+
+  const first = confirmed[0];
+  if (!first) return [];
+  return [
+    {
+      description: `Confirmed subdomain takeover risk: dangling CNAME pointing to unclaimed ${first.service} resource (${first.subdomain} -> ${first.cname})`,
+      pointsDeducted: 15,
+    },
+  ];
+}
+
+// ── 9. Domain & WHOIS Hygiene (Max: 5) ──────────────────────────────────────
+function collectWhoisObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.whois;
+  if (cat?.status !== 'completed') return [];
+
+  const whois = cat.data as {
+    available?: boolean;
+    creationDate?: string | null;
+    privacyStatus?: 'public' | 'redacted' | 'unknown';
+  } | undefined;
+
+  if (whois?.available === false || !whois) return [];
+
+  const observations: ScoreObservation[] = [];
+
+  // Check (a): Domain registered very recently (< 30 days)
+  const ageDays = parseAgeDays(whois.creationDate);
+  if (ageDays !== null && ageDays >= 0 && ageDays < 30) {
+    observations.push({
+      description: `Domain was registered very recently (${ageDays} day${ageDays === 1 ? '' : 's'} ago; soft signal on its own, not a confirmed issue)`,
+      pointsDeducted: 2,
+    });
+  }
+
+  // Check (b): Registrant contact info public without privacy/redaction
+  if (whois.privacyStatus === 'public') {
+    observations.push({
+      description: 'Registrant contact details are publicly visible without privacy proxy or redaction (soft signal on its own, not a confirmed issue)',
+      pointsDeducted: 3,
+    });
+  }
+
+  return observations;
+}
+
+// ── 10. Cookie Security (Max: 5) ────────────────────────────────────────────
+function collectCookieObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.http;
+  if (cat?.status !== 'completed') return [];
+
+  const http = cat.data as {
+    cookies?: CookieObservation[];
+    https?: { cookies?: CookieObservation[] };
+    http?: { cookies?: CookieObservation[] };
+  } | undefined;
+
+  const cookies: CookieObservation[] = [
+    ...(http?.cookies ?? []),
+    ...(http?.https?.cookies ?? []),
+    ...(http?.http?.cookies ?? []),
+  ];
+
+  if (cookies.length === 0) return [];
+
+  const observations: ScoreObservation[] = [];
+  const seenNames = new Set<string>();
+
+  for (const cookie of cookies) {
+    if (!cookie.isSessionLikely || seenNames.has(cookie.name)) continue;
+    seenNames.add(cookie.name);
+
+    if (!cookie.hasSecure) {
+      observations.push({
+        description: `Sensitive session cookie "${cookie.name}" is missing the Secure flag (heuristic session detection)`,
+        pointsDeducted: 2,
+      });
+    }
+
+    if (!cookie.hasHttpOnly) {
+      observations.push({
+        description: `Sensitive session cookie "${cookie.name}" is missing the HttpOnly flag (heuristic session detection)`,
+        pointsDeducted: 2,
+      });
+    }
+
+    if (!cookie.sameSite) {
+      observations.push({
+        description: `Sensitive session cookie "${cookie.name}" is missing the SameSite attribute`,
+        pointsDeducted: 1,
+      });
+    }
+  }
+
+  return observations;
+}
+
+// ── 11. CORS Misconfiguration (Max: 5) ──────────────────────────────────────
+function collectCorsObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.http;
+  if (cat?.status !== 'completed') return [];
+
+  const http = cat.data as {
+    corsMisconfiguration?: boolean;
+    https?: { corsMisconfiguration?: boolean; headers?: Record<string, string> };
+    http?: { corsMisconfiguration?: boolean; headers?: Record<string, string> };
+  } | undefined;
+
+  let isMisconfigured = Boolean(
+    http?.corsMisconfiguration ||
+    http?.https?.corsMisconfiguration ||
+    http?.http?.corsMisconfiguration,
+  );
+
+  if (!isMisconfigured) {
+    const headersToCheck = [http?.https?.headers, http?.http?.headers];
+    for (const h of headersToCheck) {
+      if (h) {
+        const origin = (h['access-control-allow-origin'] || '').trim().toLowerCase();
+        const creds = (h['access-control-allow-credentials'] || '').trim().toLowerCase();
+        if (origin === '*' && creds === 'true') {
+          isMisconfigured = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (isMisconfigured) {
+    return [
+      {
+        description: 'Risky CORS combination: Access-Control-Allow-Origin wildcard (*) combined with Access-Control-Allow-Credentials: true',
+        pointsDeducted: 5,
+      },
+    ];
+  }
+
+  return [];
+}
+
+// ── 12. Breach Exposure (Max: 5) ────────────────────────────────────────────
+function collectBreachObservations(scan: DomainScan): ScoreObservation[] {
+  const cat = scan.categories.exposure;
+  if (cat?.status !== 'completed') return [];
+
+  const expData = cat.data as {
+    breachData?: {
+      breaches?: Array<{ name: string; title: string }>;
+    };
+  } | undefined;
+
+  const breaches = expData?.breachData?.breaches;
+  if (Array.isArray(breaches) && breaches.length > 0) {
+    return [
+      {
+        description: `Historical security incident presence: ${breaches.length} historical public breach record(s) catalogued for domain (context signal)`,
+        pointsDeducted: 5,
+      },
+    ];
+  }
+
+  return [];
+}
+
+// ── Score Breakdown Calculation ─────────────────────────────────────────────
 export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
-  const tlsDim = buildDimension('TLS & Certificate', 20, collectTlsObservations(scan));
-  const httpsDim = buildDimension('HTTPS & Transport', 15, collectHttpsObservations(scan));
-  const headersDim = buildDimension('HTTP Security Headers', 20, collectHeaderObservations(scan));
-  const dnsDim = buildDimension('DNS & Domain Integrity', 15, collectDnsObservations(scan));
-  const emailDim = buildDimension('Email Security', 15, collectEmailObservations(scan));
-  const exposureDim = buildDimension('Internet Exposure', 15, collectExposureObservations(scan));
+  const tlsDim = buildDimension('TLS Hygiene', 20, collectTlsObservations(scan));
+  const httpsDim = buildDimension('HTTPS Enforcement', 15, collectHttpsObservations(scan));
+  const headersDim = buildDimension('Web Security Headers', 15, collectHeaderObservations(scan));
+  const emailDim = buildDimension('Email Security', 10, collectEmailObservations(scan));
+  const dnssecDim = buildDimension('DNSSEC Hygiene', 3, collectDnssecObservations(scan));
+  const exposureDim = buildDimension('Network Exposure', 15, collectExposureObservations(scan));
+  const certChainDim = buildDimension('Certificate Chain Correctness', 7, collectCertificateChainObservations(scan));
+  const takeoverDim = buildDimension('Subdomain Takeover Risk', 15, collectSubdomainTakeoverObservations(scan));
+  const whoisDim = buildDimension('Domain & WHOIS Hygiene', 5, collectWhoisObservations(scan));
+  const cookieDim = buildDimension('Cookie Security', 5, collectCookieObservations(scan));
+  const corsDim = buildDimension('CORS Misconfiguration', 5, collectCorsObservations(scan));
+  const breachDim = buildDimension('Breach Exposure', 5, collectBreachObservations(scan));
 
   const totalDeducted =
     tlsDim.deducted +
     httpsDim.deducted +
     headersDim.deducted +
-    dnsDim.deducted +
     emailDim.deducted +
-    exposureDim.deducted;
+    dnssecDim.deducted +
+    exposureDim.deducted +
+    certChainDim.deducted +
+    takeoverDim.deducted +
+    whoisDim.deducted +
+    cookieDim.deducted +
+    corsDim.deducted +
+    breachDim.deducted;
 
   const total = clamp(100 - totalDeducted, 0, 100);
 
@@ -378,8 +611,14 @@ export function computeScoreBreakdown(scan: DomainScan): ScoreBreakdown {
       httpsEnforcement: httpsDim,
       webSecurityHeaders: headersDim,
       emailSecurity: emailDim,
-      dnssecHygiene: dnsDim,
+      dnssecHygiene: dnssecDim,
       networkExposure: exposureDim,
+      certificateChain: certChainDim,
+      subdomainTakeover: takeoverDim,
+      whoisHygiene: whoisDim,
+      cookieSecurity: cookieDim,
+      corsConfiguration: corsDim,
+      breachExposure: breachDim,
     },
   };
 }

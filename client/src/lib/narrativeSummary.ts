@@ -409,7 +409,7 @@ export function generateHumanSecurityAssessment(scan: DomainScan): HumanAssessme
   if (subdomainsCount > 0 || ipCount > 0) {
     const subText = subdomainsCount > 0 ? `${subdomainsCount} subdomain${subdomainsCount > 1 ? 's' : ''} through public certificate records` : '';
     const ipText = ipCount > 0 ? `${ipCount} public server address${ipCount > 1 ? 'es' : ''}` : '';
-    const joinText = subText && ipText ? ` and ${ipText}` : subText || ipText;
+    const joinText = subText && ipText ? `${subText} and ${ipText}` : subText || ipText;
     const orgText = orgCount > 1 ? ` across ${orgCount} network hosting providers` : '';
     narrativeSentences.push(`Our passive discovery identified ${joinText}${orgText}.`);
   }
@@ -815,6 +815,156 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
       whatWouldImproveIt: isClean
         ? 'Keep administrative ports behind a VPN or zero-trust access gateway.'
         : 'Place database and administrative ports behind a firewall, private network, or VPN rather than exposing them directly.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 7. Certificate Chain Correctness
+  if (dims.certificateChain) {
+    const d = dims.certificateChain;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Certificate Chain & Hostname Validation',
+      technicalLabel: 'Certificate Chain Correctness',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'Valid Chain & SANs' : 'Chain or Hostname Gap',
+      isClean,
+      whatWasObserved: isClean
+        ? 'The certificate Subject Alternative Names cover the scanned hostname and a complete intermediate chain was served.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Assures connecting clients of domain identity and prevents untrusted connection warnings.'
+        : 'A hostname mismatch or missing intermediate certificate causes browsers and mobile clients to reject HTTPS connections.',
+      whatWouldImproveIt: isClean
+        ? 'Maintain automated certificate management covering all required subdomains.'
+        : 'Reissue certificate with correct SANs and ensure web servers serve the fullchain.pem certificate bundle.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 8. Subdomain Takeover Risk
+  if (dims.subdomainTakeover) {
+    const d = dims.subdomainTakeover;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Subdomain Takeover & Dangling DNS',
+      technicalLabel: 'Subdomain Takeover Risk',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'No Dangling Records' : 'High-Risk Takeover Detected',
+      isClean,
+      whatWasObserved: isClean
+        ? 'No subdomains point to decommissioned or unclaimed third-party cloud resources.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Prevents unauthorized actors from hijacking organizational subdomains.'
+        : 'Dangling CNAME records pointing to unclaimed services allow attackers to host arbitrary malicious content on your domain.',
+      whatWouldImproveIt: isClean
+        ? 'Maintain an automated inventory of DNS records and decommissioned cloud tenants.'
+        : 'Immediately delete dangling DNS CNAME records or reclaim the orphaned resource in the provider console.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 9. Domain & WHOIS Hygiene
+  if (dims.whoisHygiene) {
+    const d = dims.whoisHygiene;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Domain Registration & WHOIS Privacy',
+      technicalLabel: 'Domain & WHOIS Hygiene',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'Established & Protected' : 'Soft Hygiene Advisory',
+      isClean,
+      whatWasObserved: isClean
+        ? 'Domain has established age with privacy protection enabled on registrant contact records.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Reduces administrative spear-phishing exposure and provides established domain reputation.'
+        : 'Unredacted contact details expose administrators to targeted scams, while newly registered domains face baseline scrutiny.',
+      whatWouldImproveIt: isClean
+        ? 'Keep WHOIS privacy protection active and monitor domain renewal dates.'
+        : 'Enable registrar privacy proxy protection to mask administrative contact details from public scrapers.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 10. Cookie Security
+  if (dims.cookieSecurity) {
+    const d = dims.cookieSecurity;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Session Cookie Protection',
+      technicalLabel: 'Cookie Security',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'Hardened Cookie Attributes' : 'Insecure Cookie Flags',
+      isClean,
+      whatWasObserved: isClean
+        ? 'Session cookies include Secure, HttpOnly, and SameSite protection flags.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Prevents credential interception across plaintext networks and mitigates script-based token theft.'
+        : 'Missing Secure or HttpOnly flags on session tokens leaves user sessions vulnerable to eavesdropping and XSS theft.',
+      whatWouldImproveIt: isClean
+        ? 'Continue enforcing Secure, HttpOnly, and SameSite=Lax on all sensitive cookies.'
+        : 'Add Secure and HttpOnly flags to Set-Cookie response headers for all authentication and session identifiers.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 11. CORS Misconfiguration
+  if (dims.corsConfiguration) {
+    const d = dims.corsConfiguration;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Cross-Origin Resource Sharing (CORS)',
+      technicalLabel: 'CORS Misconfiguration',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'Restricted Origins' : 'Permissive Origin & Credentials',
+      isClean,
+      whatWasObserved: isClean
+        ? 'CORS headers do not expose authenticated responses to arbitrary wildcard origins.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Protects private user session data from being read by unauthorized third-party websites.'
+        : 'Combining Access-Control-Allow-Origin: * with credentials allows third-party websites to read authenticated user responses.',
+      whatWouldImproveIt: isClean
+        ? 'Maintain explicit origin whitelists for authenticated APIs.'
+        : 'Remove wildcard (*) origin headers on endpoints requiring credentials; validate and echo only trusted origins.',
+      notes: d.observations.map((o) => o.description),
+    });
+  }
+
+  // 12. Breach Exposure
+  if (dims.breachExposure) {
+    const d = dims.breachExposure;
+    const isClean = d.deducted === 0;
+    categories.push({
+      title: 'Historical Breach Incident Exposure',
+      technicalLabel: 'Breach Exposure',
+      maxDeduction: d.maxDeduction,
+      deducted: d.deducted,
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
+      statusText: isClean ? 'No Public Breaches' : 'Historical Incidents Recorded',
+      isClean,
+      whatWasObserved: isClean
+        ? 'No public breach disclosure records were catalogued for this organization domain in public indexes.'
+        : d.observations.map((o) => o.description).join('; '),
+      whyItAffectedScore: isClean
+        ? 'Indicates no widespread public exposure of historical domain credentials in known data breaches.'
+        : 'Historical breach presence signals potential residual risk from credential reuse if multi-factor authentication is not enforced.',
+      whatWouldImproveIt: isClean
+        ? 'Mandate multi-factor authentication (MFA) across all employee accounts.'
+        : 'Enforce phishing-resistant MFA across all corporate logins and require password rotation for accounts with legacy credentials.',
       notes: d.observations.map((o) => o.description),
     });
   }
