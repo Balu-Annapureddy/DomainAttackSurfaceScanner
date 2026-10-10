@@ -369,7 +369,12 @@ export function generateHumanSecurityAssessment(scan: DomainScan): HumanAssessme
   const narrativeSentences: string[] = [];
 
   // 1. Connection & TLS
-  const tlsData = scan.categories.tls?.data as { available?: boolean; validTo?: string; daysUntilExpiration?: number } | undefined;
+  const tlsData = scan.categories.tls?.data as {
+    available?: boolean;
+    outcome?: 'confirmed_absent' | 'connection_failed' | 'available';
+    validTo?: string;
+    daysUntilExpiration?: number;
+  } | undefined;
   const httpData = scan.categories.http?.data as { httpsEnforced?: boolean; missingSecurityHeaders?: string[] } | undefined;
 
   if (tlsData?.available === true) {
@@ -380,8 +385,10 @@ export function generateHumanSecurityAssessment(scan: DomainScan): HumanAssessme
     } else {
       narrativeSentences.push(`We observed that ${domain} supports encrypted HTTPS, but web requests sent over plain HTTP do not automatically redirect to HTTPS, leaving initial connections unprotected.`);
     }
-  } else if (tlsData?.available === false) {
+  } else if (tlsData?.outcome === 'confirmed_absent') {
     narrativeSentences.push(`The domain appears to lack an active HTTPS service on port 443, meaning web visitors may be transmitting credentials or reading content without encryption.`);
+  } else if (tlsData?.outcome === 'connection_failed') {
+    narrativeSentences.push(`We could not verify whether ${domain} has HTTPS active during this scan — this check was inconclusive, not a confirmed finding.`);
   } else {
     narrativeSentences.push(`We examined the public web presence of ${domain}.`);
   }
