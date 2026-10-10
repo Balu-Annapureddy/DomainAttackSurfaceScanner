@@ -252,16 +252,29 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                       {/* Title & Icon */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg ${cat.isClean ? 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788]' : 'bg-[#d97706]/10 text-[#d97706] dark:text-[#D08A2A]'}`}>
+                          <div className={`p-1.5 rounded-lg ${
+                            cat.isClean
+                              ? 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788]'
+                              : cat.isInconclusive
+                              ? 'bg-[var(--bg-panel-subtle)] text-[var(--text-muted)]'
+                              : 'bg-[#d97706]/10 text-[#d97706] dark:text-[#D08A2A]'
+                          }`}>
                             <Icon size={16} />
                           </div>
                           <div>
                             <h3 className="text-sm font-bold text-[var(--text-primary)] leading-tight">
                               {cat.title}
                             </h3>
-                            <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                              Technical: {cat.technicalLabel}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                                Technical: {cat.technicalLabel}
+                              </span>
+                              {cat.isInconclusive && (
+                                <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-panel-inset)] px-1 rounded-xs border border-[var(--border-muted)]">
+                                  Inconclusive
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -269,10 +282,12 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                           className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-sm shrink-0 border ${
                             cat.isClean
                               ? 'border-[#16a34a]/30 bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788]'
+                              : cat.isInconclusive
+                              ? 'border-[var(--border-muted)] bg-[var(--bg-panel-subtle)] text-[var(--text-secondary)]'
                               : 'border-[#d97706]/30 bg-[#d97706]/10 text-[#d97706] dark:text-[#D08A2A]'
                           }`}
                         >
-                          {cat.isClean ? 'NO DEDUCTION' : `−${effectiveDeduction} PTS`}
+                          {cat.deducted === 0 ? 'NO DEDUCTION' : `−${effectiveDeduction} PTS`}
                         </span>
                       </div>
 
