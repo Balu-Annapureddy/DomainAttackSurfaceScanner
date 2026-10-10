@@ -53,12 +53,20 @@ function attemptHandshakeOnAddress(
       port: 443,
       servername: domain,
       rejectUnauthorized: false,
-      lookup: (_hostname, _opts, callback) => {
+      lookup: (_hostname, opts, callback) => {
         if (options.signal?.aborted) {
           callback(new Error('TLS lookup aborted'), '', 4);
           return;
         }
-        callback(null, address, net.isIPv6(address) ? 6 : 4);
+        const family = net.isIPv6(address) ? 6 : 4;
+        if (opts && typeof opts === 'object' && (opts as { all?: boolean }).all) {
+          (callback as unknown as (err: Error | null, addresses: Array<{ address: string; family: number }>) => void)(
+            null,
+            [{ address, family }],
+          );
+        } else {
+          callback(null, address, family);
+        }
       },
     });
 
