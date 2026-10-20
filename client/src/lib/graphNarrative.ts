@@ -90,9 +90,26 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
   const ipv4Count = ips.filter((ip) => ip.value.includes('.')).length;
   const ipv6Count = ips.filter((ip) => ip.value.includes(':')).length;
 
+  // Distinguish resolved subdomains from CT-discovered / unverified hostnames
+  const resolvedSubdomains = subdomains.filter(
+    (s) => s.metadata?.resolutionStatus === 'resolved' || s.metadata?.resolutionStatus === 'service_verified'
+  );
+  const ctDiscoveredSubdomains = subdomains.filter((s) => s.metadata?.resolutionStatus === 'ct_discovered');
+  const unspecifiedSubdomains = subdomains.length - resolvedSubdomains.length - ctDiscoveredSubdomains.length;
+
   const parts: string[] = [];
   if (domain) parts.push('1 apex domain');
-  if (subdomains.length > 0) parts.push(`${subdomains.length} subdomain${subdomains.length > 1 ? 's' : ''}`);
+  if (subdomains.length > 0) {
+    if (ctDiscoveredSubdomains.length > 0 && resolvedSubdomains.length > 0) {
+      parts.push(
+        `${subdomains.length} subdomains (${resolvedSubdomains.length} resolved, ${ctDiscoveredSubdomains.length} CT-discovered)`
+      );
+    } else if (ctDiscoveredSubdomains.length > 0 && unspecifiedSubdomains === 0) {
+      parts.push(`${ctDiscoveredSubdomains.length} CT-discovered hostname${ctDiscoveredSubdomains.length > 1 ? 's' : ''} (unresolved)`);
+    } else {
+      parts.push(`${subdomains.length} subdomain${subdomains.length > 1 ? 's' : ''}`);
+    }
+  }
   if (ips.length > 0) {
     const ipDetail =
       ipv4Count > 0 && ipv6Count > 0
@@ -127,7 +144,35 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
     parts.push(`${vulns.length} correlated vulnerability record${vulns.length > 1 ? 's' : ''}`);
   }
 
-  let narrative = `This scan discovered ${assets.length} connected assets and ${relationships.length} operational relationships across this domain's perimeter: ${parts.join(', ')}.`;
+  // Distinguish active infrastructure relationships from certificate provenance records
+  const operationalRelTypes = new Set([
+    'resolves_to',
+    'uses_nameserver',
+    'delivers_mail_to',
+    'belongs_to_asn',
+    'operated_by',
+    'located_approximately_at',
+    'exposes_port',
+    'secured_by',
+    'hosted_on_storage',
+  ]);
+  const operationalRelCount = relationships.filter((r) => operationalRelTypes.has(r.type)).length;
+  const provenanceRelCount = relationships.length - operationalRelCount;
+
+  let relDescription = `${relationships.length} operational relationships`;
+  if (provenanceRelCount > 0 && operationalRelCount > 0) {
+    relDescription = `${relationships.length} perimeter connections (${operationalRelCount} active operational relationship${operationalRelCount === 1 ? '' : 's'} and ${provenanceRelCount} certificate discovery/provenance record${provenanceRelCount === 1 ? '' : 's'})`;
+  } else if (provenanceRelCount > 0 && operationalRelCount === 0) {
+    relDescription = `${provenanceRelCount} certificate discovery/provenance record${provenanceRelCount === 1 ? '' : 's'}`;
+  } else if (operationalRelCount > 0) {
+    relDescription = `${operationalRelCount} operational relationship${operationalRelCount === 1 ? '' : 's'}`;
+  }
+
+  let narrative = `This scan discovered ${assets.length} connected assets and ${relDescription} across this domain's perimeter: ${parts.join(', ')}.`;
+
+  if (ctDiscoveredSubdomains.length > 0) {
+    narrative += ` Certificate Transparency records represent cryptographic certificates observed in public transparency logs; they document historical or provisioned issuance rather than verified active routing unless independently resolved.`;
+  }
 
   // Network consolidation vs multi-provider distribution analysis
   if (ips.length > 0) {

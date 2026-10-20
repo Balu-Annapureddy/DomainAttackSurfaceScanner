@@ -9,7 +9,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-## [Unreleased] - 2026-10-07
+## [Unreleased] - 2026-10-20
+
+### Security Intelligence, Accuracy & Evidence Integrity
+- **DNSSEC 4-State Validation & Query Path Accuracy**: Refactored DNSSEC verification into four rigorous states (`signed`, `unsigned`, `bogus`, `inconclusive`). Corrected evidence terminology from "public authoritative resolvers" to "public validating resolvers" (Google & Cloudflare DoH). Added differential Checking Disabled (`&cd=1`) lookup validation to ensure generic SERVFAIL, timeouts, or ambiguous results are treated as inconclusive and never penalize domain score.
+- **Apex-Domain Verification Semantics**: Strictly enforced that `SERVICE-VERIFIED` is only assigned when live service evidence (active TLS handshake or HTTP probe response) is confirmed. Prevented passive certificate SANs or user inputs from misrepresenting reachability, and ensured accurate evidence sources are surfaced in the asset inventory.
+- **Active Infrastructure vs. CT Provenance Topology**: Partitioned topology relationships and graph narratives into active infrastructure connections (`resolves_to`, `uses_nameserver`, `delivers_mail_to`, `belongs_to_asn`, `operated_by`, etc.) versus certificate discovery / provenance records (`issued_for`). Explicitly distinguished resolved subdomains from unresolved CT-discovered hostnames to prevent misrepresenting certificate issuance as live routing.
+- **Remediation & Technical Guidance Deduplication**: Eliminated duplicated advice across finding generators and detailed finding views (`FindingDetailPanel` and `FindingsSection`), ensuring distinct tactical investigation steps without repeating adjacent remediation text.
+- **Diagnostics & Pipeline Count Alignment**: Aligned the 7-step pipeline execution stepper (`01 WHOIS` to `07 HYGIENE`) with the 6 telemetry assessment areas in Diagnostics and Category Inspection tabs, adopting clear "Areas Inspected" labeling.
+- **WHOIS Contact Classification**: Refined WHOIS classification to distinguish legitimate corporate registration disclosures from exposed personal registrant contacts.
+
+---
+
+## [1.0.1] - 2026-10-07
 
 ### Documentation & Validation
 - Refreshed the README to match the current passive intelligence architecture and repository layout.

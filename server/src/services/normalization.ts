@@ -148,6 +148,7 @@ export function buildNormalizedAssets(
   }
 
   const tls = scan.categories.tls.data as {
+    available?: boolean;
     subjectAltNames?: string[];
     issuer?: string;
     fingerprint256?: string;
@@ -155,6 +156,20 @@ export function buildNormalizedAssets(
     validFrom?: string;
     validTo?: string;
   } | undefined;
+
+  const http = scan.categories.http.data as {
+    httpAvailable?: boolean;
+    httpsEnforced?: boolean;
+  } | undefined;
+
+  // Assign SERVICE-VERIFIED to apex domain only when actual live service evidence is collected
+  if (tls?.available === true) {
+    domain.metadata = { ...(domain.metadata ?? {}), resolutionStatus: 'service_verified', active: true };
+    domain.evidence.push(makeEvidence('TLS handshake', `Confirmed active TLS/HTTPS service on port 443 for ${scan.domain}`, 'high'));
+  } else if (http?.httpAvailable === true) {
+    domain.metadata = { ...(domain.metadata ?? {}), resolutionStatus: 'service_verified', active: true };
+    domain.evidence.push(makeEvidence('HTTP probe', `Confirmed active HTTP service for ${scan.domain}`, 'high'));
+  }
 
   if (tls?.fingerprint256 || tls?.issuer || tls?.subjectAltNames?.length) {
     const certIdentifier = tls.fingerprint256
@@ -185,16 +200,27 @@ export function buildNormalizedAssets(
       // Do not treat unrelated registrable domains appearing in certificate SANs as subdomains of the input domain
       if (name !== normalizedDomain && !name.endsWith(`.${normalizedDomain}`)) continue;
 
-      const isTarget = name === normalizedDomain;
+      if (name === normalizedDomain) {
+        // Link certificate to the validated domain target
+        relationships.push({
+          fromAssetId: certificate.id,
+          toAssetId: domain.id,
+          type: 'issued_for',
+          evidence: makeEvidence('TLS certificate SAN', `Observed ${name} in certificate Subject Alternative Names`),
+        });
+        continue;
+      }
+
+      // Non-target SANs observed in the certificate remain CT-discovered records until independently verified
       const san = add(
-        isTarget ? 'DOMAIN' : 'SUBDOMAIN',
+        'SUBDOMAIN',
         name,
         'TLS certificate SAN',
         'Observed in live certificate SANs',
         'high',
         {
-          resolutionStatus: isTarget ? 'service_verified' : 'ct_discovered',
-          active: isTarget,
+          resolutionStatus: 'ct_discovered',
+          active: false,
         },
       );
       relationships.push({

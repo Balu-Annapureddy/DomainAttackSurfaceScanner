@@ -497,3 +497,86 @@ describe('sample and demo scan endpoint', () => {
     expect(response.body.findings[0]).toHaveProperty('observationStatus');
   });
 });
+
+describe('asset normalization and apex verification evidence', () => {
+  test('assigns service_verified and TLS handshake evidence only upon verified TLS availability', () => {
+    const scan: DomainScan = {
+      scanId: 'test-1',
+      domain: 'google.com',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1000).toISOString(),
+      status: 'completed',
+      assets: [],
+      relationships: [],
+      findings: [],
+      warnings: [],
+      categories: {
+        whois: { status: 'completed', data: {} },
+        dns: { status: 'completed', data: { addresses: ['142.250.190.46'] } },
+        subdomains: { status: 'completed', data: { subdomains: ['mail.google.com'] } },
+        tls: {
+          status: 'completed',
+          data: {
+            available: true,
+            issuer: 'GTS CA 1C3',
+            subjectAltNames: ['google.com', '*.google.com', 'mail.google.com'],
+          },
+        },
+        http: { status: 'completed', data: { httpAvailable: true } },
+        exposure: { status: 'completed', data: {} },
+        scoring: { status: 'completed' },
+      },
+    };
+
+    const { assets, relationships } = buildNormalizedAssets(scan, []);
+    const domainAsset = assets.find((a) => a.type === 'DOMAIN');
+    expect(domainAsset).toBeDefined();
+    expect(domainAsset?.metadata?.resolutionStatus).toBe('service_verified');
+
+    const domainEvidenceSources = domainAsset?.evidence.map((e) => e.source);
+    expect(domainEvidenceSources).toContain('User input');
+    expect(domainEvidenceSources).toContain('TLS handshake');
+    expect(domainEvidenceSources).not.toContain('TLS certificate SAN');
+
+    // Subdomain observed via CT receives ct_discovered
+    const subAsset = assets.find((a) => a.value === 'mail.google.com');
+    expect(subAsset?.metadata?.resolutionStatus).toBe('ct_discovered');
+
+    // Certificate issued_for relationships are created without misclassifying operational routing
+    const certRel = relationships.find((r) => r.type === 'issued_for' && r.toAssetId === domainAsset?.id);
+    expect(certRel).toBeDefined();
+  });
+
+  test('does not assign service_verified or SAN evidence when TLS handshake is not confirmed', () => {
+    const scan: DomainScan = {
+      scanId: 'test-2',
+      domain: 'unverified.example.com',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1000).toISOString(),
+      status: 'completed',
+      assets: [],
+      relationships: [],
+      findings: [],
+      warnings: [],
+      categories: {
+        whois: { status: 'completed', data: {} },
+        dns: { status: 'completed', data: { addresses: ['93.184.216.34'] } },
+        subdomains: { status: 'completed', data: { subdomains: [] } },
+        tls: { status: 'completed', data: { available: false } },
+        http: { status: 'completed', data: { httpAvailable: false } },
+        exposure: { status: 'completed', data: {} },
+        scoring: { status: 'completed' },
+      },
+    };
+
+    const { assets } = buildNormalizedAssets(scan, []);
+    const domainAsset = assets.find((a) => a.type === 'DOMAIN');
+    expect(domainAsset).toBeDefined();
+    expect(domainAsset?.metadata?.resolutionStatus).toBe('dns_resolved');
+
+    const domainEvidenceSources = domainAsset?.evidence.map((e) => e.source);
+    expect(domainEvidenceSources).toEqual(['User input']);
+    expect(domainEvidenceSources).not.toContain('service_verified');
+    expect(domainEvidenceSources).not.toContain('TLS handshake');
+  });
+});

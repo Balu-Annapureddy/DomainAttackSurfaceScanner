@@ -319,13 +319,19 @@ export default function FindingsSection({
                       <div className="p-3 bg-[var(--bg-panel)] border border-[#16a34a]/30 rounded-lg text-xs leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap">
                         {analysis?.remediation || finding.recommendation}
                       </div>
-                      {finding.investigationSteps && finding.investigationSteps.length > 0 && (
-                        <ul className="space-y-1.5 text-xs text-[var(--text-secondary)] list-disc pl-4 mt-2">
-                          {finding.investigationSteps.map((step, idx) => (
-                            <li key={idx}>{step}</li>
-                          ))}
-                        </ul>
-                      )}
+                      {(() => {
+                        const remediationText = (analysis?.remediation || finding.recommendation || '').trim().toLowerCase();
+                        const steps = (finding.investigationSteps || []).filter(
+                          (step) => step.trim() && step.trim().toLowerCase() !== remediationText
+                        );
+                        return steps.length > 0 ? (
+                          <ul className="space-y-1.5 text-xs text-[var(--text-secondary)] list-disc pl-4 mt-2">
+                            {steps.map((step, idx) => (
+                              <li key={idx}>{step}</li>
+                            ))}
+                          </ul>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* [10] Safe Validation */}

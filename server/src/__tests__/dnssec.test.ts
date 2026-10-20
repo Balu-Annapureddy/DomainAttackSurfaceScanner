@@ -63,7 +63,7 @@ describe('dnssec presence check', () => {
 
     expect(result.dnssec.observed).toBe(false);
     expect(result.dnssec.status).toBe('unsigned');
-    expect(result.dnssec.note).toContain('No DNSKEY or DS records observed');
+    expect(result.dnssec.note).toContain('No DNSKEY or parent DS records observed');
   });
 
   it('classifies as bogus when normal query fails validation while comparable CD=1 query returns records', async () => {

@@ -418,6 +418,10 @@ export default function AttackSurfaceGraph({
                   <span className="text-[var(--accent-primary)] font-bold shrink-0">•</span>
                   <span><strong>Domain → Certificate:</strong> Shows which public cryptographic certificate secures connections to this domain.</span>
                 </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[var(--accent-primary)] font-bold shrink-0">•</span>
+                  <span><strong>Certificate → Subdomain (Issued For):</strong> Documents hostnames observed in public Certificate Transparency logs or certificate SANs (cryptographic provenance rather than active DNS routing).</span>
+                </li>
               </ul>
             </div>
           </div>

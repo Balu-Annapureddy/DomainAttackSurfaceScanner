@@ -32,8 +32,8 @@ function finding(
 ): Finding {
   const whyItMatters = partial.whyItMatters || partial.analysis?.whyItMatters || 'Security configuration observation.';
   const investigationSteps = partial.investigationSteps || [
-    partial.recommendation,
-    partial.analysis?.safeValidation ?? 'Verify configuration changes in a test environment.',
+    'Inspect relevant server, DNS, or network configuration files associated with this perimeter observation.',
+    partial.analysis?.safeValidation ?? 'Verify configuration changes in a test environment before production deployment.',
   ];
   const observationStatus = partial.observationStatus || 'observed';
   return {
@@ -546,8 +546,8 @@ export function buildFindings(scan: DomainScan): Finding[] {
       observationStatus: 'not_observed',
       whyItMatters: exp?.risk ?? 'Defensive response headers provide defense-in-depth against client-side browser attacks.',
       investigationSteps: [
-        exp?.advice ?? `Review whether ${header} is applicable to this domain.`,
-        'Test header deployment in a staging environment to ensure no legitimate functionality is broken.',
+        `Review whether ${header} is applicable to this domain's application architecture.`,
+        'Test header deployment in a staging environment to ensure legitimate client functionality is preserved.',
       ],
       evidence: [
         ev('HTTPS response headers', `Header ${header} was not observed in HTTPS response headers`, 'high'),

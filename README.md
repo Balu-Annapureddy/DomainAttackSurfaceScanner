@@ -21,10 +21,13 @@ Modern organizations inadvertently expand their external attack surface through 
 
 - **Passive Intelligence Engines**:
   - Authoritative DNS enumeration (A, AAAA, MX, TXT, NS, CNAME, CAA).
-  - Certificate Transparency logging (`crt.sh`) for non-intrusive subdomain discovery.
+  - DNSSEC 4-state cryptographic validation (`signed`, `unsigned`, `bogus`, `inconclusive`) using public validating resolvers with differential Checking-Disabled (`&cd=1`) cross-verification.
+  - Certificate Transparency logging (`crt.sh`) for non-intrusive subdomain discovery with clear distinction between resolved endpoints and unverified CT records.
+  - Evidence-driven asset classification separating live `SERVICE-VERIFIED` hosts (active TLS/HTTP confirmed) from `DNS-RESOLVED` records and passive `CT-DISCOVERED` entries.
+  - Attack surface topology graphs distinguishing active operational routing relationships from certificate issuance/provenance records.
   - BGP routing prefix and Autonomous System Number (ASN) correlation.
   - TLS handshake cryptography verification (ciphers, expiry, SANs).
-  - HTTP perimeter defense header auditing (HSTS, CSP, X-Frame-Options, redirects).
+  - HTTP perimeter defense header auditing (HSTS, CSP, X-Frame-Options, redirects) with deduplicated tactical remediation.
   - Email posture verification (SPF syntax, DKIM selectors, DMARC policy enforcement).
   - Approximate infrastructure geolocation rendered on an interactive Leaflet map.
 - **Privacy-First Dual Identity Model**:

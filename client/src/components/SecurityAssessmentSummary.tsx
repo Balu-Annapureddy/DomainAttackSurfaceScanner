@@ -184,12 +184,12 @@ export default function SecurityAssessmentSummary({
               <div className="text-2xl sm:text-3xl font-display italic text-[var(--text-primary)]">
                 {assessment.inconclusiveChecksCount > 0
                   ? `${assessment.inconclusiveChecksCount} Inconclusive`
-                  : `${assessment.completedStagesCount}/${assessment.totalStagesCount} Stages`}
+                  : `${assessment.completedStagesCount}/${assessment.totalStagesCount} Areas Inspected`}
               </div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                 {assessment.inconclusiveChecksCount > 0
                   ? `${assessment.inconclusiveChecksCount} check observation${assessment.inconclusiveChecksCount > 1 ? 's' : ''} returned inconclusive results or timeouts.`
-                  : `${assessment.completedStagesCount} of ${assessment.totalStagesCount} analysis stages completed without category timeouts.`}
+                  : `${assessment.completedStagesCount} of ${assessment.totalStagesCount} telemetry assessment areas completed without category timeouts.`}
               </p>
             </div>
           </div>

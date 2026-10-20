@@ -453,6 +453,25 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       const narrative = generateGraphNarrative([], []);
       expect(narrative).toBe('No connected infrastructure assets were discovered during this scan.');
     });
+
+    it('distinguishes operational relationships from certificate provenance records and separates CT-discovered hostnames', () => {
+      const ctAssets: Asset[] = [
+        { id: '1', type: 'DOMAIN', value: 'example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '2', type: 'SUBDOMAIN', value: 'ct1.example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [], metadata: { resolutionStatus: 'ct_discovered' } },
+        { id: '3', type: 'SUBDOMAIN', value: 'ct2.example.com', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [], metadata: { resolutionStatus: 'ct_discovered' } },
+        { id: '4', type: 'IP', value: '93.184.216.34', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+      ];
+      const mixedRelationships: Relationship[] = [
+        { fromAssetId: '1', toAssetId: '4', type: 'resolves_to', evidence: mockEv },
+        { fromAssetId: '1', toAssetId: '2', type: 'issued_for', evidence: mockEv },
+        { fromAssetId: '1', toAssetId: '3', type: 'issued_for', evidence: mockEv },
+      ];
+      const narrative = generateGraphNarrative(ctAssets, mixedRelationships);
+      expect(narrative).toContain('4 connected assets');
+      expect(narrative).toContain('3 perimeter connections (1 active operational relationship and 2 certificate discovery/provenance records)');
+      expect(narrative).toContain('2 CT-discovered hostnames (unresolved)');
+      expect(narrative).toContain('Certificate Transparency records represent cryptographic certificates');
+    });
   });
 
   describe('FindingsSection UI & Copy Compliance', () => {
@@ -492,6 +511,23 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       const { container } = render(<FindingsSection findings={mockFindings} sectionNumber="01" />);
       const textContent = container.textContent || '';
       expect(textContent.toLowerCase()).not.toContain('dossier');
+    });
+
+    it('deduplicates investigation steps that repeat the recommended remediation', () => {
+      const base = mockFindings[0]!;
+      const duplicatedFinding: Finding = {
+        ...base,
+        id: 'f-1-dup',
+        recommendation: 'Configure a strict Content-Security-Policy header.',
+        investigationSteps: [
+          'Configure a strict Content-Security-Policy header.',
+          'Review whether CSP is applicable to this domain.',
+        ],
+      };
+      render(<FindingsSection findings={[duplicatedFinding]} sectionNumber="01" />);
+      const matchingItems = screen.getAllByText('Configure a strict Content-Security-Policy header.');
+      expect(matchingItems).toHaveLength(1);
+      expect(screen.getByText('Review whether CSP is applicable to this domain.')).toBeDefined();
     });
   });
 });

@@ -120,7 +120,7 @@ export async function checkDnssec(domain: string, options: DnsOptions = {}): Pro
       return {
         observed: false,
         status: 'unsigned',
-        note: 'No DNSKEY or DS records observed in public authoritative resolvers (confirmed unsigned).',
+        note: 'No DNSKEY or parent DS records observed via public validating resolvers (confirmed unsigned).',
       };
     }
   } catch {
@@ -182,7 +182,7 @@ export async function checkDnssec(domain: string, options: DnsOptions = {}): Pro
       return {
         observed: false,
         status: 'unsigned',
-        note: 'No DNSKEY or DS records observed in public authoritative resolvers (confirmed unsigned).',
+        note: 'No DNSKEY or parent DS records observed via public validating resolvers (confirmed unsigned).',
       };
     }
   } catch (err) {
