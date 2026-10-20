@@ -28,8 +28,8 @@ Modern organizations inadvertently expand their external attack surface through 
   - Email posture verification (SPF syntax, DKIM selectors, DMARC policy enforcement).
   - Approximate infrastructure geolocation rendered on an interactive Leaflet map.
 - **Privacy-First Dual Identity Model**:
-  - **Anonymous Mode**: Perform scans without an account; 0 tracking cookies; volatile 24-hr retention; local browser history cache; 5 scans/hour default quota.
-  - **Registered Account Mode**: Minimal first-party signup (email + Scrypt password hash); persistent cross-device history; multi-scan comparison; 50 scans/hour default quota; essential `HttpOnly`, `SameSite=Lax`, `Secure` session cookie (`dass_session`).
+  - **Anonymous Mode**: Perform scans without an account; 0 tracking cookies; volatile 24-hr retention; local browser history cache; **15 scans/hour** default quota.
+  - **Registered Account Mode**: Minimal first-party signup (email + Scrypt password hash); persistent cross-device history; multi-scan comparison; **60 scans/hour** default quota; essential `HttpOnly`, `SameSite=Lax`, `Secure` session cookie (`dass_session`).
   - **Complete Account Deletion**: Self-service deletion (`DELETE /api/auth/me`) immediately cascades across the database to permanently purge the user, all active sessions, owned scan records, and quota telemetry.
   - **NO payments, NO subscriptions, NO external trackers, NO third-party data brokers**.
 - **Retro Network Intelligence Workstation UI**:
@@ -128,7 +128,7 @@ curl http://localhost:3001/api/health/ready
 
 ## 6. Results, Validation & Current Test Coverage
 
-The repository includes dedicated server and client test suites covering scanner behavior, scoring, SSRF protection, authentication and authorization, quota enforcement, provider failures, DNS/email analysis, UI behavior, API handling, and end-to-end sample scanning. The current repository contains **26 test files** with **202 `test`/`it` test-case declarations** based on the source tree.
+The repository includes dedicated server and client test suites covering scanner behavior, scoring, SSRF protection, authentication and authorization, quota enforcement, provider failures, DNS/email analysis, UI behavior, API handling, and end-to-end sample scanning.
 
 Validation commands:
 

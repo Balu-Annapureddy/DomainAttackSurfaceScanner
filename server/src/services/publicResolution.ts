@@ -41,9 +41,30 @@ export function isPublicAddress(address: string): boolean {
   if (net.isIPv6(normalized)) {
     const value = ipv6ToBigInt(normalized);
     const blocked = [
-      [0n, 128], [0n, 8], [ipv6ToBigInt('::ffff:0:0'), 96],
-      [ipv6ToBigInt('fc00::'), 7], [ipv6ToBigInt('fe80::'), 10],
-      [ipv6ToBigInt('ff00::'), 8], [ipv6ToBigInt('2001:db8::'), 32],
+      // Unspecified & loopback
+      [0n, 128], [0n, 8],
+      // IPv4-mapped IPv6 (::ffff:0:0/96)
+      [ipv6ToBigInt('::ffff:0:0'), 96],
+      // NAT64 well-known prefix (64:ff9b::/96) — embeds IPv4 in low 32 bits
+      [ipv6ToBigInt('64:ff9b::'), 96],
+      // NAT64 local-use prefix (64:ff9b:1::/48)
+      [ipv6ToBigInt('64:ff9b:1::'), 48],
+      // IPv4/IPv6 translation (::ffff:0:0:0/96)
+      [ipv6ToBigInt('::ffff:0:0:0'), 96],
+      // Discard prefix (100::/64)
+      [ipv6ToBigInt('100::'), 64],
+      // Teredo (2001::/32) — tunnels IPv4 inside IPv6; can map private IPv4 space
+      [ipv6ToBigInt('2001::'), 32],
+      // 6to4 (2002::/16) — encodes IPv4 in bits 17-48; 2002:7f00::/24 maps to 127.x.x.x
+      [ipv6ToBigInt('2002::'), 16],
+      // Unique local (fc00::/7)
+      [ipv6ToBigInt('fc00::'), 7],
+      // Link-local (fe80::/10)
+      [ipv6ToBigInt('fe80::'), 10],
+      // Multicast (ff00::/8)
+      [ipv6ToBigInt('ff00::'), 8],
+      // Documentation (2001:db8::/32)
+      [ipv6ToBigInt('2001:db8::'), 32],
     ] as const;
     return !blocked.some(([start, prefix]) => inRange(value, start, prefix, 128));
   }

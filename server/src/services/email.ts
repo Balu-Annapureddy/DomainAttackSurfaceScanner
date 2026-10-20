@@ -16,17 +16,30 @@ export interface SendEmailPayload {
 
 /**
  * Send a transactional email using Resend HTTP API.
- * Gracefully falls back to structured console logging when RESEND_API_KEY is not configured
- * so development, CI, and testing run flawlessly without external API credentials.
+ *
+ * Behaviour when RESEND_API_KEY is absent:
+ *   - Development / test: logs safe delivery metadata (recipient + subject only — never
+ *     token-bearing content) and returns a mocked-success result so local flows work.
+ *   - Production: fails closed and returns an error so auth flows surface the problem
+ *     rather than silently discarding credentials.
+ *
+ * SECURITY NOTE: this function must NEVER log payload.text or payload.html because both
+ * can contain raw verification tokens or password-reset URLs.
  */
 export async function sendTransactionalEmail(payload: SendEmailPayload): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.EMAIL_FROM?.trim() || 'Domain Attack Surface Scanner <onboarding@resend.dev>';
+  const isProduction = (process.env.NODE_ENV ?? 'development') === 'production';
 
   if (!apiKey) {
-    console.info(`[email:dev] RESEND_API_KEY not configured. Mocking delivery to ${payload.to}`);
-    console.info(`[email:dev] Subject: ${payload.subject}`);
-    console.info(`[email:dev] Content preview:\n${payload.text}`);
+    if (isProduction) {
+      // Fail closed in production: silently mocking email delivery would swallow
+      // verification/reset tokens and leave users unable to confirm their accounts.
+      console.error('[email] RESEND_API_KEY is not configured in production. Transactional email cannot be delivered. Set RESEND_API_KEY to enable email dispatch.');
+      return { success: false, error: 'Email delivery is not configured on this server.' };
+    }
+    // Development / test: safe metadata log only — never log body content.
+    console.info(`[email:dev] RESEND_API_KEY not set — mocking delivery. recipient=${payload.to} subject="${payload.subject}"`);
     return { success: true, id: 'mocked-email-' + Date.now(), mocked: true };
   }
 

@@ -73,18 +73,47 @@ export async function extractDocumentMetadata(
       });
 
       const body = resp.body || '';
+      const contentType = (resp.headers?.['content-type'] ?? '').toLowerCase();
       const isPdf = docUrl.toLowerCase().includes('.pdf');
       const isDocx = docUrl.toLowerCase().includes('.docx');
       const isXlsx = docUrl.toLowerCase().includes('.xlsx');
 
       const fileType: 'PDF' | 'DOCX' | 'XLSX' = isPdf ? 'PDF' : isDocx ? 'DOCX' : isXlsx ? 'XLSX' : 'PDF';
 
+      // LIMITATION: safeGet returns the response body as a UTF-8 string. PDF files are
+      // binary; DOCX/XLSX files are ZIP archives containing compressed XML. Regex-based
+      // metadata extraction can only succeed when the server happens to serve the file as
+      // plain text or when the binary happens to contain recognisable ASCII sequences for
+      // the target patterns. A production-quality implementation would use a proper
+      // binary-aware parser (e.g. pdf-parse for PDF, unzipper for OOXML) that reads the
+      // raw Buffer rather than a decoded string.
+      //
+      // Guard: if the content-type is clearly binary and the body looks non-textual,
+      // skip regex extraction and record the observation as uninspectable rather than
+      // returning garbage matches from binary noise.
+      const isBinaryContentType = /application\/(pdf|zip|octet-stream|vnd\.)/.test(contentType);
+      const looksTextual = body.length > 0 && /[\x20-\x7E]/.test(body.slice(0, 256));
+
       let creationTool: string | undefined;
       let creationDate: string | undefined;
       let hasAuthor = false;
 
+      if (isBinaryContentType && !looksTextual) {
+        // Binary body that we cannot reliably parse with string regexes.
+        // Record the file was observed but leave all metadata fields undefined.
+        results.push({
+          url: docUrl,
+          fileType,
+          creationTool: undefined,
+          creationDate: undefined,
+          hasAuthorField: false,
+          authorFieldSanitized: undefined,
+        });
+        continue;
+      }
+
       if (isPdf) {
-        // Parse PDF trailer dictionary string entries
+        // Parse PDF trailer dictionary string entries (works only for linearised/text PDFs)
         const creatorMatch = body.match(/\/Creator\s*\(([^)]+)\)/i);
         const producerMatch = body.match(/\/Producer\s*\(([^)]+)\)/i);
         const dateMatch = body.match(/\/CreationDate\s*\(([^)]+)\)/i);
@@ -96,7 +125,7 @@ export async function extractDocumentMetadata(
         if (dateMatch?.[1]) creationDate = dateMatch[1];
         if (authorMatch?.[1]?.trim()) hasAuthor = true;
       } else if (isDocx || isXlsx) {
-        // Inspect XML tags embedded inside OpenXML files
+        // Inspect XML tags embedded inside OpenXML files (only when served as text/XML)
         const appMatch = body.match(/<Application>([^<]+)<\/Application>/i);
         const verMatch = body.match(/<AppVersion>([^<]+)<\/AppVersion>/i);
         const dateMatch = body.match(/<dcterms:created[^>]*>([^<]+)<\/dcterms:created>/i);

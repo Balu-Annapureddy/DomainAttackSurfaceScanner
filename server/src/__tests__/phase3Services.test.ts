@@ -176,7 +176,9 @@ describe('Phase 3 Information-Gathering Services & Scope Boundaries', () => {
       expect(pubBucket?.httpStatus).toBe(200);
 
       const privBucket = results.find((r) => r.bucketName === 'example-assets');
-      expect(privBucket?.status).toBe('private_bucket_exists');
+      // S3 returns 403 for both private-but-existing buckets AND non-existent names
+      // in some regions. Status is 'access_denied', not a confirmed existence signal.
+      expect(privBucket?.status).toBe('access_denied');
       expect(privBucket?.httpStatus).toBe(403);
     });
   });

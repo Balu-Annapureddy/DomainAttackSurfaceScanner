@@ -5,7 +5,10 @@ export interface CloudStorageCheckResult {
   bucketName: string;
   provider: 'AWS_S3' | 'AZURE_BLOB';
   url: string;
-  status: 'publicly_accessible' | 'private_bucket_exists' | 'not_found' | 'error';
+  // 'access_denied': HTTP 403 received. AWS S3 returns 403 for private-but-existing
+  // buckets AND for non-existent buckets in certain regions (to prevent enumeration).
+  // This status means "access denied" — not a confirmed existence signal.
+  status: 'publicly_accessible' | 'access_denied' | 'not_found' | 'error';
   httpStatus: number;
 }
 
@@ -60,11 +63,13 @@ export async function checkCloudStorageExposure(
           httpStatus: resp.status,
         });
       } else if (resp.status === 403) {
+        // S3 returns 403 for both private buckets AND non-existent names in some
+        // regions. Report as 'access_denied', not as confirmed bucket existence.
         results.push({
           bucketName: bucket,
           provider: 'AWS_S3',
           url: s3Url,
-          status: 'private_bucket_exists',
+          status: 'access_denied',
           httpStatus: resp.status,
         });
       }

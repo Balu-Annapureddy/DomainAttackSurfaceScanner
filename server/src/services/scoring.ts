@@ -18,7 +18,7 @@
  *   11. CORS Misconfiguration             5 pts max (NEW)
  *   12. Breach Exposure                   5 pts max (NEW)
  *
- * Total theoretical maximum deduction across all 12 categories: 110 points.
+ * Total theoretical maximum deduction across all 12 categories: 120 points.
  * Final score = clamp(100 - totalDeducted, 0, 100).
  *
  * Epistemic safety principles:
