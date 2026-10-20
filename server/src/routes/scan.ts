@@ -26,6 +26,7 @@ import { lookupRecentCves, type DisclosedCve } from '../services/cveLookup';
 import { checkCloudStorageExposure, type CloudStorageCheckResult } from '../services/cloudStorage';
 import { checkBreachExposure, type BreachExposureResult } from '../services/breachExposure';
 import { extractDocumentMetadata, findLinkedDocuments, type DocumentMetadataRecord } from '../services/docMetadata';
+import { checkSubdomainTakeover, type TakeoverMatch } from '../services/takeoverCheck';
 import { buildNormalizedAssets } from '../services/normalization';
 import { buildFindings } from '../services/findings';
 import { compareScans } from '../services/diff';
@@ -208,12 +209,28 @@ async function runScan(scanId: string): Promise<void> {
       logError('doc_metadata_check_failed', err, { scanId });
     }
 
+    let takeoverMatches: TakeoverMatch[] = [];
+    const discoveredSubdomains =
+      (freshScan.categories.subdomains.data as { subdomains?: string[] } | undefined)?.subdomains ?? [];
+    if (discoveredSubdomains.length > 0) {
+      try {
+        const takeoverResult = await checkSubdomainTakeover(discoveredSubdomains, { budget });
+        takeoverMatches = takeoverResult.matches;
+        if (freshScan.categories.subdomains.data) {
+          (freshScan.categories.subdomains.data as Record<string, unknown>).takeoverRisks = takeoverMatches;
+        }
+      } catch (err) {
+        logError('subdomain_takeover_check_failed', err, { scanId });
+      }
+    }
+
     const expData = (freshScan.categories.exposure.data as Record<string, unknown>) || {};
     if (orgProfile) expData.orgProfile = orgProfile;
     if (recentCves.length > 0) expData.recentCves = recentCves;
     if (cloudStorageData.length > 0) expData.cloudStorage = cloudStorageData;
     if (breachData) expData.breachData = breachData;
     if (docMetadata.length > 0) expData.docMetadata = docMetadata;
+    if (takeoverMatches.length > 0) expData.takeoverRisks = takeoverMatches;
     freshScan.categories.exposure.data = expData;
 
     if (budget.isExhausted()) {

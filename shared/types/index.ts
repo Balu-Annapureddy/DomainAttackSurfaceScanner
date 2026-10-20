@@ -174,10 +174,14 @@ export interface ScoreBreakdown {
     httpsEnforcement: DimensionScore;
     webSecurityHeaders: DimensionScore;
     emailSecurity: DimensionScore;
-    /** DNSSEC presence check. Always present from scoring v1 onwards. */
     dnssecHygiene: DimensionScore;
-    /** Shodan/exposure perimeter check. Always present from scoring v1 onwards. */
     networkExposure: DimensionScore;
+    certificateChain: DimensionScore;
+    subdomainTakeover: DimensionScore;
+    whoisHygiene: DimensionScore;
+    cookieSecurity: DimensionScore;
+    corsConfiguration: DimensionScore;
+    breachExposure: DimensionScore;
   };
 }
 

@@ -203,11 +203,11 @@ describe('exposure posture scoring', () => {
 
   test('penalizes missing TLS and missing email authentication', () => {
     const scan = makeScan({
-      tls: { status: 'completed', data: { available: false } },
+      tls: { status: 'completed', data: { available: false, outcome: 'confirmed_absent' } },
       dns: { status: 'completed', data: { spf: { present: false }, dmarc: { present: false } } },
     });
     const score = computeExposureScore(scan);
-    // -5 for no TLS, -4 for missing SPF, -4 for missing DMARC
+    // -5 for confirmed absent TLS, -4 for missing SPF, -4 for missing DMARC
     expect(score).toBe(87);
   });
 

@@ -9,6 +9,13 @@ import {
   Mail,
   FileCode,
   Cpu,
+  ShieldCheck,
+  AlertTriangle,
+  Cookie,
+  Share2,
+  Database,
+  Sliders,
+  RotateCcw,
 } from 'lucide-react';
 import type { DomainScan } from '../../../shared/types';
 import { getHumanScoreBreakdown } from '../lib/narrativeSummary';
@@ -21,17 +28,46 @@ interface ScanOverviewCardProps {
 
 export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewCardProps) {
   const [breakdownOpen, setBreakdownOpen] = useState(true);
+  const [showCustomWeighting, setShowCustomWeighting] = useState(false);
+  const [weights, setWeights] = useState<Record<string, number>>({});
+
   const score = scan.score ?? 0;
   const hasScore = scan.score !== undefined && scan.score !== null;
   const breakdown = scan.scoreBreakdown;
   const humanCategories = useMemo(() => getHumanScoreBreakdown(scan), [scan]);
 
+  const handleWeightChange = (technicalLabel: string, value: number) => {
+    setWeights((prev) => ({
+      ...prev,
+      [technicalLabel]: value,
+    }));
+  };
+
+  const handleResetWeights = () => {
+    setWeights({});
+  };
+
+  const personalized = useMemo(() => {
+    let totalWeightedDeduction = 0;
+    for (const cat of humanCategories) {
+      const multiplier = weights[cat.technicalLabel] ?? 1.0;
+      totalWeightedDeduction += cat.deducted * multiplier;
+    }
+    const computedScore = Math.min(100, Math.max(0, Math.round(100 - totalWeightedDeduction)));
+    return {
+      score: computedScore,
+      totalDeducted: Math.round(totalWeightedDeduction),
+      isModified: Object.values(weights).some((w) => w !== 1.0),
+    };
+  }, [humanCategories, weights]);
+
   const scoreClassification = useMemo(() => {
-    if (score >= 80) return 'Strong — Following core security best practices';
-    if (score >= 60) return 'Good, but improvements are recommended';
-    if (score >= 40) return 'Attention Needed — Meaningful configuration gaps observed';
+    const activeScore = showCustomWeighting ? personalized.score : score;
+    if (activeScore >= 80) return 'Strong — Following core security best practices';
+    if (activeScore >= 60) return 'Good, but improvements are recommended';
+    if (activeScore >= 40) return 'Attention Needed — Meaningful configuration gaps observed';
     return 'Urgent Review Recommended — Essential defenses missing';
-  }, [score]);
+  }, [score, showCustomWeighting, personalized.score]);
 
   const getCategoryIcon = (label: string) => {
     switch (label) {
@@ -47,6 +83,18 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
         return Globe;
       case 'Network Exposure':
         return Cpu;
+      case 'Certificate Chain Correctness':
+        return ShieldCheck;
+      case 'Subdomain Takeover Risk':
+        return AlertTriangle;
+      case 'Domain & WHOIS Hygiene':
+        return Globe;
+      case 'Cookie Security':
+        return Cookie;
+      case 'CORS Misconfiguration':
+        return Share2;
+      case 'Breach Exposure':
+        return Database;
       default:
         return Shield;
     }
@@ -64,7 +112,7 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                 Score Explanation
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] text-[var(--text-secondary)] font-medium">
-                Version {breakdown?.scoringVersion ?? 1}
+                Version {breakdown?.scoringVersion ?? 2}
               </span>
             </div>
             <h2 id="score-breakdown-heading" className="text-lg sm:text-xl font-display italic font-normal text-[var(--text-primary)]">
@@ -72,30 +120,63 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setBreakdownOpen(!breakdownOpen)}
-            className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-          >
-            <span>{breakdownOpen ? 'Collapse Details' : 'Expand Score Details'}</span>
-            {breakdownOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setShowCustomWeighting(!showCustomWeighting)}
+              className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 cursor-pointer transition-colors ${
+                showCustomWeighting
+                  ? 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40 text-[var(--accent-primary)]'
+                  : 'bg-[var(--bg-panel)] border-[var(--border-muted)] text-[var(--text-secondary)] hover:text-[var(--accent-primary)]'
+              }`}
+              title="Locally adjust dimension multipliers for custom risk priorities"
+            >
+              <Sliders size={13} />
+              <span>{showCustomWeighting ? 'Hide Adjustments' : 'Adjust Weighting'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setBreakdownOpen(!breakdownOpen)}
+              className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1.5 cursor-pointer ml-1"
+            >
+              <span>{breakdownOpen ? 'Collapse Details' : 'Expand Score Details'}</span>
+              {breakdownOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
         </div>
 
         {/* Score Summary Banner */}
         <div className="p-5 sm:p-6 bg-[var(--bg-panel)] border-b border-[var(--border-muted)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1 max-w-2xl">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-display italic font-normal text-[var(--text-primary)]">
-                {hasScore ? score : '—'}
-              </span>
-              <span className="text-sm font-mono text-[var(--text-muted)]">/ 100 Points</span>
-              <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)] ml-2">
-                — {scoreClassification}
-              </span>
-            </div>
+          <div className="space-y-1.5 max-w-2xl">
+            {showCustomWeighting ? (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl sm:text-4xl font-display italic font-normal text-[var(--accent-primary)]">
+                    {personalized.score}
+                  </span>
+                  <span className="text-sm font-mono text-[var(--text-muted)]">/ 100 Points</span>
+                  <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)] ml-2">
+                    — Your view: {personalized.score}/100 (default: {hasScore ? score : '—'}/100)
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-[11px] font-medium">
+                  <span>Custom risk priorities applied locally in your browser. Canonical fixed score is {score}/100.</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl sm:text-4xl font-display italic font-normal text-[var(--text-primary)]">
+                  {hasScore ? score : '—'}
+                </span>
+                <span className="text-sm font-mono text-[var(--text-muted)]">/ 100 Points</span>
+                <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)] ml-2">
+                  — {scoreClassification}
+                </span>
+              </div>
+            )}
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Every domain begins with 100 points. Points are only deducted when a specific security control was definitively checked and observed missing or weak. Incomplete checks never reduce your score.
+              Every domain begins with 100 points across 12 evaluation dimensions. Points are deducted only when a specific security control was definitively checked and observed missing or weak. Incomplete checks never reduce your score.
             </p>
           </div>
 
@@ -121,17 +202,45 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
           </div>
         </div>
 
-        {/* 6 Category Dimension Cards */}
+        {/* 12 Category Dimension Cards */}
         {breakdownOpen && (
           <div className="p-5 sm:p-6 space-y-6 bg-[var(--bg-panel-inset)]">
-            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">
-              Evaluation Across 6 Core Security Dimensions
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Evaluation Across {humanCategories.length} Core Security Dimensions
+              </div>
+              {showCustomWeighting && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--text-secondary)]">Personalized weighting active</span>
+                  <button
+                    type="button"
+                    onClick={handleResetWeights}
+                    className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset multipliers</span>
+                  </button>
+                </div>
+              )}
             </div>
+
+            {showCustomWeighting && (
+              <div className="p-3.5 bg-[var(--bg-panel)] rounded-xl border border-[var(--border-technical)] text-xs text-[var(--text-secondary)] space-y-1">
+                <span className="font-bold text-[var(--text-primary)] block">
+                  Interactive Personal Weighting (Client-Side Only)
+                </span>
+                <p className="leading-relaxed">
+                  Use the sliders on each dimension below to adjust multipliers (0.5× to 2.0×) for your organization’s risk appetite. This lets you emphasize areas like email protection or takeover risk without altering the canonical score reported to others.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {humanCategories.map((cat, idx) => {
                 const Icon = getCategoryIcon(cat.technicalLabel);
-                const deductionPercent = Math.round((cat.deducted / cat.maxDeduction) * 100);
+                const multiplier = showCustomWeighting ? (weights[cat.technicalLabel] ?? 1.0) : 1.0;
+                const effectiveDeduction = showCustomWeighting ? Math.round(cat.deducted * multiplier) : cat.deducted;
+                const deductionPercent = Math.min(100, Math.round((effectiveDeduction / cat.maxDeduction) * 100));
                 const scorePercent = 100 - deductionPercent;
 
                 return (
@@ -163,7 +272,7 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                               : 'border-[#d97706]/30 bg-[#d97706]/10 text-[#d97706] dark:text-[#D08A2A]'
                           }`}
                         >
-                          {cat.isClean ? 'NO DEDUCTION' : `−${cat.deducted} PTS`}
+                          {cat.isClean ? 'NO DEDUCTION' : `−${effectiveDeduction} PTS`}
                         </span>
                       </div>
 
@@ -184,7 +293,15 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                       {/* What was observed */}
                       <div className="space-y-1 text-xs">
                         <div className="font-bold text-[var(--text-primary)]">What was observed:</div>
-                        <p className="text-[var(--text-secondary)] leading-relaxed">{cat.whatWasObserved}</p>
+                        {cat.notes && cat.notes.length > 1 ? (
+                          <ul className="space-y-1 text-[var(--text-secondary)] leading-relaxed list-disc list-inside pl-0.5">
+                            {cat.notes.map((note, noteIdx) => (
+                              <li key={noteIdx}>{note}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-[var(--text-secondary)] leading-relaxed">{cat.whatWasObserved}</p>
+                        )}
                       </div>
 
                       {/* Why it affected score */}
@@ -193,6 +310,32 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
                         <p className="text-[var(--text-secondary)] leading-relaxed">{cat.whyItAffectedScore}</p>
                       </div>
                     </div>
+
+                    {/* Weighting Slider (when enabled) */}
+                    {showCustomWeighting && (
+                      <div className="pt-2 border-t border-[var(--border-muted)] space-y-1 bg-[var(--bg-panel-subtle)] p-2 rounded-lg">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[var(--text-muted)]">Custom Multiplier:</span>
+                          <span className="font-mono font-bold text-[var(--accent-primary)]">
+                            {multiplier.toFixed(1)}×
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="2.0"
+                          step="0.1"
+                          value={multiplier}
+                          onChange={(e) => handleWeightChange(cat.technicalLabel, parseFloat(e.target.value))}
+                          className="w-full accent-[var(--accent-primary)] h-1 cursor-pointer"
+                        />
+                        {cat.deducted > 0 && multiplier !== 1.0 && (
+                          <div className="text-[10px] text-[var(--text-muted)] text-right font-mono">
+                            Base: −{cat.deducted} pts → Adjusted: −{effectiveDeduction} pts
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* What would improve it */}
                     <div className="pt-2 border-t border-[var(--border-muted)] text-xs bg-[var(--bg-panel-inset)] p-2.5 rounded-lg space-y-0.5">
@@ -211,14 +354,16 @@ export default function ScanOverviewCard({ scan, onOpenGlossary }: ScanOverviewC
               <div className="p-4 bg-[var(--bg-panel)] rounded-xl border border-[var(--border-muted)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="space-y-0.5">
                   <span className="font-bold text-[var(--text-primary)]">
-                    Total Deductions Assessed: −{breakdown.totalDeducted} Points
+                    {showCustomWeighting
+                      ? `Personalized Deductions: −${personalized.totalDeducted} Points (Canonical: −${breakdown.totalDeducted})`
+                      : `Total Deductions Assessed: −${breakdown.totalDeducted} Points`}
                   </span>
                   <p className="text-[var(--text-secondary)]">
                     Addressing the priority items highlighted above will bring your score closer to 100/100.
                   </p>
                 </div>
                 <div className="text-right shrink-0 font-mono font-bold text-sm text-[var(--accent-primary)]">
-                  Final Score: {score}/100
+                  {showCustomWeighting ? `Your view: ${personalized.score}/100` : `Final Score: ${score}/100`}
                 </div>
               </div>
             )}

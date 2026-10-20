@@ -142,7 +142,7 @@ describe('Phase 2 Findings & Scoring Integration', () => {
 
   it('deducts points for DNSSEC missing, exposed risky ports, and CVEs in computeExposureScore and scoreBreakdown', () => {
     const scan = createBaseScan();
-    // Simulate DNSSEC missing (-4), exposed database port (-5), confirmed CVE (-5)
+    // Simulate DNSSEC missing (-3), exposed database port (-5), confirmed CVE (-5)
     (scan.categories.dns.data as any).dnssec = { observed: false };
     (scan.categories.exposure.data as any).shodan = [
       {
@@ -157,11 +157,11 @@ describe('Phase 2 Findings & Scoring Integration', () => {
     const score = computeExposureScore(scan);
     const breakdown = computeScoreBreakdown(scan);
 
-    // 100 - 4 (dnssec) - 5 (risky port) - 5 (distinct CVE) = 86
-    expect(score).toBe(86);
-    expect(breakdown.total).toBe(86);
-    expect(breakdown.totalDeducted).toBe(14);
-    expect(breakdown.dimensions.dnssecHygiene?.deducted).toBe(4);
+    // 100 - 3 (dnssec) - 5 (risky port) - 5 (distinct CVE) = 87
+    expect(score).toBe(87);
+    expect(breakdown.total).toBe(87);
+    expect(breakdown.totalDeducted).toBe(13);
+    expect(breakdown.dimensions.dnssecHygiene?.deducted).toBe(3);
     expect(breakdown.dimensions.networkExposure?.deducted).toBe(10);
   });
 });
