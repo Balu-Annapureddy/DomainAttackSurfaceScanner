@@ -220,6 +220,53 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         expect(narrative).not.toContain('Our passive discovery identified');
       });
     });
+
+    describe('TLS Outcome phrasing in Human Security Assessment', () => {
+      const baseScan: DomainScan = {
+        scanId: 'test-tls-outcome',
+        domain: 'example.com',
+        createdAt: '2026-10-07T00:00:00Z',
+        expiresAt: '2026-10-08T00:00:00Z',
+        status: 'completed',
+        categories: { scoring: { status: 'completed' } } as unknown as DomainScan['categories'],
+        assets: [],
+        findings: [],
+        relationships: [],
+        warnings: [],
+      };
+
+      it('uses confirmed absence wording when outcome is confirmed_absent', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          categories: {
+            ...baseScan.categories,
+            tls: {
+              status: 'completed',
+              data: { available: false, outcome: 'confirmed_absent' },
+            },
+          } as unknown as DomainScan['categories'],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).toContain('The domain appears to lack an active HTTPS service on port 443');
+        expect(narrative).not.toContain('inconclusive');
+      });
+
+      it('uses inconclusive phrasing when outcome is connection_failed', () => {
+        const scan: DomainScan = {
+          ...baseScan,
+          categories: {
+            ...baseScan.categories,
+            tls: {
+              status: 'completed',
+              data: { available: false, outcome: 'connection_failed' },
+            },
+          } as unknown as DomainScan['categories'],
+        };
+        const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
+        expect(narrative).toContain('We could not verify whether example.com has HTTPS active during this scan — this check was inconclusive, not a confirmed finding.');
+        expect(narrative).not.toContain('appears to lack an active HTTPS service');
+      });
+    });
   });
 
   describe('generateGraphNarrative', () => {
