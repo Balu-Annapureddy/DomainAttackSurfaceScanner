@@ -99,12 +99,20 @@ async function requestOnce(url: URL, options: SafeHttpOptions): Promise<SafeHttp
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (DomainAttackSurfaceScanner/1.0; Passive-Recon)',
         },
         timeout: timeoutMs,
-        lookup: (_hostname, _options, callback) => {
+        lookup: (_hostname, lookupOptions, callback) => {
           if (options.signal?.aborted) {
             callback(new Error('Lookup aborted'), '', 4);
             return;
           }
-          callback(null, address, net.isIPv6(address) ? 6 : 4);
+          const family = net.isIPv6(address) ? 6 : 4;
+          if (lookupOptions && typeof lookupOptions === 'object' && (lookupOptions as { all?: boolean }).all) {
+            (callback as unknown as (err: Error | null, addresses: Array<{ address: string; family: number }>) => void)(
+              null,
+              [{ address, family }],
+            );
+          } else {
+            callback(null, address, family);
+          }
         },
         // Intentional passive recon design: rejectUnauthorized is false so HTTP response headers,
         // status codes, and redirects can be inspected even if the target has an invalid cert.

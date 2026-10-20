@@ -5,6 +5,62 @@ function canonicalAsn(val: string): string {
   return match ? `AS${match[1]}` : val.trim();
 }
 
+const LEGAL_SUFFIXES = [
+  ', inc.',
+  ' inc.',
+  ', inc',
+  ' inc',
+  ' b.v.',
+  ' bv',
+  ', ltd.',
+  ' ltd.',
+  ', ltd',
+  ' ltd',
+  ', llc',
+  ' llc',
+  ', corp.',
+  ' corp.',
+  ', corp',
+  ' corp',
+  ', corporation',
+  ' corporation',
+  ', co.',
+  ' co.',
+  ', co',
+  ' co',
+];
+
+export function normalizeOrgKey(val: string): string {
+  let s = val.trim().toLowerCase();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const suffix of LEGAL_SUFFIXES) {
+      if (s.endsWith(suffix)) {
+        s = s.slice(0, -suffix.length).trim().replace(/,+$/, '');
+        changed = true;
+        break;
+      }
+    }
+  }
+  return s.replace(/[,\s]+$/, '') || val.trim().toLowerCase();
+}
+
+export function deduplicateOrgs(orgs: { value: string }[]): string[] {
+  const map = new Map<string, string>();
+  for (const org of orgs) {
+    const raw = org.value.trim();
+    if (!raw) continue;
+    const key = normalizeOrgKey(raw);
+    const existing = map.get(key);
+    // Keep the longest form (e.g. 'Akamai Technologies, Inc.' over 'Akamai Technologies')
+    if (!existing || raw.length > existing.length) {
+      map.set(key, raw);
+    }
+  }
+  return Array.from(map.values());
+}
+
 /**
  * Generates an analytical text narrative walking through the assets and relationships
  * represented in the attack surface topology graph.
@@ -60,7 +116,7 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
     parts.push(`${uniqueAsnList.length} autonomous system${uniqueAsnList.length > 1 ? 's' : ''} (${asnNames})`);
   }
   if (orgs.length > 0) {
-    const uniqueOrgList = Array.from(new Set(orgs.map((o) => o.value.trim())));
+    const uniqueOrgList = deduplicateOrgs(orgs);
     const orgNames = uniqueOrgList.slice(0, 2).join(', ');
     parts.push(`${uniqueOrgList.length} owning organization${uniqueOrgList.length > 1 ? 's' : ''} (${orgNames})`);
   }
@@ -76,7 +132,7 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
   // Network consolidation vs multi-provider distribution analysis
   if (ips.length > 0) {
     const uniqueAsns = Array.from(new Set(asns.map((a) => canonicalAsn(a.value))));
-    const uniqueOrgs = Array.from(new Set(orgs.map((o) => o.value.trim())));
+    const uniqueOrgs = deduplicateOrgs(orgs);
 
     if (uniqueAsns.length <= 1 && uniqueOrgs.length <= 1) {
       const providerName = uniqueOrgs[0] || (uniqueAsns[0] ? `autonomous system ${uniqueAsns[0]}` : 'a single network provider');

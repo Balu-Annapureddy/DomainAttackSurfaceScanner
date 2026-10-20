@@ -385,6 +385,25 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       expect(narrative).toContain('multi-cloud or hybrid infrastructure footprint');
     });
 
+    it("deduplicates organization names with legal suffixes using Tesla's actual data (counts 2, not 3)", () => {
+      const teslaAssets: Asset[] = [
+        { id: '1', type: 'DOMAIN', value: 'tesla.com', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '2', type: 'IP', value: '23.205.77.10', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '3', type: 'IP', value: '23.205.77.11', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '4', type: 'ASN', value: 'AS20940', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '5', type: 'ORGANIZATION', value: 'Akamai Technologies, Inc.', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '6', type: 'ORGANIZATION', value: 'Akamai International B.V.', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '7', type: 'ORGANIZATION', value: 'Akamai Technologies', targetDomain: 'tesla.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+      ];
+      const narrative = generateGraphNarrative(teslaAssets, []);
+      expect(narrative).toContain('2 owning organizations');
+      expect(narrative).toContain('2 operating organizations');
+      expect(narrative).not.toContain('3 owning organizations');
+      expect(narrative).not.toContain('3 operating organizations');
+      expect(narrative).toContain('Akamai Technologies, Inc.');
+      expect(narrative).toContain('Akamai International B.V.');
+    });
+
     it('handles empty asset array cleanly', () => {
       const narrative = generateGraphNarrative([], []);
       expect(narrative).toBe('No connected infrastructure assets were discovered during this scan.');
