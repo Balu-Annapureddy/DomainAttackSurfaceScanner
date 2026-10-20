@@ -24,6 +24,7 @@ export default function AssetChainVisualizer({
   sectionNumber = '04',
 }: AssetChainVisualizerProps) {
   const [filterSearch, setFilterSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'resolved' | 'discovery'>('all');
 
   // Compute resolution chains
   const chains = useMemo<ChainPath[]>(() => {
@@ -79,10 +80,29 @@ export default function AssetChainVisualizer({
     return result;
   }, [assets, relationships]);
 
+  const { resolvedChains, discoveryRecords } = useMemo(() => {
+    const resolved: ChainPath[] = [];
+    const discovery: ChainPath[] = [];
+    for (const c of chains) {
+      if (c.ipAsset) {
+        resolved.push(c);
+      } else {
+        discovery.push(c);
+      }
+    }
+    return { resolvedChains: resolved, discoveryRecords: discovery };
+  }, [chains]);
+
+  const tabChains = useMemo(() => {
+    if (activeTab === 'resolved') return resolvedChains;
+    if (activeTab === 'discovery') return discoveryRecords;
+    return chains;
+  }, [activeTab, resolvedChains, discoveryRecords, chains]);
+
   const filteredChains = useMemo(() => {
-    if (!filterSearch.trim()) return chains;
+    if (!filterSearch.trim()) return tabChains;
     const q = filterSearch.toLowerCase();
-    return chains.filter(
+    return tabChains.filter(
       (c) =>
         c.domainAsset.value.toLowerCase().includes(q) ||
         (c.ipAsset?.value && c.ipAsset.value.toLowerCase().includes(q)) ||
@@ -90,7 +110,7 @@ export default function AssetChainVisualizer({
         (c.orgAsset?.value && c.orgAsset.value.toLowerCase().includes(q)) ||
         (c.geoAsset?.value && c.geoAsset.value.toLowerCase().includes(q)),
     );
-  }, [chains, filterSearch]);
+  }, [tabChains, filterSearch]);
 
   return (
     <div className="console-panel rounded-xl overflow-hidden shadow-sm">
@@ -100,7 +120,7 @@ export default function AssetChainVisualizer({
           <span className="dossier-num">[{sectionNumber}]</span>
           <span className="font-bold tracking-wide text-sm">ASSET ROUTING CHAINS</span>
           <span className="text-xs text-[var(--text-secondary)] ml-1 font-sans">
-            TRACE: DOMAIN &rarr; IP &rarr; ASN &rarr; ORG &rarr; LOCATION
+            TRACE: DOMAIN &rarr; IP &rarr; ASN &rarr; ORG &rarr; GEOLOCATION
           </span>
         </div>
 
@@ -115,6 +135,45 @@ export default function AssetChainVisualizer({
             className="h-8 w-44 sm:w-64 border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)] rounded-lg transition"
           />
         </div>
+      </div>
+
+      {/* ─── Active Filter Tabs (Distinguish Active Traces vs CT Discovery) ── */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-technical)] bg-[var(--bg-panel)] px-4 py-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('all')}
+          className={`px-3 py-1 rounded-md font-mono transition cursor-pointer text-xs ${
+            activeTab === 'all'
+              ? 'bg-[var(--accent-active-bg)] text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/40'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-transparent'
+          }`}
+        >
+          All Records ({chains.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('resolved')}
+          className={`px-3 py-1 rounded-md font-mono transition cursor-pointer text-xs flex items-center gap-1.5 ${
+            activeTab === 'resolved'
+              ? 'bg-[var(--accent-active-bg)] text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/40'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-transparent'
+          }`}
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+          Active Routing Chains ({resolvedChains.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('discovery')}
+          className={`px-3 py-1 rounded-md font-mono transition cursor-pointer text-xs flex items-center gap-1.5 ${
+            activeTab === 'discovery'
+              ? 'bg-[var(--accent-active-bg)] text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/40'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-transparent'
+          }`}
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+          Discovered CT Records ({discoveryRecords.length})
+        </button>
       </div>
 
       {/* ─── One-Time Plain-Language Chain Architecture Explainer (A.6) ── */}
@@ -170,10 +229,15 @@ export default function AssetChainVisualizer({
                   <Globe size={13} />
                   <span className="truncate">{chain.domainAsset.value}</span>
                 </div>
-                {chain.ipAsset && (
+                {chain.ipAsset ? (
                   <div className="pl-4 flex items-center gap-2 text-[#8b5cf6] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5">
                     <Server size={12} />
                     <span>{chain.ipAsset.value}</span>
+                  </div>
+                ) : (
+                  <div className="pl-4 flex items-center gap-2 text-[var(--text-muted)] border-l-2 border-[var(--border-muted)] ml-1.5 py-0.5 text-[11px]">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500/70" />
+                    <span>DNS resolution not observed (CT log record)</span>
                   </div>
                 )}
                 {chain.asnAsset && (
@@ -228,8 +292,12 @@ export default function AssetChainVisualizer({
                       <span>{chain.ipAsset.value}</span>
                     </button>
                   ) : (
-                    <span className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-muted)] px-2.5 py-1 text-xs rounded-lg">
-                      UNRESOLVED
+                    <span
+                      className="border border-[var(--border-muted)] bg-[var(--bg-panel-inset)] text-[var(--text-muted)] px-2.5 py-1 text-xs rounded-lg inline-flex items-center gap-1.5"
+                      title="Discovered from Certificate Transparency (CT) or passive sources; no active DNS A/AAAA resolution observed during this scan."
+                    >
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500/70" />
+                      <span>DNS NOT RESOLVED (CT DISCOVERY)</span>
                     </span>
                   )}
                 </div>
@@ -280,7 +348,7 @@ export default function AssetChainVisualizer({
                         type="button"
                         onClick={() => onSelectAsset?.(chain.geoAsset!)}
                         className="border border-[#d97706]/40 bg-[#d97706]/10 text-[#d97706] dark:text-[#f59e0b] px-2.5 py-1 text-xs font-medium hover:border-[#d97706] cursor-pointer flex items-center gap-1 rounded-lg transition"
-                        title="Approximate Datacenter"
+                        title="Approximate IP Geolocation (Registry Estimate)"
                       >
                         <MapPin size={11} className="shrink-0" />
                         <span>
@@ -298,7 +366,9 @@ export default function AssetChainVisualizer({
 
       {/* ─── Footer ─────────────────────────────────────────────────── */}
       <div className="border-t border-[var(--border-muted)] bg-[var(--bg-panel-inset)] px-4 py-2.5 flex items-center justify-between text-xs text-[var(--text-muted)]">
-        <span>{filteredChains.length} of {chains.length} resolution traces</span>
+        <span>
+          Showing {filteredChains.length} of {chains.length} records ({resolvedChains.length} active routing chains, {discoveryRecords.length} CT discovery records)
+        </span>
         <span className="text-[11px]">[CLICK ASSET IN TRACE TO INSPECT EVIDENCE]</span>
       </div>
     </div>

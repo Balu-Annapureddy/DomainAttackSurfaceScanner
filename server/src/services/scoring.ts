@@ -245,7 +245,14 @@ function collectEmailObservations(scan: DomainScan): ScoreObservation[] {
       } else if (policy.includes('?all')) {
         observations.push({ description: 'SPF uses a neutral ?all policy', pointsDeducted: 2 });
       } else if (policy.includes('~all')) {
-        observations.push({ description: 'SPF uses a softfail ~all policy', pointsDeducted: 1 });
+        // Industry Best Practice Alignment: If DMARC is present and enforcing (p=reject or p=quarantine),
+        // SPF ~all (SoftFail) is the recommended configuration (per Google Workspace & Microsoft 365)
+        // to preserve email forwarding deliverability. Only deduct if DMARC is absent or in monitoring mode (p=none).
+        const dmarcPolicy = dns.dmarc?.present ? dns.dmarc.policy?.toLowerCase() : undefined;
+        const dmarcEnforcing = dmarcPolicy === 'reject' || dmarcPolicy === 'quarantine';
+        if (!dmarcEnforcing) {
+          observations.push({ description: 'SPF uses a softfail ~all policy without an enforcing DMARC policy', pointsDeducted: 1 });
+        }
       }
     }
   }
@@ -279,12 +286,18 @@ function collectDnssecObservations(scan: DomainScan): ScoreObservation[] {
   if (cat?.status !== 'completed') return [];
 
   const dns = cat.data as {
-    dnssec?: { observed?: boolean };
+    dnssec?: { observed?: boolean; status?: string; inconclusive?: boolean };
   } | undefined;
 
   const observations: ScoreObservation[] = [];
 
-  if (dns?.dnssec?.observed === false) {
+  // Deduct only when verified unsigned; NEVER deduct when lookup was inconclusive or aborted
+  if (
+    dns?.dnssec &&
+    dns.dnssec.observed === false &&
+    dns.dnssec.status !== 'inconclusive' &&
+    !dns.dnssec.inconclusive
+  ) {
     observations.push({
       description: 'No DNSSEC (DNSKEY/DS) cryptographic records were observed in DNS',
       pointsDeducted: 3,
@@ -443,9 +456,9 @@ function collectWhoisObservations(scan: DomainScan): ScoreObservation[] {
   }
 
   // Check (b): Registrant contact info public without privacy/redaction
-  if (whois.privacyStatus === 'public') {
+  if (whois.privacyStatus === 'public' && (whois as { contactDetailsExposed?: boolean }).contactDetailsExposed !== false) {
     observations.push({
-      description: 'Registrant contact details are publicly visible without privacy proxy or redaction (soft signal on its own, not a confirmed issue)',
+      description: 'Registrant personal contact details are publicly visible without privacy proxy or redaction (soft signal on its own, not a confirmed issue)',
       pointsDeducted: 3,
     });
   }

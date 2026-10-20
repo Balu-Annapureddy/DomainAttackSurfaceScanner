@@ -10,6 +10,7 @@ export type WhoisRecord = {
   nameservers: string[];
   registrantOrg?: string | null;
   privacyStatus: 'public' | 'redacted' | 'unknown';
+  contactDetailsExposed?: boolean;
   reason?: string;
   rawText?: string;
 };
@@ -89,7 +90,18 @@ export function parseWhoisText(raw: string): Partial<WhoisRecord> {
 
   result.nameservers = Array.from(nsSet);
 
-  // Assess privacy status
+  // Assess privacy status & contact exposure:
+  // Note: An organizational name (e.g. "Google LLC") does NOT mean personal contact info is exposed.
+  // Check whether raw text contains unredacted personal contact fields (email or phone).
+  const hasUnredactedEmail =
+    /registrant email:\s*[^@\s]+@[^@\s]+/i.test(raw) &&
+    !PRIVACY_PATTERNS.some((p) => p.test(raw.match(/registrant email:\s*([^\r\n]+)/i)?.[1] ?? ''));
+  const hasUnredactedPhone =
+    /registrant phone:\s*\+?[0-9\s().-]{7,}/i.test(raw) &&
+    !PRIVACY_PATTERNS.some((p) => p.test(raw.match(/registrant phone:\s*([^\r\n]+)/i)?.[1] ?? ''));
+
+  result.contactDetailsExposed = hasUnredactedEmail || hasUnredactedPhone;
+
   if (result.registrantOrg) {
     const isRedacted = PRIVACY_PATTERNS.some((pat) => pat.test(result.registrantOrg!));
     if (isRedacted) {
@@ -103,6 +115,8 @@ export function parseWhoisText(raw: string): Partial<WhoisRecord> {
     const hasRedactionText = PRIVACY_PATTERNS.some((pat) => pat.test(rawLower));
     if (hasRedactionText) {
       result.privacyStatus = 'redacted';
+    } else {
+      result.privacyStatus = result.contactDetailsExposed ? 'public' : 'unknown';
     }
   }
 

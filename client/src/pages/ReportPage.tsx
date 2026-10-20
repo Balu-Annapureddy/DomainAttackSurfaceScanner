@@ -293,8 +293,8 @@ export default function ReportPage() {
                 <span className="text-base font-bold text-[var(--text-primary)]">{scan.assets?.length ?? 0}</span>
               </div>
               <div className="p-2 bg-[var(--bg-panel-subtle)] rounded">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Unverified Areas</span>
-                <span className="text-base font-bold text-[var(--text-muted)]">{assessment.unverifiedAreasCount}</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Inconclusive Checks</span>
+                <span className="text-base font-bold text-[var(--text-muted)]">{assessment.inconclusiveChecksCount}</span>
               </div>
             </div>
           </section>

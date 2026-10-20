@@ -244,11 +244,11 @@ export default function InfrastructureMap({
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)] mt-0.5">
-            Infrastructure Locations
+            Approximate IP Geolocation Estimates
           </h2>
         </div>
         <p className="text-xs text-[var(--text-muted)] max-w-md">
-          Approximate geographic registrations of public servers associated with this domain based on IP routing records.
+          Estimated IP registry allocations and routing registration points for observed endpoints. Note: BGP Anycast and cloud proxy routing mean these represent network registrations, not confirmed physical datacenter locations.
         </p>
       </div>
 
@@ -258,7 +258,7 @@ export default function InfrastructureMap({
         <div className="lg:col-span-7 bg-[var(--bg-panel)] border border-[var(--border-technical)] rounded-xl overflow-hidden shadow-xs flex flex-col">
           <div className="p-3 bg-[var(--bg-panel-subtle)] border-b border-[var(--border-muted)] flex items-center justify-between text-xs">
             <span className="font-mono text-xs text-[var(--text-primary)] font-bold">
-              Global Network Point-of-Presence Map
+              Approximate Network Geolocation Map (RIR Estimates)
             </span>
             <span className="text-[11px] text-[var(--text-muted)] font-mono">
               Click any marker to inspect location
@@ -368,7 +368,7 @@ export default function InfrastructureMap({
                     <span>Important Geographic Context</span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
-                    This represents an approximate network registration location based on public BGP routing databases. It does <strong>not</strong> identify the physical location of a person or the exact street address of a datacenter building.
+                    This represents an approximate network registration location based on public BGP and RIR routing databases. Due to cloud CDNs and BGP Anycast routing, public IP blocks are often broadcast worldwide from multiple facilities simultaneously, making single-city physical datacenter attribution inherently uncertain.
                   </p>
                 </div>
               </div>

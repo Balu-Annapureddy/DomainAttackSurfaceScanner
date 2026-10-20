@@ -399,7 +399,7 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
       expect(narrative).toContain('1 apex domain');
       expect(narrative).toContain('2 IP addresses (1 IPv4, 1 IPv6)');
       expect(narrative).toContain('a.iana-servers.net');
-      expect(narrative).toContain("All of this domain's infrastructure is run by a single provider, Edgecast Inc.");
+      expect(narrative).toContain("All resolved IP addresses observed in this scan route through a single provider, Edgecast Inc.");
       expect(narrative).toContain('Edgecast Inc.');
       expect(narrative.toLowerCase()).not.toContain('multi-cloud');
       expect(narrative.toLowerCase()).not.toContain('hybrid');
@@ -415,7 +415,7 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         { id: '6', type: 'ORGANIZATION', value: 'Cloudflare, Inc.', targetDomain: 'cloudflare-only.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
       ];
       const narrative = generateGraphNarrative(singleProviderAssets, []);
-      expect(narrative).toContain("All of this domain's infrastructure is run by a single provider, Cloudflare, Inc.");
+      expect(narrative).toContain("All resolved IP addresses observed in this scan route through a single provider, Cloudflare, Inc.");
       expect(narrative.toLowerCase()).not.toContain('multi-cloud');
       expect(narrative.toLowerCase()).not.toContain('hybrid');
     });
@@ -427,7 +427,7 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         { id: '9', type: 'ASN', value: 'AS13335', targetDomain: 'example.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
       ];
       const narrative = generateGraphNarrative(multiAssets, mockRelationships);
-      expect(narrative).toContain('multi-cloud or hybrid infrastructure footprint');
+      expect(narrative).toContain('multi-provider or hybrid network distribution');
     });
 
     it("deduplicates organization names with legal suffixes using Tesla's actual data (counts 2, not 3)", () => {

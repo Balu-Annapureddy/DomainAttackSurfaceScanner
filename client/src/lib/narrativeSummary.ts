@@ -285,6 +285,9 @@ export interface HumanAssessmentSummary {
   protectionsConfirmedCount: number;
   unverifiedAreasCount: number;
   unverifiedCategoryNames: string[];
+  completedStagesCount: number;
+  totalStagesCount: number;
+  inconclusiveChecksCount: number;
   whatWeChecked: Array<{ title: string; description: string }>;
   whatWeFoundNarrative: string;
   whatMattersMostNarrative: string;
@@ -305,10 +308,22 @@ export function generateHumanSecurityAssessment(scan: DomainScan): HumanAssessme
   const positiveControls = extractPositiveControls(scan);
   const protectionsConfirmedCount = positiveControls.length;
 
-  const failedCategories = Object.entries(scan.categories ?? {})
-    .filter(([key, cat]) => key !== 'scoring' && cat.status === 'failed')
+  const categoryEntries = Object.entries(scan.categories ?? {}).filter(([key]) => key !== 'scoring');
+  const totalStagesCount = categoryEntries.length || 7;
+  const completedStagesCount = categoryEntries.filter(
+    ([, cat]) => cat.status === 'completed'
+  ).length;
+
+  const failedCategories = categoryEntries
+    .filter(([, cat]) => cat.status === 'failed')
     .map(([key]) => key);
   const unverifiedAreasCount = failedCategories.length;
+
+  const inconclusiveChecksCount = findings.filter(
+    (f) =>
+      f.observationStatus === 'check_failed' ||
+      f.title.toLowerCase().includes('inconclusive')
+  ).length;
 
   let scoreClassification = 'Assessment in progress';
   let scoreBadgeText = 'In Progress';
@@ -470,6 +485,9 @@ export function generateHumanSecurityAssessment(scan: DomainScan): HumanAssessme
     protectionsConfirmedCount,
     unverifiedAreasCount,
     unverifiedCategoryNames: failedCategories,
+    completedStagesCount,
+    totalStagesCount,
+    inconclusiveChecksCount,
     whatWeChecked,
     whatWeFoundNarrative,
     whatMattersMostNarrative,
@@ -884,7 +902,7 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
       statusText: isClean ? 'No High-Risk Ports Exposed' : 'Exposed Service Ports or Known Issues',
       isClean,
       whatWasObserved: isClean
-        ? 'No sensitive database or remote administration ports were observed on public IP addresses in passive intelligence records.'
+        ? 'No sensitive database or remote administration ports were observed on public IP addresses in passive intelligence records (Shodan InternetDB). Note: This check relies on passive internet scan feeds and does not rule out unindexed ports.'
         : d.observations.map((o) => o.description).join('; '),
       whyItAffectedScore: isClean
         ? 'Restricting administrative access to private networks prevents automated brute-force attacks.'
@@ -949,10 +967,10 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
       maxDeduction: d.maxDeduction,
       deducted: d.deducted,
       scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
-      statusText: isClean ? 'No Dangling Records' : 'High-Risk Takeover Detected',
+      statusText: isClean ? 'No Dangling Records Observed' : 'High-Risk Takeover Detected',
       isClean,
       whatWasObserved: isClean
-        ? 'No subdomains point to decommissioned or unclaimed third-party cloud resources.'
+        ? 'No dangling CNAME records pointing to unclaimed third-party cloud services were observed among discovered hostnames. Note: This check evaluates observed public DNS aliases and does not guarantee complete absence of takeover risk on private or unlisted zones.'
         : d.observations.map((o) => o.description).join('; '),
       whyItAffectedScore: isClean
         ? 'Prevents unauthorized actors from hijacking organizational subdomains.'

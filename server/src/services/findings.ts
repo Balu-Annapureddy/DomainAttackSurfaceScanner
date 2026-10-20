@@ -50,7 +50,7 @@ function finding(
 const HEADER_EXPLANATIONS: Record<string, { purpose: string; risk: string; advice: string }> = {
   'content-security-policy': {
     purpose: 'Controls which external resources (such as scripts, images, and fonts) the browser is permitted to load.',
-    risk: 'Without CSP (Content-Security-Policy), the site lacks a backup defense against cross-site scripting (XSS, where malicious scripts run in visitors\' browsers). This means injected scripts execute unrestricted.',
+    risk: 'Without CSP (Content-Security-Policy), the site lacks defense-in-depth against cross-site scripting (XSS). If an application vulnerability allows script injection, CSP acts as a secondary barrier restricting script execution and unauthorized data exfiltration.',
     advice: 'Add a Content-Security-Policy header restricting script sources to trusted origins.',
   },
   'strict-transport-security': {
@@ -298,7 +298,13 @@ export function buildFindings(scan: DomainScan): Finding[] {
     ? (dnsCategory.data as {
         spf?: { present?: boolean; policy?: string };
         dmarc?: { present?: boolean; policy?: string; record?: string };
-        dnssec?: { observed?: boolean; note?: string; record?: string };
+        dnssec?: {
+          observed?: boolean;
+          note?: string;
+          record?: string;
+          status?: 'signed' | 'unsigned' | 'inconclusive';
+          inconclusive?: boolean;
+        };
         mx?: string[];
         addresses?: string[];
       } | undefined)
@@ -709,34 +715,69 @@ export function buildFindings(scan: DomainScan): Finding[] {
   // ════════════════════════════════════════════════════════════════════════════
 
   if (spf.present && spf.allQualifier === 'softfail') {
-    findings.push(finding({
-      title: 'SPF record uses ~all (softfail): unauthorised senders are not rejected',
-      severity: 'low',
-      kind: 'recommendation',
-      category: 'dns',
-      description: `The SPF record for ${domain} uses "~all" (softfail), meaning mail from unlisted senders is accepted with a warning rather than rejected. This is appropriate while testing but reduces email authentication strength in production.`,
-      recommendation: 'Once all legitimate sending sources are confirmed in the SPF record, change "~all" to "-all" (hardfail) to reject mail from unlisted senders outright.',
-      confidence: 'high',
-      observationStatus: 'observed',
-      evidence: [
-        ev('DNS TXT SPF record', `SPF record observed: ${spfRecord ?? '(v=spf1 ... ~all)'}. The "~all" softfail qualifier is in use.`),
-      ],
-      analysis: {
-        whatIsThis: 'In SPF, "~all" (softfail) instructs receiving mail servers to accept email from unlisted senders but mark it as potentially suspicious. It does not cause rejection. It is typically used during SPF deployment while identifying all sending sources.',
-        whatWasObserved: `The SPF record for ${domain} ends with "~all", meaning messages from senders not listed in the SPF record are accepted (not rejected) by default.`,
-        howDiscovered: `DASS performed a DNS TXT lookup for ${domain}, found an SPF record, and parsed the "all" mechanism qualifier.`,
-        technicalExplanation: 'With "~all", receiving servers return an SPF "softfail" result for unlisted senders. Many spam filters treat this as a mild negative signal, but they still deliver the message. A "-all" hardfail causes SPF-aware servers to reject the message outright.',
-        whyItMatters: 'Softfail is a weaker protection than hardfail. An attacker can still send email from an unlisted server and have it delivered to many inboxes, as not all receivers act on SPF softfail. It is appropriate during testing but not as a permanent configuration.',
-        securityImpact: 'Lower than if "+all" were used, but unauthorised senders can still successfully deliver messages in many cases, particularly with email providers that do not enforce SPF softfail strictly.',
-        potentialAbuse: 'An attacker sending phishing email from an unlisted server gets an SPF "softfail" result. Many email systems deliver softfail messages, so the email may still reach inboxes.',
-        remediation: `Once you have confirmed all legitimate email senders are listed in the SPF record, change "~all" to "-all". Test first by validating all expected mail is listed: \`dig TXT ${domain} | grep spf\`.`,
-        safeValidation: 'After changing to "-all", verify with MX Toolbox (https://mxtoolbox.com/spf.aspx) and send test emails from all expected sources to confirm delivery.',
-        references: [
-          'https://www.rfc-editor.org/rfc/rfc7208#section-5',
-          'https://dmarcian.com/spf-survey/',
+    const dmarcEnforcing = dmarc.present && (dmarc.policyStrength === 'reject' || dmarc.policyStrength === 'quarantine');
+
+    if (dmarcEnforcing) {
+      findings.push(finding({
+        title: `SPF uses ~all (softfail) with active DMARC ${dmarc.policyStrength} enforcement`,
+        severity: 'informational',
+        kind: 'observation',
+        category: 'dns',
+        description: `The SPF record for ${domain} specifies "~all" (softfail) alongside an active DMARC policy of p=${dmarc.policy}. This configuration aligns with standard industry best practices (recommended by Google Workspace and Microsoft 365) to prevent mail delivery failures during third-party forwarding while DMARC provides strict domain authentication.`,
+        recommendation: 'Maintain your current DMARC alignment. Upgrading "~all" to "-all" is an optional hardening choice, but verify that legitimate third-party forwarders and automated mailing lists will not be rejected before making changes.',
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('DNS TXT SPF record', `SPF record observed: ${spfRecord ?? '(v=spf1 ... ~all)'}.`),
+          ev('DNS TXT DMARC record', `DMARC record observed with enforcing policy: p=${dmarc.policy}.`),
         ],
-      },
-    }));
+        analysis: {
+          whatIsThis: 'In SPF, "~all" (softfail) marks unlisted senders as suspect rather than rejecting them outright. When paired with an enforcing DMARC policy (p=quarantine or p=reject) and DKIM, DMARC makes the final authentication determination.',
+          whatWasObserved: `The SPF record for ${domain} ends with "~all", and an enforcing DMARC record (p=${dmarc.policy}) was observed.`,
+          howDiscovered: `DASS performed DNS TXT queries for ${domain} and _dmarc.${domain} to evaluate SPF and DMARC alignment.`,
+          technicalExplanation: 'Strict SPF "-all" can cause legitimate email to fail when routed through intermediary servers (such as email forwarders or mailing lists) that change the sending IP address. An enforcing DMARC policy with DKIM allows legitimate forwarded messages to pass authentication even when SPF fails.',
+          whyItMatters: 'Using "~all" with an enforcing DMARC policy represents a deliberate balance between anti-spoofing protection and legitimate email deliverability.',
+          securityImpact: 'Low. Because DMARC enforces policy on messages failing both SPF and DKIM alignment, spoofed messages are blocked by DMARC even with SPF softfail.',
+          potentialAbuse: 'Adversaries attempting to send email as @' + domain + ' are subjected to DMARC enforcement (p=' + dmarc.policy + ').',
+          remediation: 'No urgent remediation required. If your organization desires strict SPF-level rejection, transition to "-all" after validating that all outbound routes support direct delivery.',
+          safeValidation: 'Verify SPF and DMARC alignment using diagnostic tools such as https://dmarcian.com/dmarc-inspector/ or https://mxtoolbox.com/dmarc.aspx.',
+          references: [
+            'https://support.google.com/a/answer/33786',
+            'https://www.rfc-editor.org/rfc/rfc7208',
+            'https://www.rfc-editor.org/rfc/rfc7489',
+          ],
+        },
+      }));
+    } else {
+      findings.push(finding({
+        title: 'SPF record uses ~all (softfail) without enforcing DMARC policy',
+        severity: 'low',
+        kind: 'configuration_weakness',
+        category: 'dns',
+        description: `The SPF record for ${domain} uses "~all" (softfail) without an enforcing DMARC policy (p=quarantine or p=reject). Messages from unlisted senders are marked rather than rejected, leaving recipients exposed to spoofing if receivers do not penalize softfail.`,
+        recommendation: 'Deploy an enforcing DMARC policy (p=quarantine or p=reject) to tie SPF and DKIM authentication together, or change "~all" to "-all" after confirming all legitimate sending sources.',
+        confidence: 'high',
+        observationStatus: 'observed',
+        evidence: [
+          ev('DNS TXT SPF record', `SPF record observed: ${spfRecord ?? '(v=spf1 ... ~all)'}. The "~all" softfail qualifier is in use.`),
+        ],
+        analysis: {
+          whatIsThis: 'In SPF, "~all" (softfail) instructs receiving mail servers to accept email from unlisted senders but mark it as suspect. Without an enforcing DMARC policy, many receiving systems still deliver softfail email to user inboxes.',
+          whatWasObserved: `The SPF record for ${domain} ends with "~all", and no enforcing DMARC policy was observed.`,
+          howDiscovered: `DASS performed a DNS TXT lookup for ${domain} and parsed the SPF mechanism qualifier.`,
+          technicalExplanation: 'Without an enforcing DMARC policy, "~all" provides only weak protection against email spoofing. Some spam filters deliver softfail messages directly to inboxes.',
+          whyItMatters: 'Without DMARC enforcement, attackers can forge the From: header on unlisted mail servers and have their messages accepted by email receivers.',
+          securityImpact: 'Unauthorised senders can deliver spoofed email in environments where receivers do not enforce strict spam filtering on SPF softfail.',
+          potentialAbuse: 'An attacker sending phishing email from an unlisted server gets an SPF "softfail" result, which may be delivered to recipient inboxes.',
+          remediation: 'Deploy DMARC with p=quarantine or p=reject, or change "~all" to "-all" once all legitimate email sources are confirmed in the SPF record.',
+          safeValidation: 'Validate outbound email flows with MX Toolbox (https://mxtoolbox.com/spf.aspx) before enforcing strict rejection.',
+          references: [
+            'https://www.rfc-editor.org/rfc/rfc7208#section-5',
+            'https://dmarcian.com/spf-survey/',
+          ],
+        },
+      }));
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -1173,7 +1214,35 @@ export function buildFindings(scan: DomainScan): Finding[] {
   // FINDING 21: DNSSEC not observed
   // ════════════════════════════════════════════════════════════════════════════
 
-  if (dns && dns.dnssec && dns.dnssec.observed === false) {
+  if (dns && dns.dnssec && (dns.dnssec.inconclusive || dns.dnssec.status === 'inconclusive')) {
+    findings.push(finding({
+      title: 'DNSSEC validation was inconclusive during this scan',
+      severity: 'informational',
+      kind: 'observation',
+      category: 'dns',
+      description: `Authoritative DNSSEC records (DNSKEY/DS) could not be conclusively validated for ${domain} due to resolver timeout or upstream network failure. This does not confirm the zone is unsigned.`,
+      recommendation: 'Perform manual verification with dig +dnssec to inspect authoritative DS/DNSKEY records directly.',
+      confidence: 'low',
+      observationStatus: 'check_failed',
+      evidence: [
+        ev('DNS query', dns.dnssec.note || 'DNSSEC query returned an inconclusive response.', 'low'),
+      ],
+      analysis: {
+        whatIsThis: 'DNSSEC (DNS Security Extensions) adds cryptographic digital signatures to DNS records using public-key cryptography.',
+        whatWasObserved: 'DNSSEC status check was inconclusive.',
+        howDiscovered: 'Public validating DNS resolvers did not return a conclusive DNSKEY or DS answer.',
+        technicalExplanation: 'Network timeouts or resolver throttling prevented complete verification of the DNSSEC delegation chain.',
+        whyItMatters: 'Inconclusive checks must not be assumed to be security weaknesses.',
+        securityImpact: 'Unknown until conclusive DNSSEC validation completes.',
+        potentialAbuse: 'Inconclusive.',
+        remediation: 'Inspect DNSSEC configuration directly in the authoritative DNS provider console.',
+        safeValidation: `Run dig +dnssec ${domain} against authoritative nameservers.`,
+        references: [
+          'https://www.rfc-editor.org/rfc/rfc4033',
+        ],
+      },
+    }));
+  } else if (dns && dns.dnssec && dns.dnssec.observed === false) {
     findings.push(finding({
       title: 'DNSSEC (DNS Security Extensions) not observed',
       severity: 'low',

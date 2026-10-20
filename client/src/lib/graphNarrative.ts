@@ -136,9 +136,9 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
 
     if (uniqueAsns.length <= 1 && uniqueOrgs.length <= 1) {
       const providerName = uniqueOrgs[0] || (uniqueAsns[0] ? `autonomous system ${uniqueAsns[0]}` : 'a single network provider');
-      narrative += ` All of this domain's infrastructure is run by a single provider, ${providerName}. This means its internet traffic is routed through one central network rather than spread across different hosting companies.`;
+      narrative += ` All resolved IP addresses observed in this scan route through a single provider, ${providerName}. While this indicates consolidated network routing for the observed endpoints, enterprise architectures may span additional unobserved networks or multi-region points of presence.`;
     } else {
-      narrative += ` Resolved host endpoints span ${uniqueAsns.length} autonomous systems and ${uniqueOrgs.length} operating organizations. This demonstrates a multi-cloud or hybrid infrastructure footprint, with servers hosted by different providers.`;
+      narrative += ` Resolved host endpoints span ${uniqueAsns.length} autonomous systems and ${uniqueOrgs.length} operating organizations. This indicates a multi-provider or hybrid network distribution across the observed perimeter.`;
     }
   }
 

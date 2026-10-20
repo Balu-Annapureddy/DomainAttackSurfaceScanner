@@ -11,13 +11,15 @@ export interface DnsOptions {
 
 export interface DnssecResult {
   observed: boolean;
+  status: 'signed' | 'unsigned' | 'inconclusive';
   note: string;
   record?: string;
+  inconclusive?: boolean;
 }
 
 async function checkDnssec(domain: string, options: DnsOptions): Promise<DnssecResult> {
   const encoded = encodeURIComponent(domain);
-  // Try Google DoH first
+  // Try Google DoH first for DNSKEY (48) and DS (43)
   try {
     const gRes = await fetchProviderJson<{
       Status?: number;
@@ -27,16 +29,59 @@ async function checkDnssec(domain: string, options: DnsOptions): Promise<DnssecR
       signal: options.signal,
       timeoutMs: 4000,
     });
-    const dnskeyRecord = gRes.Answer?.find((a) => a.type === 48);
-    if (dnskeyRecord || gRes.AD === true) {
+
+    const dnskeyRecord = gRes?.Answer?.find((a) => a.type === 48);
+    if (dnskeyRecord || gRes?.AD === true) {
       return {
         observed: true,
+        status: 'signed',
         note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
         record: dnskeyRecord?.data,
       };
     }
-    if (gRes.Status === 0) {
-      return { observed: false, note: 'No DNSKEY or DS records observed.' };
+
+    // Check DS record at parent zone
+    try {
+      const gDs = await fetchProviderJson<{
+        Status?: number;
+        AD?: boolean;
+        Answer?: Array<{ type: number; data?: string }>;
+      }>(`https://dns.google/resolve?name=${encoded}&type=DS`, {
+        signal: options.signal,
+        timeoutMs: 4000,
+      });
+      const dsRecord = gDs?.Answer?.find((a) => a.type === 43);
+      if (dsRecord || gDs?.AD === true) {
+        return {
+          observed: true,
+          status: 'signed',
+          note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
+          record: dsRecord?.data,
+        };
+      }
+      if (gRes?.Status === 0 && (gDs?.Status === 0 || gDs === undefined)) {
+        return {
+          observed: false,
+          status: 'unsigned',
+          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
+        };
+      }
+    } catch {
+      if (gRes?.Status === 0) {
+        return {
+          observed: false,
+          status: 'unsigned',
+          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
+        };
+      }
+    }
+
+    if (gRes?.Status === 0) {
+      return {
+        observed: false,
+        status: 'unsigned',
+        note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
+      };
     }
   } catch {
     // If Google DoH fails, try Cloudflare DoH fallback
@@ -50,23 +95,38 @@ async function checkDnssec(domain: string, options: DnsOptions): Promise<DnssecR
         timeoutMs: 4000,
         headers: { Accept: 'application/dns-json' },
       });
-      const dnskeyRecord = cfRes.Answer?.find((a) => a.type === 48);
-      if (dnskeyRecord || cfRes.AD === true) {
+      const dnskeyRecord = cfRes?.Answer?.find((a) => a.type === 48);
+      if (dnskeyRecord || cfRes?.AD === true) {
         return {
           observed: true,
+          status: 'signed',
           note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
           record: dnskeyRecord?.data,
         };
       }
-      if (cfRes.Status === 0) {
-        return { observed: false, note: 'No DNSKEY or DS records observed.' };
+      if (cfRes?.Status === 0) {
+        return {
+          observed: false,
+          status: 'unsigned',
+          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
+        };
       }
     } catch (fallbackErr) {
       const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      return { observed: false, note: `DNSSEC lookup was inconclusive: ${msg}` };
+      return {
+        observed: false,
+        status: 'inconclusive',
+        inconclusive: true,
+        note: `DNSSEC lookup was inconclusive: ${msg}`,
+      };
     }
   }
-  return { observed: false, note: 'No DNSKEY or DS records observed.' };
+  return {
+    observed: false,
+    status: 'inconclusive',
+    inconclusive: true,
+    note: 'DNSSEC verification was inconclusive.',
+  };
 }
 
 export async function runDns(
@@ -93,7 +153,7 @@ export async function runDns(
       cname: [],
       spf: { present: false },
       dmarc: { present: false },
-      dnssec: { observed: false, note: 'DNS scan aborted' },
+      dnssec: { observed: false, status: 'inconclusive', inconclusive: true, note: 'DNS scan aborted' },
     };
   }
 
@@ -122,7 +182,7 @@ export async function runDns(
       cname: [],
       spf: { present: false },
       dmarc: { present: false },
-      dnssec: { observed: false, note: 'DNS scan aborted' },
+      dnssec: { observed: false, status: 'inconclusive', inconclusive: true, note: 'DNS scan aborted' },
     };
   }
 
@@ -153,6 +213,6 @@ export async function runDns(
     })(),
     dnssec: dnssecResult.status === 'fulfilled'
       ? dnssecResult.value
-      : { observed: false, note: 'DNSSEC status check was inconclusive' },
+      : { observed: false, status: 'inconclusive', inconclusive: true, note: 'DNSSEC status check was inconclusive' },
   };
 }

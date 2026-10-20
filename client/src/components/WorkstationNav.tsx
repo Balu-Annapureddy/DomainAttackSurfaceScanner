@@ -80,7 +80,7 @@ export default function WorkstationNav({ onOpenGlossary }: WorkstationNavProps) 
           
           <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] border-l border-[var(--border-technical)] pl-3">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-teal)]" />
-            <span className="font-mono text-[10px]">PASSIVE RECON ONLINE</span>
+            <span className="font-mono text-[10px]">NON-INTRUSIVE RECON ONLINE</span>
           </div>
         </div>
 

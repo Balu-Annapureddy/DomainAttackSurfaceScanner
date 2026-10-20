@@ -173,19 +173,21 @@ export default function SecurityAssessmentSummary({
               </p>
             </div>
 
-            {/* Unverified / Inconclusive Card */}
+            {/* Pipeline Diagnostics & Verification Status Card */}
             <div className="p-4 rounded-lg bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-muted)]">
                 <Info size={15} />
-                <span>Unverified Areas</span>
+                <span>Diagnostics &amp; Verification</span>
               </div>
-              <div className="text-3xl font-display italic text-[var(--text-primary)]">
-                {assessment.unverifiedAreasCount}
+              <div className="text-2xl sm:text-3xl font-display italic text-[var(--text-primary)]">
+                {assessment.inconclusiveChecksCount > 0
+                  ? `${assessment.inconclusiveChecksCount} Inconclusive`
+                  : `${assessment.completedStagesCount}/${assessment.totalStagesCount} Stages`}
               </div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                {assessment.unverifiedAreasCount === 0
-                  ? 'All standard assessment checks completed successfully.'
-                  : `${assessment.unverifiedAreasCount} category check${assessment.unverifiedAreasCount > 1 ? 's' : ''} timed out or was inconclusive.`}
+                {assessment.inconclusiveChecksCount > 0
+                  ? `${assessment.inconclusiveChecksCount} check observation${assessment.inconclusiveChecksCount > 1 ? 's' : ''} returned inconclusive results or timeouts.`
+                  : `${assessment.completedStagesCount} of ${assessment.totalStagesCount} analysis stages completed without category timeouts.`}
               </p>
             </div>
           </div>

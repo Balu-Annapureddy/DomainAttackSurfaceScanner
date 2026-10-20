@@ -84,7 +84,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     term: 'Passive OSINT Epistemology',
     category: 'general',
     shortExplanation: 'A non-intrusive reconnaissance methodology relying solely on publicly observable data.',
-    whatIsThis: 'Passive reconnaissance gathers intelligence without sending unauthorized probes, scanning closed ports, or attempting exploitation.',
+    whatIsThis: 'Non-intrusive external reconnaissance gathers perimeter intelligence through public authoritative sources (DNS, WHOIS, CT certificates, public internet census telemetry) and standard client-side handshakes (TLS negotiation, HTTP GET /) without invasive port probing, exploitation attempts, or payload injection.',
     whyItMatters: 'Safe, legal, and non-disruptive to production systems, while still providing valuable visibility into external exposure.',
     whatDoesItMean: 'CRITICAL RULE: “We did not observe X” ≠ “X does not exist.” If a firewall blocks port 80 or crt.sh times out, it means the check was unobservable, not that a flaw exists.',
   },
