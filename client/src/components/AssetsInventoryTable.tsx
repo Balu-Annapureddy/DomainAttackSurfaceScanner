@@ -10,6 +10,50 @@ interface AssetsInventoryTableProps {
   sectionNumber?: string;
 }
 
+function getAssetResolutionBadge(asset: Asset): { label: string; className: string } {
+  const resolutionStatus = (asset.metadata as { resolutionStatus?: string })?.resolutionStatus;
+  if (resolutionStatus === 'service_verified') {
+    return {
+      label: 'SERVICE-VERIFIED',
+      className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    };
+  }
+  if (resolutionStatus === 'dns_resolved') {
+    return {
+      label: 'DNS-RESOLVED',
+      className: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30',
+    };
+  }
+  if (resolutionStatus === 'dns_unresolved') {
+    return {
+      label: 'DNS-UNRESOLVED',
+      className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    };
+  }
+  if (resolutionStatus === 'dns_inconclusive') {
+    return {
+      label: 'DNS-INCONCLUSIVE',
+      className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    };
+  }
+  if (resolutionStatus === 'ct_discovered' || asset.type === 'SUBDOMAIN') {
+    return {
+      label: 'CT-DISCOVERED',
+      className: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+    };
+  }
+  if (asset.type === 'GEOLOCATION') {
+    return {
+      label: 'APPROXIMATE',
+      className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    };
+  }
+  return {
+    label: 'OBSERVED',
+    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  };
+}
+
 export default function AssetsInventoryTable({
   assets,
   onSelectAsset,
@@ -111,11 +155,7 @@ export default function AssetsInventoryTable({
               </tr>
             ) : (
               paginatedAssets.map((asset) => {
-                const isGeo = asset.type === 'GEOLOCATION';
-                const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
-                const statusClass = isGeo
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+                const { label: statusLabel, className: statusClass } = getAssetResolutionBadge(asset);
                 
                 const uniqueSources = Array.from(new Set(asset.evidence.map((e) => e.source).filter(Boolean)));
                 const sources = uniqueSources.length > 0 ? uniqueSources.join(' • ') : 'DNS / CT Logs';
@@ -267,11 +307,7 @@ export default function AssetsInventoryTable({
           </div>
         ) : (
           paginatedAssets.map((asset) => {
-            const isGeo = asset.type === 'GEOLOCATION';
-            const statusLabel = isGeo ? 'APPROXIMATE' : 'OBSERVED';
-            const statusClass = isGeo
-              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+            const { label: statusLabel, className: statusClass } = getAssetResolutionBadge(asset);
 
             const uniqueSources = Array.from(new Set(asset.evidence.map((e) => e.source).filter(Boolean)));
             const sources = uniqueSources.length > 0 ? uniqueSources.join(' • ') : 'DNS / CT Logs';

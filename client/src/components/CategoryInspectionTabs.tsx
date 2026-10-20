@@ -307,15 +307,33 @@ export default function CategoryInspectionTabs({
                           DNSSEC cryptographically signs DNS responses to prevent attackers from tampering with lookups or redirecting visitors to fake sites.
                         </p>
                       </div>
-                      <span
-                        className={`text-xs font-mono font-bold px-3 py-1 rounded-md border shrink-0 ${
-                          (data.dnssec as { observed?: boolean })?.observed
-                            ? 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788] border-[#16a34a]/30'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                        }`}
-                      >
-                        {(data.dnssec as { observed?: boolean })?.observed ? '✓ SIGNED (DNSSEC ACTIVE)' : 'NOT SIGNED (ZONE UNSIGNED)'}
-                      </span>
+                      {(() => {
+                        const dnssec = data.dnssec as { observed?: boolean; status?: string; inconclusive?: boolean } | undefined;
+                        const isSigned = dnssec?.status === 'signed' || dnssec?.observed === true;
+                        const isBogus = dnssec?.status === 'bogus';
+                        const isInconclusive = dnssec?.status === 'inconclusive' || dnssec?.inconclusive === true;
+                        const isUnsigned = dnssec?.status === 'unsigned' || (dnssec?.observed === false && !isInconclusive && !isBogus);
+
+                        let badgeText = 'INCONCLUSIVE (UNVERIFIED)';
+                        let badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
+
+                        if (isSigned) {
+                          badgeText = '✓ SIGNED (DNSSEC ACTIVE)';
+                          badgeClass = 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788] border-[#16a34a]/30';
+                        } else if (isBogus) {
+                          badgeText = '⚠ VALIDATION FAILED (BOGUS)';
+                          badgeClass = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30';
+                        } else if (isUnsigned) {
+                          badgeText = 'CONFIRMED UNSIGNED';
+                          badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
+                        }
+
+                        return (
+                          <span className={`text-xs font-mono font-bold px-3 py-1 rounded-md border shrink-0 ${badgeClass}`}>
+                            {badgeText}
+                          </span>
+                        );
+                      })()}
                     </div>
                     {(data.dnssec as { record?: string })?.record && (
                       <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-panel)] p-2 rounded border border-[var(--border-muted)] break-all font-mono">

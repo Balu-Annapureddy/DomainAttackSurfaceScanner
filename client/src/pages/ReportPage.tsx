@@ -108,7 +108,7 @@ export default function ReportPage() {
     ns?: string[];
     spf?: { record?: string };
     dmarc?: { record?: string };
-    dnssec?: { observed?: boolean; record?: string };
+    dnssec?: { observed?: boolean; record?: string; status?: string; inconclusive?: boolean };
   } | undefined;
 
   const httpData = scan.categories.http?.data as {
@@ -484,9 +484,31 @@ export default function ReportPage() {
 
               <div className="p-3 bg-[var(--bg-panel-subtle)] rounded border border-[var(--border-muted)] space-y-1">
                 <span className="text-[10px] text-[var(--text-muted)] uppercase block">DNSSEC ZONE INTEGRITY</span>
-                <span className={`font-bold block ${dnsData?.dnssec?.observed ? 'text-[#16a34a] dark:text-[#52B788]' : 'text-amber-500'}`}>
-                  {dnsData?.dnssec?.observed ? '✓ SIGNED' : 'NOT SIGNED'}
-                </span>
+                {(() => {
+                  const dnssec = dnsData?.dnssec;
+                  const isSigned = dnssec?.status === 'signed' || dnssec?.observed === true;
+                  const isBogus = dnssec?.status === 'bogus';
+                  const isInconclusive = dnssec?.status === 'inconclusive' || dnssec?.inconclusive === true;
+                  const isUnsigned = dnssec?.status === 'unsigned' || (dnssec?.observed === false && !isInconclusive && !isBogus);
+
+                  let text = 'INCONCLUSIVE';
+                  let color = 'text-amber-500';
+                  if (isSigned) {
+                    text = '✓ SIGNED';
+                    color = 'text-[#16a34a] dark:text-[#52B788]';
+                  } else if (isBogus) {
+                    text = '⚠ BOGUS / ERROR';
+                    color = 'text-rose-500';
+                  } else if (isUnsigned) {
+                    text = 'CONFIRMED UNSIGNED';
+                    color = 'text-amber-500';
+                  }
+                  return (
+                    <span className={`font-bold block ${color}`}>
+                      {text}
+                    </span>
+                  );
+                })()}
                 <span className="text-[10px] text-[var(--text-secondary)] font-sans">Prevents DNS lookup spoofing</span>
               </div>
             </div>

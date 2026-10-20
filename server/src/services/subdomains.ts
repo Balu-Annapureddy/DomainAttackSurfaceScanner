@@ -70,13 +70,18 @@ async function queryCrtSh(domain: string, signal?: AbortSignal): Promise<string[
   )) as Array<Record<string, unknown>>;
 
   const names = new Set<string>();
+  const normalizedDomain = domain.toLowerCase().trim();
   if (Array.isArray(data)) {
     for (const entry of data) {
       const rawNames = typeof entry?.name_value === 'string' ? entry.name_value : '';
       for (const value of rawNames.split(/\r?\n/)) {
-        const cleaned = value.trim().toLowerCase().replace(/^\*\./, '');
+        const raw = value.trim().toLowerCase();
+        // Do not count wildcard certificate SAN entries such as *.google.com as ordinary, concrete subdomains
+        if (raw.includes('*')) continue;
+        const cleaned = raw.replace(/\.$/, '');
         if (!cleaned) continue;
-        if (cleaned === domain || cleaned.endsWith(`.${domain}`)) {
+        // Do not treat unrelated registrable domains appearing in certificate SANs as subdomains of the input domain
+        if (cleaned === normalizedDomain || cleaned.endsWith(`.${normalizedDomain}`)) {
           names.add(cleaned);
         }
       }
@@ -92,14 +97,19 @@ async function queryCertspotter(domain: string, signal?: AbortSignal): Promise<s
   )) as Array<{ dns_names?: string[] }>;
 
   const names = new Set<string>();
+  const normalizedDomain = domain.toLowerCase().trim();
   if (Array.isArray(data)) {
     for (const entry of data) {
       const dnsNames = Array.isArray(entry.dns_names) ? entry.dns_names : [];
       for (const value of dnsNames) {
         if (typeof value !== 'string') continue;
-        const cleaned = value.trim().toLowerCase().replace(/^\*\./, '');
+        const raw = value.trim().toLowerCase();
+        // Do not count wildcard certificate SAN entries such as *.google.com as ordinary, concrete subdomains
+        if (raw.includes('*')) continue;
+        const cleaned = raw.replace(/\.$/, '');
         if (!cleaned) continue;
-        if (cleaned === domain || cleaned.endsWith(`.${domain}`)) {
+        // Do not treat unrelated registrable domains appearing in certificate SANs as subdomains of the input domain
+        if (cleaned === normalizedDomain || cleaned.endsWith(`.${normalizedDomain}`)) {
           names.add(cleaned);
         }
       }

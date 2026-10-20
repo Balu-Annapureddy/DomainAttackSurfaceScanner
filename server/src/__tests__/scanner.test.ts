@@ -67,35 +67,36 @@ describe('domain validation', () => {
 });
 
 describe('normalized intelligence & relationships', () => {
-  test('creates evidence-backed DNS relationships, certificate fingerprint, and IP-to-geolocation link', () => {
-    const scan: DomainScan = {
-      scanId: 'scan',
-      domain: 'example.com',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 1000).toISOString(),
-      status: 'completed',
-      categories: {
-        whois: { status: 'completed' },
-        dns: { status: 'completed', data: { addresses: ['93.184.216.34'], aaaa: [], ns: ['ns.example.com'], mx: [] } },
-        subdomains: { status: 'completed', data: { subdomains: ['api.example.com'] } },
-        tls: {
-          status: 'completed',
-          data: {
-            subjectAltNames: ['example.com', 'api.example.com'],
-            issuer: 'CN=DigiCert Global Root G2',
-            fingerprint256: 'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
-            serialNumber: '047a98b712',
-          },
+  const scan: DomainScan = {
+    scanId: 'scan',
+    domain: 'example.com',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 1000).toISOString(),
+    status: 'completed',
+    categories: {
+      whois: { status: 'completed' },
+      dns: { status: 'completed', data: { addresses: ['93.184.216.34'], aaaa: [], ns: ['ns.example.com'], mx: [] } },
+      subdomains: { status: 'completed', data: { subdomains: ['api.example.com'] } },
+      tls: {
+        status: 'completed',
+        data: {
+          subjectAltNames: ['example.com', 'api.example.com'],
+          issuer: 'CN=DigiCert Global Root G2',
+          fingerprint256: 'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
+          serialNumber: '047a98b712',
         },
-        http: { status: 'completed' },
-        exposure: { status: 'completed' },
-        scoring: { status: 'completed' },
       },
-      assets: [],
-      relationships: [],
-      findings: [],
-      warnings: [],
-    };
+      http: { status: 'completed' },
+      exposure: { status: 'completed' },
+      scoring: { status: 'completed' },
+    },
+    assets: [],
+    relationships: [],
+    findings: [],
+    warnings: [],
+  };
+
+  test('creates evidence-backed DNS relationships, certificate fingerprint, and IP-to-geolocation link', () => {
 
     const ipIntel = [
       {
@@ -139,6 +140,64 @@ describe('normalized intelligence & relationships', () => {
     expect(geoRel).toBeDefined();
     expect(geoRel?.fromAssetId).toBe(ipAsset?.id);
     expect(geoRel?.toAssetId).toBe(geoAsset?.id);
+  });
+
+  it('enforces explicit CT-discovered states, skips wildcard SANs, and deduplicates relationships', () => {
+    const scanWithCt = {
+      ...scan,
+      categories: {
+        ...scan.categories,
+        subdomains: {
+          status: 'completed' as const,
+          data: {
+            available: true,
+            total: 3,
+            subdomains: ['unresolved-ct.example.com', 'api.example.com'],
+            subdomainSources: {
+              'unresolved-ct.example.com': ['Certificate Transparency'],
+              'api.example.com': ['Certificate Transparency'],
+            },
+          },
+        },
+        tls: {
+          status: 'completed' as const,
+          data: {
+            available: true,
+            fingerprint256: 'AA:BB:CC',
+            subjectAltNames: ['example.com', '*.example.com', 'other-san.example.com'],
+          },
+        },
+      },
+    };
+
+    const result = buildNormalizedAssets(scanWithCt as any);
+
+    // Wildcard SAN *.example.com must NOT be created as a concrete asset
+    expect(result.assets.some((a) => a.value.includes('*'))).toBe(false);
+
+    // Unresolved CT subdomain
+    const ctAsset = result.assets.find((a) => a.value === 'unresolved-ct.example.com');
+    expect(ctAsset).toBeDefined();
+    expect(ctAsset?.metadata?.resolutionStatus).toBe('ct_discovered');
+    expect(ctAsset?.metadata?.active).toBe(false);
+
+    // CT asset must NOT have active routing relationships (resolves_to, belongs_to_asn, operated_by)
+    const ctRoutingRels = result.relationships.filter(
+      (rel) => (rel.fromAssetId === ctAsset?.id || rel.toAssetId === ctAsset?.id) &&
+               ['resolves_to', 'belongs_to_asn', 'operated_by', 'located_approximately_at'].includes(rel.type),
+    );
+    expect(ctRoutingRels.length).toBe(0);
+
+    // Non-target SAN from TLS handshake must be ct_discovered and not active
+    const otherSanAsset = result.assets.find((a) => a.value === 'other-san.example.com');
+    expect(otherSanAsset).toBeDefined();
+    expect(otherSanAsset?.metadata?.resolutionStatus).toBe('ct_discovered');
+    expect(otherSanAsset?.metadata?.active).toBe(false);
+
+    // No duplicate relationships
+    const relKeys = result.relationships.map((r) => `${r.fromAssetId}->${r.toAssetId}:${r.type}`);
+    const uniqueKeys = new Set(relKeys);
+    expect(relKeys.length).toBe(uniqueKeys.size);
   });
 });
 

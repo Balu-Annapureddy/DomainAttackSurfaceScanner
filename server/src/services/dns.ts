@@ -9,123 +9,197 @@ export interface DnsOptions {
   budget?: ScanRequestBudget;
 }
 
+export type DnssecStatus = 'signed' | 'unsigned' | 'bogus' | 'inconclusive';
+
 export interface DnssecResult {
   observed: boolean;
-  status: 'signed' | 'unsigned' | 'inconclusive';
+  status: DnssecStatus;
   note: string;
   record?: string;
   inconclusive?: boolean;
 }
 
-async function checkDnssec(domain: string, options: DnsOptions): Promise<DnssecResult> {
+export async function checkDnssec(domain: string, options: DnsOptions = {}): Promise<DnssecResult> {
   const encoded = encodeURIComponent(domain);
-  // Try Google DoH first for DNSKEY (48) and DS (43)
-  try {
-    const gRes = await fetchProviderJson<{
+
+  // Helper to query DoH
+  const queryDoH = async (baseUrl: string, type: 'DNSKEY' | 'DS', headers?: Record<string, string>, extraQuery = '') => {
+    return fetchProviderJson<{
       Status?: number;
       AD?: boolean;
+      TC?: boolean;
       Answer?: Array<{ type: number; data?: string }>;
-    }>(`https://dns.google/resolve?name=${encoded}&type=DNSKEY`, {
+      Authority?: Array<{ type: number; data?: string }>;
+      Comment?: string;
+    }>(`${baseUrl}?name=${encoded}&type=${type}${extraQuery}`, {
       signal: options.signal,
       timeoutMs: 4000,
+      headers,
     });
+  };
 
-    const dnskeyRecord = gRes?.Answer?.find((a) => a.type === 48);
-    if (dnskeyRecord || gRes?.AD === true) {
-      return {
-        observed: true,
-        status: 'signed',
-        note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
-        record: dnskeyRecord?.data,
-      };
-    }
+  const hasDnssecValidationComment = (res?: { Comment?: string }) => {
+    const comment = res?.Comment?.toLowerCase() || '';
+    return /dnssec|bogus|rrsig|validation failure/i.test(comment);
+  };
 
-    // Check DS record at parent zone
+  const verifyBogusWithCdQuery = async (
+    baseUrl: string,
+    type: 'DNSKEY' | 'DS',
+    headers?: Record<string, string>,
+  ): Promise<boolean> => {
+    const expectedType = type === 'DNSKEY' ? 48 : 43;
     try {
-      const gDs = await fetchProviderJson<{
-        Status?: number;
-        AD?: boolean;
-        Answer?: Array<{ type: number; data?: string }>;
-      }>(`https://dns.google/resolve?name=${encoded}&type=DS`, {
-        signal: options.signal,
-        timeoutMs: 4000,
-      });
-      const dsRecord = gDs?.Answer?.find((a) => a.type === 43);
-      if (dsRecord || gDs?.AD === true) {
-        return {
-          observed: true,
-          status: 'signed',
-          note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
-          record: dsRecord?.data,
-        };
+      const cdRes = await queryDoH(baseUrl, type, headers, '&cd=1');
+      if (cdRes?.Status !== 0 || !Array.isArray(cdRes.Answer) || cdRes.Answer.length === 0) {
+        return false;
       }
-      if (gRes?.Status === 0 && (gDs?.Status === 0 || gDs === undefined)) {
-        return {
-          observed: false,
-          status: 'unsigned',
-          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
-        };
-      }
+      // Require comparable records matching the requested record type (DNSKEY: 48, DS: 43)
+      return cdRes.Answer.some(
+        (a) => a.type === expectedType && typeof a.data === 'string' && a.data.trim().length > 0,
+      );
     } catch {
-      if (gRes?.Status === 0) {
-        return {
-          observed: false,
-          status: 'unsigned',
-          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
-        };
-      }
+      return false;
     }
+  };
 
-    if (gRes?.Status === 0) {
-      return {
-        observed: false,
-        status: 'unsigned',
-        note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
-      };
-    }
-  } catch {
-    // If Google DoH fails, try Cloudflare DoH fallback
-    try {
-      const cfRes = await fetchProviderJson<{
-        Status?: number;
-        AD?: boolean;
-        Answer?: Array<{ type: number; data?: string }>;
-      }>(`https://cloudflare-dns.com/dns-query?name=${encoded}&type=DNSKEY`, {
-        signal: options.signal,
-        timeoutMs: 4000,
-        headers: { Accept: 'application/dns-json' },
-      });
-      const dnskeyRecord = cfRes?.Answer?.find((a) => a.type === 48);
-      if (dnskeyRecord || cfRes?.AD === true) {
-        return {
-          observed: true,
-          status: 'signed',
-          note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed.',
-          record: dnskeyRecord?.data,
-        };
+  // Primary attempt: Google DoH (dns.google)
+  try {
+    const [gDnskey, gDs] = await Promise.all([
+      queryDoH('https://dns.google/resolve', 'DNSKEY'),
+      queryDoH('https://dns.google/resolve', 'DS'),
+    ]);
+
+    // RCODE 2 (SERVFAIL): require reliable DNSSEC-validation-specific evidence before classifying as bogus
+    if (gDnskey?.Status === 2 || gDs?.Status === 2) {
+      let isBogus = false;
+
+      if (hasDnssecValidationComment(gDnskey) || hasDnssecValidationComment(gDs)) {
+        isBogus = true;
       }
-      if (cfRes?.Status === 0) {
+
+      if (!isBogus && gDnskey?.Status === 2) {
+        isBogus = await verifyBogusWithCdQuery('https://dns.google/resolve', 'DNSKEY');
+      }
+
+      if (!isBogus && gDs?.Status === 2) {
+        isBogus = await verifyBogusWithCdQuery('https://dns.google/resolve', 'DS');
+      }
+
+      if (isBogus) {
         return {
           observed: false,
-          status: 'unsigned',
-          note: 'No DNSKEY or DS records observed in public authoritative resolvers.',
+          status: 'bogus',
+          inconclusive: false,
+          note: 'DNSSEC validation failure observed (resolver rejected records during authenticated lookup but returned valid records with validation disabled).',
         };
       }
-    } catch (fallbackErr) {
-      const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
       return {
         observed: false,
         status: 'inconclusive',
         inconclusive: true,
-        note: `DNSSEC lookup was inconclusive: ${msg}`,
+        note: 'DNSSEC status check was inconclusive (resolver returned generic SERVFAIL without DNSSEC-validation evidence).',
       };
     }
+
+    const dnskeyRecord = gDnskey?.Answer?.find((a) => a.type === 48);
+    const dsRecord = gDs?.Answer?.find((a) => a.type === 43);
+
+    // If either DNSKEY or DS is confirmed present, or AD (Authenticated Data) is set
+    if (dnskeyRecord || dsRecord || gDnskey?.AD === true || gDs?.AD === true) {
+      return {
+        observed: true,
+        status: 'signed',
+        note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed and validated.',
+        record: dsRecord?.data || dnskeyRecord?.data,
+      };
+    }
+
+    // Only conclude unsigned if BOTH queries returned NOERROR (Status 0) with definitive negative answers
+    if (gDnskey?.Status === 0 && gDs?.Status === 0) {
+      return {
+        observed: false,
+        status: 'unsigned',
+        note: 'No DNSKEY or DS records observed in public authoritative resolvers (confirmed unsigned).',
+      };
+    }
+  } catch {
+    // If primary query failed or timed out, attempt secondary fallback (Cloudflare DoH)
   }
+
+  // Fallback attempt: Cloudflare DoH (cloudflare-dns.com)
+  try {
+    const cfHeaders = { Accept: 'application/dns-json' };
+    const [cfDnskey, cfDs] = await Promise.all([
+      queryDoH('https://cloudflare-dns.com/dns-query', 'DNSKEY', cfHeaders),
+      queryDoH('https://cloudflare-dns.com/dns-query', 'DS', cfHeaders),
+    ]);
+
+    if (cfDnskey?.Status === 2 || cfDs?.Status === 2) {
+      let isBogus = false;
+
+      if (hasDnssecValidationComment(cfDnskey) || hasDnssecValidationComment(cfDs)) {
+        isBogus = true;
+      }
+
+      if (!isBogus && cfDnskey?.Status === 2) {
+        isBogus = await verifyBogusWithCdQuery('https://cloudflare-dns.com/dns-query', 'DNSKEY', cfHeaders);
+      }
+
+      if (!isBogus && cfDs?.Status === 2) {
+        isBogus = await verifyBogusWithCdQuery('https://cloudflare-dns.com/dns-query', 'DS', cfHeaders);
+      }
+
+      if (isBogus) {
+        return {
+          observed: false,
+          status: 'bogus',
+          inconclusive: false,
+          note: 'DNSSEC validation failure observed (resolver rejected records during authenticated lookup but returned valid records with validation disabled).',
+        };
+      }
+      return {
+        observed: false,
+        status: 'inconclusive',
+        inconclusive: true,
+        note: 'DNSSEC status check was inconclusive (resolver returned generic SERVFAIL without DNSSEC-validation evidence).',
+      };
+    }
+
+    const dnskeyRecord = cfDnskey?.Answer?.find((a) => a.type === 48);
+    const dsRecord = cfDs?.Answer?.find((a) => a.type === 43);
+
+    if (dnskeyRecord || dsRecord || cfDnskey?.AD === true || cfDs?.AD === true) {
+      return {
+        observed: true,
+        status: 'signed',
+        note: 'DNSSEC records (DNSKEY/DS) observed; domain DNSSEC chain is signed and validated.',
+        record: dsRecord?.data || dnskeyRecord?.data,
+      };
+    }
+
+    if (cfDnskey?.Status === 0 && cfDs?.Status === 0) {
+      return {
+        observed: false,
+        status: 'unsigned',
+        note: 'No DNSKEY or DS records observed in public authoritative resolvers (confirmed unsigned).',
+      };
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      observed: false,
+      status: 'inconclusive',
+      inconclusive: true,
+      note: `DNSSEC lookup was inconclusive: ${msg}`,
+    };
+  }
+
   return {
     observed: false,
     status: 'inconclusive',
     inconclusive: true,
-    note: 'DNSSEC verification was inconclusive.',
+    note: 'DNSSEC verification was inconclusive (resolvers returned incomplete or ambiguous status).',
   };
 }
 

@@ -50,19 +50,19 @@ export function summarizeFindingPlain(f: Finding): string {
     return 'This website operates only over unencrypted HTTP and has no HTTPS enabled. This means all passwords, session data, and page content travel as readable plaintext across the internet.';
   }
   if (title.includes('hsts') || title.includes('strict-transport-security')) {
-    return 'The HSTS (HTTP Strict-Transport-Security, an instruction telling browsers to only connect securely) header is missing. This means web browsers are not instructed to always enforce HTTPS, leaving visitors vulnerable to downgrade attacks on untrusted networks.';
+    return 'The HSTS (HTTP Strict-Transport-Security) header is missing. This means web browsers are not instructed to unconditionally upgrade initial connections, though this is a transport hardening measure rather than proof of an active interception.';
   }
   if (title.includes('content-security-policy') || title.includes('csp')) {
-    return 'No Content-Security-Policy (CSP, a defensive header that controls which scripts are allowed to run) was observed. This means the browser will not have an extra layer of defense if an attacker tries to inject malicious scripts into the page.';
+    return 'No Content-Security-Policy (CSP) header was observed. This provides defense-in-depth against script injection; its absence does not imply an exploitable XSS vulnerability exists.';
   }
   if (title.includes('x-frame-options') || title.includes('clickjacking')) {
     return 'No clickjacking protection (X-Frame-Options header) was observed. This means malicious external sites could embed this page inside an invisible frame to trick visitors into unwanted clicks.';
   }
   if (title.includes('x-content-type-options') || title.includes('mime')) {
-    return 'The X-Content-Type-Options header is missing. This means web browsers might guess file types automatically, which can cause non-executable files to be executed as malicious code.';
+    return 'The X-Content-Type-Options header is missing. This means web browsers might attempt MIME sniffing on ambiguously typed downloads, though it does not imply malicious uploads exist on the site.';
   }
   if (title.includes('referrer-policy')) {
-    return 'No Referrer-Policy header is set. This means visitor navigation paths could leak to external websites when users click outgoing links.';
+    return 'No explicit Referrer-Policy header is configured. This governs outbound referrer headers on external navigation, though it does not establish that sensitive URL parameters were leaked.';
   }
   if (title.includes('permissions-policy')) {
     return 'No Permissions-Policy header is configured. This means the website has not explicitly restricted browser features like camera, microphone, or geolocation access.';
@@ -74,7 +74,7 @@ export function summarizeFindingPlain(f: Finding): string {
     return 'The website security certificate is already expired. This means visitors see security warning screens and modern browsers will block access to the site.';
   }
   if (title.includes('wildcard tls certificate') || title.includes('wildcard')) {
-    return 'A wildcard TLS certificate is in use across multiple subdomains. This means if any single subdomain server is ever compromised, the private key for all other subdomains is compromised as well.';
+    return 'A wildcard TLS certificate was observed matching multiple subdomains. This is an informational observation about certificate scope; it indicates the certificate matches subdomains under the wildcard pattern.';
   }
   if (title.includes('weak signature algorithm') || title.includes('sha-1')) {
     return 'The security certificate uses an obsolete signature algorithm (such as SHA-1). This means the certificate relies on outdated mathematical hashing that modern browsers consider insecure.';

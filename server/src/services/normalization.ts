@@ -71,7 +71,10 @@ export function buildNormalizedAssets(
     return asset;
   };
 
-  const domain = add('DOMAIN', scan.domain, 'User input', 'Validated public scan target', 'high');
+  const domain = add('DOMAIN', scan.domain, 'User input', 'Validated public scan target', 'high', {
+    resolutionStatus: 'dns_resolved',
+    active: true,
+  });
   const dns = scan.categories.dns.data as { addresses?: string[]; aaaa?: string[]; ns?: string[]; mx?: string[] } | undefined;
 
   const validIps = [...(dns?.addresses ?? []), ...(dns?.aaaa ?? [])].filter(
@@ -79,7 +82,10 @@ export function buildNormalizedAssets(
   );
 
   for (const ip of validIps) {
-    const ipAsset = add('IP', ip, 'DNS A/AAAA record', `Observed address for ${scan.domain}`, 'high');
+    const ipAsset = add('IP', ip, 'DNS A/AAAA record', `Observed address for ${scan.domain}`, 'high', {
+      resolutionStatus: 'dns_resolved',
+      active: true,
+    });
     relationships.push({
       fromAssetId: domain.id,
       toAssetId: ipAsset.id,
@@ -89,7 +95,10 @@ export function buildNormalizedAssets(
   }
 
   for (const value of dns?.ns ?? []) {
-    const nameserver = add('NAMESERVER', value, 'DNS NS record', `Observed authoritative nameserver for ${scan.domain}`, 'high');
+    const nameserver = add('NAMESERVER', value, 'DNS NS record', `Observed authoritative nameserver for ${scan.domain}`, 'high', {
+      resolutionStatus: 'dns_resolved',
+      active: true,
+    });
     relationships.push({
       fromAssetId: domain.id,
       toAssetId: nameserver.id,
@@ -101,7 +110,10 @@ export function buildNormalizedAssets(
   for (const value of dns?.mx ?? []) {
     const mail = value.split(' (')[0];
     if (!mail) continue;
-    const mailAsset = add('MAIL_SERVER', mail, 'DNS MX record', `Observed mail exchanger for ${scan.domain}`, 'high');
+    const mailAsset = add('MAIL_SERVER', mail, 'DNS MX record', `Observed mail exchanger for ${scan.domain}`, 'high', {
+      resolutionStatus: 'dns_resolved',
+      active: true,
+    });
     relationships.push({
       fromAssetId: domain.id,
       toAssetId: mailAsset.id,
@@ -120,7 +132,10 @@ export function buildNormalizedAssets(
     const sourceLabel = sources.length > 1 || (sources[0] && sources[0] !== 'Certificate Transparency')
       ? `Certificate Transparency (${sources.join(', ')})`
       : 'Certificate Transparency';
-    const asset = add('SUBDOMAIN', subdomain, sourceLabel, 'Observed in a public certificate record', 'high');
+    const asset = add('SUBDOMAIN', subdomain, sourceLabel, 'Observed in a public certificate record', 'high', {
+      resolutionStatus: 'ct_discovered',
+      active: false,
+    });
     relationships.push({
       fromAssetId: domain.id,
       toAssetId: asset.id,
@@ -158,11 +173,30 @@ export function buildNormalizedAssets(
         issuer: tls.issuer ?? null,
         validFrom: tls.validFrom ?? null,
         validTo: tls.validTo ?? null,
+        active: true,
       },
     );
 
-    for (const name of tls.subjectAltNames ?? []) {
-      const san = add(name === scan.domain ? 'DOMAIN' : 'SUBDOMAIN', name, 'TLS certificate SAN', 'Observed in live certificate SANs', 'high');
+    const normalizedDomain = scan.domain.toLowerCase().trim();
+    for (const rawName of tls.subjectAltNames ?? []) {
+      const name = rawName.trim().toLowerCase().replace(/\.$/, '');
+      // Do not count wildcard certificate SAN entries such as *.google.com as ordinary, concrete subdomains
+      if (name.includes('*')) continue;
+      // Do not treat unrelated registrable domains appearing in certificate SANs as subdomains of the input domain
+      if (name !== normalizedDomain && !name.endsWith(`.${normalizedDomain}`)) continue;
+
+      const isTarget = name === normalizedDomain;
+      const san = add(
+        isTarget ? 'DOMAIN' : 'SUBDOMAIN',
+        name,
+        'TLS certificate SAN',
+        'Observed in live certificate SANs',
+        'high',
+        {
+          resolutionStatus: isTarget ? 'service_verified' : 'ct_discovered',
+          active: isTarget,
+        },
+      );
       relationships.push({
         fromAssetId: certificate.id,
         toAssetId: san.id,
@@ -487,11 +521,19 @@ export function buildNormalizedAssets(
     toAssetId: idRemap.get(rel.toAssetId) ?? rel.toAssetId,
   }));
 
+  const uniqueRelMap = new Map<string, Relationship>();
+  for (const rel of remappedRelationships) {
+    if (finalAssets.some((a) => a.id === rel.fromAssetId) && finalAssets.some((a) => a.id === rel.toAssetId)) {
+      const relKey = `${rel.fromAssetId}->${rel.toAssetId}:${rel.type}`;
+      if (!uniqueRelMap.has(relKey)) {
+        uniqueRelMap.set(relKey, rel);
+      }
+    }
+  }
+
   return {
     assets: finalAssets,
-    relationships: remappedRelationships.filter(
-      (rel) => finalAssets.some((a) => a.id === rel.fromAssetId) && finalAssets.some((a) => a.id === rel.toAssetId),
-    ),
+    relationships: Array.from(uniqueRelMap.values()),
     warnings,
   };
 }

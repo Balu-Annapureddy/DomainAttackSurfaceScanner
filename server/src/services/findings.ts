@@ -50,12 +50,12 @@ function finding(
 const HEADER_EXPLANATIONS: Record<string, { purpose: string; risk: string; advice: string }> = {
   'content-security-policy': {
     purpose: 'Controls which external resources (such as scripts, images, and fonts) the browser is permitted to load.',
-    risk: 'Without CSP (Content-Security-Policy), the site lacks defense-in-depth against cross-site scripting (XSS). If an application vulnerability allows script injection, CSP acts as a secondary barrier restricting script execution and unauthorized data exfiltration.',
+    risk: 'Without CSP (Content-Security-Policy), the site lacks defense-in-depth against cross-site scripting (XSS). Note: missing CSP does not imply that an XSS vulnerability exists or is exploitable on this domain; it indicates the absence of a browser-enforced secondary barrier.',
     advice: 'Add a Content-Security-Policy header restricting script sources to trusted origins.',
   },
   'strict-transport-security': {
     purpose: 'Instructs web browsers to always connect to this domain using encrypted HTTPS.',
-    risk: 'Without HSTS (HTTP Strict-Transport-Security), initial web connections can travel in plaintext. This means attackers on the same network can intercept or downgrade traffic.',
+    risk: 'Without HSTS (HTTP Strict-Transport-Security), browsers are not instructed to unconditionally upgrade initial connections to HTTPS. Note: this is a preventative defense against hypothetical on-path downgrade attempts and does not imply that an interception has occurred.',
     advice: 'Enable Strict-Transport-Security (HSTS) with a max-age of at least one year once HTTPS is verified.',
   },
   'x-frame-options': {
@@ -65,12 +65,12 @@ const HEADER_EXPLANATIONS: Record<string, { purpose: string; risk: string; advic
   },
   'x-content-type-options': {
     purpose: 'Prevents web browsers from guessing file types when downloading content.',
-    risk: 'Without this header, browsers might interpret uploaded files as executable scripts. This means attackers could upload non-executable files that execute as malicious code.',
+    risk: 'Without this header, browsers might attempt MIME-type sniffing if ambiguous content is served. Note: missing this header does not imply malicious uploads or executable content exist on the site.',
     advice: 'Add X-Content-Type-Options: nosniff across all web server responses.',
   },
   'referrer-policy': {
     purpose: 'Governs how much address information is passed when visitors click external links.',
-    risk: 'Without a Referrer-Policy, internal webpage addresses and parameters leak to destination sites. This means sensitive internal tokens or user parameters can be exposed.',
+    risk: 'Without a Referrer-Policy, browsers rely on default referrer behavior when navigating to external origins. If sensitive parameters exist in URLs, they could potentially be exposed. Note: this check identifies the lack of an explicit header directive and does not demonstrate that sensitive URL parameters were leaked.',
     advice: 'Set Referrer-Policy to strict-origin-when-cross-origin.',
   },
   'permissions-policy': {
@@ -97,11 +97,11 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     analysis: {
       whatIsThis: 'HTTP Strict-Transport-Security (HSTS) is a browser security policy that forces all future connections to a domain to use HTTPS, preventing downgrade attacks. It is delivered as an HTTP response header.',
       whatWasObserved: 'No Strict-Transport-Security header was present in the HTTPS response headers observed for this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers returned by the server.',
-      technicalExplanation: 'Without HSTS, a user who types the domain name without specifying "https://" may first connect over HTTP. An attacker on the same network can intercept this initial plaintext request before the redirect to HTTPS occurs. HSTS instructs browsers to always initiate HTTPS connections after the first visit.',
-      whyItMatters: 'HSTS defends against SSL-stripping attacks, where a network-level attacker silently downgrades HTTPS to HTTP. It also prevents browsers from accepting invalid certificates without user warning.',
-      securityImpact: 'Without HSTS, users on untrusted networks (public Wi-Fi, compromised routers) may be vulnerable to connection interception on their first HTTP request before the redirect to HTTPS.',
-      potentialAbuse: 'An attacker positioned between the user and the network (e.g., on the same Wi-Fi) could intercept the initial HTTP request before the HTTPS redirect, potentially reading or modifying traffic.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers returned by the server.',
+      technicalExplanation: 'Without HSTS, a user who types the domain name without specifying "https://" may first connect over HTTP. An attacker on the same network could attempt to intercept this initial plaintext request before the redirect to HTTPS occurs. HSTS instructs browsers to always initiate HTTPS connections after the first visit. Note: recommending HSTS is a preventative transport hardening measure; it does not demonstrate that an initial request was intercepted or that downgrade attacks are demonstrably possible in this specific environment.',
+      whyItMatters: 'HSTS defends against hypothetical SSL-stripping attacks, where a network-level attacker silently attempts to downgrade HTTPS to HTTP. It also prevents browsers from accepting invalid certificates without user warning.',
+      securityImpact: 'Without HSTS, users on untrusted networks (such as unencrypted public Wi-Fi) could theoretically be susceptible to connection interception on their first HTTP request before the redirect to HTTPS. This does not imply an interception has occurred.',
+      potentialAbuse: 'In a hypothetical scenario where an on-path attacker controls the local network (such as unencrypted public Wi-Fi) during a user\'s initial unencrypted HTTP visit, they could attempt SSL stripping before the HTTPS redirect.',
       remediation: 'Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` to your HTTPS responses. Do not set it on HTTP responses. Test with max-age=300 first, then increase.',
       safeValidation: 'After deployment, verify using curl -I https://<domain> or browser developer tools that the header is present. Check https://hstspreload.org/ for preload eligibility.',
       references: [
@@ -116,13 +116,13 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     description: 'No Content-Security-Policy header was present in the HTTPS response headers observed for this domain.',
     recommendation: 'Implement a Content-Security-Policy header. Start with a report-only policy to identify violations before enforcing, then progressively tighten.',
     analysis: {
-      whatIsThis: 'Content-Security-Policy (CSP) is an HTTP response header that controls which resources (scripts, styles, images, frames) a browser is allowed to load for a page. It is the primary browser-enforced defence against Cross-Site Scripting (XSS) attacks.',
+      whatIsThis: 'Content-Security-Policy (CSP) is an HTTP response header that controls which resources (scripts, styles, images, frames) a browser is allowed to load for a page. It is a browser-enforced defense-in-depth measure against Cross-Site Scripting (XSS) attacks.',
       whatWasObserved: 'No Content-Security-Policy header was present in the HTTPS response headers returned by this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers.',
-      technicalExplanation: 'Without CSP, if an attacker manages to inject malicious JavaScript into a page (via an XSS vulnerability, third-party library compromise, or supply chain attack), the browser will execute it with full access to the page\'s DOM, cookies, and storage.',
-      whyItMatters: 'CSP is the most effective control for limiting the impact of XSS and data injection attacks. Without it, successful script injection gives attackers the ability to steal session tokens, credentials, or sensitive data displayed on the page.',
-      securityImpact: 'Absence of CSP means any XSS vulnerability in the application, or a compromised third-party script, can exfiltrate data or perform actions as the authenticated user without restriction.',
-      potentialAbuse: 'An attacker who identifies an XSS vulnerability or compromises a third-party JavaScript dependency could inject malicious scripts that run freely in users\' browsers, harvesting credentials or redirecting sessions.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers.',
+      technicalExplanation: 'Without CSP, if an independent application vulnerability (such as script injection) or third-party dependency compromise were to occur, the browser will not have an origin-enforced restriction policy limiting script execution or unauthorized data exfiltration. Note: the absence of a CSP header does not indicate that an XSS vulnerability exists or is exploitable on this domain; it reflects the absence of a browser-enforced defense-in-depth barrier.',
+      whyItMatters: 'CSP is a defense-in-depth control for mitigating the impact of potential script injection attacks. Its absence does not indicate the application is vulnerable or compromised.',
+      securityImpact: 'Absence of CSP removes a browser-enforced secondary barrier if an injection vulnerability were to exist. It does not establish that XSS is present or exploitable on this domain.',
+      potentialAbuse: 'If an independent input-sanitization or injection vulnerability were discovered in the application, an adversary could exploit it without facing browser-enforced CSP restrictions.',
       remediation: 'Begin with `Content-Security-Policy-Report-Only: default-src \'self\'` to identify violations without breaking the site. Gradually tighten the policy and switch to enforcement mode (`Content-Security-Policy`).',
       safeValidation: 'Use https://csp-evaluator.withgoogle.com/ to assess policy quality. Check browser developer console for CSP violation reports after deployment.',
       references: [
@@ -139,7 +139,7 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     analysis: {
       whatIsThis: 'X-Frame-Options is an HTTP response header that instructs browsers whether the page is allowed to be displayed inside an iframe, frame, or object element on another domain.',
       whatWasObserved: 'No X-Frame-Options header was present in the HTTPS response headers returned by this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers.',
       technicalExplanation: 'Without X-Frame-Options, an attacker can embed this page inside a hidden or transparent iframe on their own site. Users interacting with what they think is the attacker\'s page are actually interacting with this domain\'s interface — a technique called clickjacking.',
       whyItMatters: 'Clickjacking can trick authenticated users into performing unintended actions (e.g., clicking "Confirm transfer", "Grant permissions") without realising it, because the legitimate page is overlaid invisibly.',
       securityImpact: 'Authenticated users visiting a malicious page that embeds this domain in an iframe could be deceived into performing account actions, granting permissions, or clicking UI elements without their knowledge.',
@@ -160,11 +160,11 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     analysis: {
       whatIsThis: 'X-Content-Type-Options is an HTTP response header that disables MIME-type sniffing in browsers. When set to "nosniff", the browser uses only the declared Content-Type header and will not guess the content type from the file contents.',
       whatWasObserved: 'No X-Content-Type-Options: nosniff header was present in the HTTPS response headers returned by this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers.',
-      technicalExplanation: 'Without this header, some browsers may interpret response content differently from its declared MIME type. For example, a browser might execute a file declared as "text/plain" as JavaScript if it looks like JavaScript code. This can be exploited when an attacker can upload or control response content.',
-      whyItMatters: 'MIME-type sniffing attacks are particularly relevant when user-supplied content (uploads, comments) is served from the same domain. An attacker could craft a file that looks like a benign type but is executed as a script.',
-      securityImpact: 'If the application serves user-controlled content without strict MIME typing, an attacker could potentially cause a browser to execute their content as an unexpected type, enabling cross-site scripting in some scenarios.',
-      potentialAbuse: 'An attacker who can upload content to the domain could craft files that browsers would MIME-sniff as executable types (e.g., JavaScript), bypassing declared content type restrictions.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers.',
+      technicalExplanation: 'Without this header, legacy MIME-type sniffing in certain browsers may interpret response content differently from its declared MIME type if user-controlled content or ambiguously typed downloads are served. Note: missing this header does not imply that malicious uploads or executable content exist on this domain.',
+      whyItMatters: 'MIME-type sniffing protections are especially relevant when user-supplied content (uploads, comments) is served. This header ensures browsers strictly respect declared MIME types.',
+      securityImpact: 'If an application serves user-controlled uploads without strict MIME typing, an attacker could potentially attempt MIME-confusion attacks. If the domain serves only static or API content with strict Content-Types, the operational impact is minimal. This observation does not establish that malicious files exist.',
+      potentialAbuse: 'Only if an attacker can upload or control files served by the domain, they might attempt to craft files that browsers would MIME-sniff as executable types.',
       remediation: 'Add `X-Content-Type-Options: nosniff` to all HTTP responses. This is a single directive with no configuration required.',
       safeValidation: 'Verify the header is present on all responses using curl -I or browser developer tools. This header should have no visible effect on legitimate functionality.',
       references: [
@@ -180,11 +180,11 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     analysis: {
       whatIsThis: 'The Referrer-Policy HTTP header controls how much information from the current page\'s URL is sent in the Referer header when navigating to another page or making requests. Without it, browsers may send full URLs as referrers by default.',
       whatWasObserved: 'No Referrer-Policy header was present in the HTTPS response headers returned by this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers.',
-      technicalExplanation: 'Without a Referrer-Policy, browser defaults vary. In many configurations, the full URL of the current page (including query parameters) is sent as the Referer header to external sites. If pages contain sensitive tokens, session IDs, or user data in their URLs, this information can leak to third parties.',
-      whyItMatters: 'URL query parameters often contain session tokens, password reset tokens, search terms, or user IDs. When users click links to external sites, these values may be exposed to the destination site via the Referer header.',
-      securityImpact: 'Sensitive URL parameters (authentication tokens, search terms, personal data) may be inadvertently disclosed to third-party sites, analytics services, or CDN providers through the Referer header.',
-      potentialAbuse: 'A malicious or compromised third-party resource loaded by the page (analytics, fonts, advertising) could observe sensitive URL parameters transmitted in the Referer header.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers.',
+      technicalExplanation: 'Without an explicit Referrer-Policy header, browsers apply default referrer rules (typically strict-origin-when-cross-origin in modern browsers). If URLs contain sensitive query parameters or session tokens, those could be included in outbound request headers. Note: this check identifies the lack of an explicit header directive and does not demonstrate that sensitive URL parameters were leaked.',
+      whyItMatters: 'If URLs contain query parameters with session tokens or sensitive data, an explicit Referrer-Policy prevents them from leaking to external destination origins.',
+      securityImpact: 'Potential exposure of query parameters to destination origins only if pages use sensitive URL parameters. This does not prove that sensitive tokens are present or were disclosed.',
+      potentialAbuse: 'If pages use sensitive URL parameters, a third-party resource loaded by the page could potentially observe parameters transmitted in the Referer header.',
       remediation: 'Add `Referrer-Policy: strict-origin-when-cross-origin` (sends origin only for cross-origin requests, full URL for same-origin). For stricter privacy: `no-referrer` or `same-origin`.',
       safeValidation: 'Verify the header is present using curl -I or browser developer tools. Confirm that legitimate analytics and link tracking still function as expected after deployment.',
       references: [
@@ -201,7 +201,7 @@ const HEADER_DEFINITIONS: Record<string, HeaderDef> = {
     analysis: {
       whatIsThis: 'The Permissions-Policy (formerly Feature-Policy) HTTP header allows a web application to selectively enable or disable browser APIs and features, such as geolocation, camera, microphone, and payment APIs.',
       whatWasObserved: 'No Permissions-Policy header was present in the HTTPS response headers returned by this domain.',
-      howDiscovered: 'DASS made a passive HTTP request to the HTTPS endpoint and inspected the response headers.',
+      howDiscovered: 'DASS made a non-intrusive HTTP request to the HTTPS endpoint and inspected the response headers.',
       technicalExplanation: 'Without Permissions-Policy, third-party content embedded in the page (iframes, ads, widgets) retains access to any browser features the user has previously granted permission for. This can allow third-party content to silently access the camera, microphone, or location.',
       whyItMatters: 'If any third-party scripts or iframes are loaded in the application, they inherit the full set of browser feature permissions unless explicitly restricted. This is a defence-in-depth measure.',
       securityImpact: 'Third-party content embedded in the page could access sensitive browser APIs (camera, microphone, geolocation) without the user\'s explicit knowledge, if the user has previously granted these permissions to the domain.',
@@ -302,7 +302,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
           observed?: boolean;
           note?: string;
           record?: string;
-          status?: 'signed' | 'unsigned' | 'inconclusive';
+          status?: 'signed' | 'unsigned' | 'bogus' | 'inconclusive';
           inconclusive?: boolean;
         };
         mx?: string[];
@@ -610,7 +610,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
         severity: 'informational',
         kind: 'observation',
         category: 'tls',
-        description: `The TLS certificate for ${domain} includes wildcard Subject Alternative Names: ${wildcards.join(', ')}. A single private key protects all subdomains matching the wildcard pattern.`,
+        description: `The TLS certificate for ${domain} includes wildcard Subject Alternative Names: ${wildcards.join(', ')}. Wildcard patterns allow a single certificate to match multiple subdomains. Note: this is an informational observation about certificate scope; it does not establish that all matching hostnames share a single deployed private key unless deployment evidence demonstrates that.`,
         recommendation: 'Wildcard certificates are widely used. If a wildcard certificate\'s private key is compromised, all subdomains sharing it are affected. Consider per-service certificates for higher-sensitivity subdomains.',
         confidence: 'high',
         observationStatus: 'observed',
@@ -618,10 +618,10 @@ export function buildFindings(scan: DomainScan): Finding[] {
           ev('TLS certificate SANs', `Wildcard SANs observed: ${wildcards.join(', ')}.`),
         ],
         analysis: {
-          whatIsThis: 'A wildcard TLS certificate secures all first-level subdomains of a domain (e.g., *.example.com covers api.example.com, mail.example.com, etc.) using a single certificate and private key.',
+          whatIsThis: 'A wildcard TLS certificate matches first-level subdomains under a domain pattern (e.g., *.example.com covers api.example.com, mail.example.com, etc.).',
           whatWasObserved: `The TLS certificate presented by ${domain} contains wildcard Subject Alternative Names: ${wildcards.join(', ')}.`,
           howDiscovered: `DASS performed a TLS handshake with ${domain} and read the Subject Alternative Names (SANs) from the certificate.`,
-          technicalExplanation: 'Wildcard certificates are operationally convenient but create a shared trust boundary. If the private key associated with the certificate is compromised (e.g., via server breach, insecure key storage, or deployment pipeline exposure), all subdomains protected by that certificate are simultaneously affected.',
+          technicalExplanation: 'Wildcard certificates allow operational flexibility across dynamic subdomains. While sharing certificate material is common, deployment architectures vary (e.g., edge termination vs. discrete backend keys). The presence of a wildcard SAN indicates certificate matching scope, not physical key deployment topology.',
           whyItMatters: 'This is an informational observation, not a vulnerability. However, it is useful for understanding the certificate boundary when assessing the blast radius of a hypothetical key compromise.',
           securityImpact: 'No immediate risk. In the event of a private key compromise, an attacker could impersonate any subdomain under the wildcard pattern without needing per-service certificates.',
           potentialAbuse: 'If the private key were obtained by an attacker, it could be used to impersonate any subdomain covered by the wildcard, facilitating phishing or man-in-the-middle attacks against users of those subdomains.',
@@ -1100,7 +1100,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
           analysis: {
             whatIsThis: 'Domain registrations have an expiry date. If not renewed before this date, the domain enters a grace period and then becomes available for general registration. Anyone can then register the expired domain.',
             whatWasObserved: `WHOIS data for ${domain} indicates the registration expires on ${whois.expiryDate}, which is ${daysUntilExpiry} day${daysUntilExpiry === 1 ? '' : 's'} from now.`,
-            howDiscovered: `DASS performed a passive WHOIS lookup for ${domain} through the authoritative WHOIS servers and extracted the Registry Expiry Date field.`,
+            howDiscovered: `DASS performed a non-intrusive WHOIS query for ${domain} through the authoritative WHOIS servers and extracted the Registry Expiry Date field.`,
             technicalExplanation: 'Domain expiry leads to a sequential process: expiry → grace period (0-30 days, renewals still possible) → redemption period (up to 75 days, expensive renewal) → deletion and open registration. Once deleted, any actor can register the domain.',
             whyItMatters: 'Domain expiry can cause an immediate availability outage for all services under the domain. More critically, an adversary registering an expired domain inherits all DNS reputation, email records, and any hardcoded references to the domain in third-party systems.',
             securityImpact: `If ${domain} expires and is registered by an adversary, they gain control of all email, web traffic, and services associated with the domain. They could harvest credentials, impersonate services, or intercept password reset emails sent to @${domain} addresses.`,
@@ -1148,23 +1148,23 @@ export function buildFindings(scan: DomainScan): Finding[] {
         severity: 'informational',
         kind: 'observation',
         category: 'subdomains',
-        description: `Certificate Transparency logs reveal ${sensitiveFound.length} subdomain${sensitiveFound.length === 1 ? '' : 's'} with naming patterns suggesting ${[...new Set(sensitiveFound.map((s) => s.label))].join(', ')} environments: ${examples}${sensitiveFound.length > 5 ? ', and others.' : '.'}`,
-        recommendation: 'Verify these subdomains are intentionally public. Development, staging, and administrative subdomains should use network-level access controls (VPN, IP allowlist) rather than relying on obscurity.',
-        confidence: 'high',
+        description: `Certificate Transparency logs reveal ${sensitiveFound.length} subdomain${sensitiveFound.length === 1 ? '' : 's'} with naming patterns suggesting ${[...new Set(sensitiveFound.map((s) => s.label))].join(', ')} environments: ${examples}${sensitiveFound.length > 5 ? ', and others.' : '.'} Note: these are naming-pattern indicators observed in historical or public certificate logs. They do not establish that these hostnames currently resolve, host live services, or are exposed, accessible, or vulnerable without independent verification.`,
+        recommendation: 'Verify whether these hostnames are currently active and intentionally public. Development, staging, and administrative services should use network-level access controls (VPN, IP allowlist) or identity-aware proxies.',
+        confidence: 'low',
         observationStatus: 'observed',
         evidence: [
-          ev('Certificate Transparency logs', `Subdomains with sensitive naming patterns observed in CT logs: ${examples}.`),
+          ev('Certificate Transparency logs', `Subdomains with sensitive naming patterns observed in CT logs: ${examples}.`, 'low'),
         ],
         analysis: {
-          whatIsThis: 'Certificate Transparency (CT) is a public logging system where every TLS certificate issued is publicly recorded. Subdomains that have received TLS certificates appear in these logs, making them discoverable by anyone — even if the owner considers them non-public.',
-          whatWasObserved: `The following subdomains of ${domain} with naming patterns suggesting non-production or administrative environments were observed in public Certificate Transparency logs: ${examples}.`,
-          howDiscovered: `DASS queried crt.sh (a public Certificate Transparency log aggregator) for certificates issued for *.${domain} and identified subdomains matching sensitive naming patterns.`,
-          technicalExplanation: 'Subdomains exposed through CT logs are publicly discoverable. Development and staging environments often run with reduced security controls (debug modes, verbose errors, weaker authentication, unrestricted admin panels) and may share code/data with production.',
-          whyItMatters: 'Non-production environments are frequent targets for attackers because they are often less hardened than production and may contain real customer data used for testing. Their presence in public CT logs means they are discoverable without prior knowledge.',
-          securityImpact: 'Development/staging environments may be accessible without authentication or with weak credentials. Administrative panels may expose management interfaces. These environments may contain sensitive data or allow pivoting to production systems.',
-          potentialAbuse: 'An attacker enumerates subdomains from CT logs to discover non-production environments, then targets them for easier initial access. Admin panels may have weaker authentication or unpatched vulnerabilities.',
-          remediation: 'Restrict access to non-production and administrative subdomains using VPN, IP allowlisting, or certificate-based authentication. Remove TLS certificates for environments that should not be internet-accessible, or use private CA certificates for internal environments.',
-          safeValidation: 'Attempt to access each sensitive subdomain from an unauthenticated external connection. Verify that access is denied or requires authentication appropriate to the sensitivity of the environment.',
+          whatIsThis: 'Certificate Transparency (CT) is a public logging system where TLS certificates issued by public certificate authorities are recorded. Subdomains that have historically received TLS certificates appear in these logs.',
+          whatWasObserved: `Hostnames matching non-production or administrative naming patterns were observed in Certificate Transparency records for ${domain}: ${examples}.`,
+          howDiscovered: `DASS queried Certificate Transparency log aggregators for certificates issued for ${domain} and identified hostnames matching naming patterns.`,
+          technicalExplanation: 'Certificate Transparency records preserve certificate issuance history. Hostnames appearing in CT logs may no longer resolve or may be protected behind corporate firewalls or VPNs. Naming patterns alone do not indicate live exposure, access, or vulnerability.',
+          whyItMatters: 'Names suggestive of non-production or management roles warrant verification to confirm whether they resolve and have intended access controls applied.',
+          securityImpact: 'Informational observation only. Presence in CT logs does not demonstrate that a live service is currently running, exposed, or misconfigured.',
+          potentialAbuse: 'An adversary could identify historical naming patterns during reconnaissance; actual attack viability requires independent confirmation of live services and access.',
+          remediation: 'Confirm whether these hostnames are active, and ensure any intended internal-only services are protected by network-level access controls (VPN, IP allowlists) or identity-aware proxies.',
+          safeValidation: 'Perform authoritative DNS resolution and access checks to verify if services are actually live or protected.',
           references: [
             'https://certificate.transparency.dev/',
             'https://crt.sh/',
@@ -1198,7 +1198,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
       analysis: {
         whatIsThis: 'security.txt (RFC 9116) is a standardised plain-text file that organisations publish at a well-known URL to tell security researchers how to report vulnerabilities they discover. It is the equivalent of a "responsible disclosure" contact page for automated tools and researchers.',
         whatWasObserved: `No security.txt file was found at https://${domain}/.well-known/security.txt. The endpoint returned a non-200 HTTP status.`,
-        howDiscovered: `DASS made a passive HTTP request to https://${domain}/.well-known/security.txt and examined the response status.`,
+        howDiscovered: `DASS made a non-intrusive HTTP request to https://${domain}/.well-known/security.txt and examined the response status.`,
         technicalExplanation: 'Without security.txt, security researchers who discover vulnerabilities in your systems have no obvious way to report them confidentially. They may report publicly, discard the finding, or in rare cases escalate to full disclosure — all suboptimal outcomes.',
         whyItMatters: 'A security.txt file enables responsible disclosure by providing researchers with a clear, trusted channel for reporting vulnerabilities before they are exploited or made public.',
         securityImpact: 'Low direct impact. However, without a security.txt, vulnerabilities discovered by researchers may go unreported or be publicly disclosed before you have the chance to remediate.',
@@ -1245,9 +1245,37 @@ export function buildFindings(scan: DomainScan): Finding[] {
         ],
       },
     }));
+  } else if (dns && dns.dnssec && dns.dnssec.status === 'bogus') {
+    findings.push(finding({
+      title: 'DNSSEC validation failure observed (bogus status)',
+      severity: 'medium',
+      kind: 'configuration_weakness',
+      category: 'dns',
+      description: `Public validating recursive resolvers returned SERVFAIL or validation errors when validating DNSSEC signatures for ${domain}. This indicates a broken or misconfigured cryptographic delegation chain.`,
+      recommendation: 'Check the Delegation Signer (DS) records published with your registrar against the active DNSKEY records in your zone to ensure key tags, algorithms, and digests match.',
+      confidence: 'high',
+      observationStatus: 'observed',
+      evidence: [
+        ev('DNS query', dns.dnssec.note || 'DNSSEC validation failure: validating resolver returned SERVFAIL during authenticated lookup.', 'high'),
+      ],
+      analysis: {
+        whatIsThis: 'DNSSEC validation verifies cryptographic signatures from the parent zone delegation down to authoritative records.',
+        whatWasObserved: 'A validating recursive resolver rejected DNSSEC records for this domain as invalid or bogus.',
+        howDiscovered: 'DASS queried validating DNS resolvers and received an authentication failure (SERVFAIL) response.',
+        technicalExplanation: 'When a domain has DS records in the parent zone but authoritative nameservers return mismatched DNSKEY records or expired/invalid RRSIG signatures, validating resolvers reject responses to protect against spoofing.',
+        whyItMatters: 'A bogus DNSSEC state causes outages for visitors on DNSSEC-validating networks, as their resolvers will refuse to resolve the domain.',
+        securityImpact: 'Denial of service for users on validating resolvers and broken cryptographic authentication.',
+        potentialAbuse: 'Traffic cannot resolve normally on validating recursive resolvers.',
+        remediation: 'Align registrar DS records with the active DNSKEY or temporarily remove parent DS records while repairing zone signing.',
+        safeValidation: `Run dig +dnssec ${domain} against 8.8.8.8 and 1.1.1.1 to inspect authenticated answers.`,
+        references: [
+          'https://www.rfc-editor.org/rfc/rfc4035',
+        ],
+      },
+    }));
   } else if (dns && dns.dnssec && dns.dnssec.observed === false) {
     findings.push(finding({
-      title: 'DNSSEC (DNS Security Extensions) not observed',
+      title: 'DNSSEC (DNS Security Extensions) not observed (confirmed unsigned)',
       severity: 'low',
       kind: 'configuration_weakness',
       category: 'dns',
@@ -1261,7 +1289,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
       analysis: {
         whatIsThis: 'DNSSEC (DNS Security Extensions) adds cryptographic digital signatures to DNS records using public-key cryptography. This allows validating resolvers to verify that DNS responses are authentic and have not been forged or altered in transit.',
         whatWasObserved: `No active DNSKEY or DS records were observed for ${domain}.`,
-        howDiscovered: 'DASS performed passive DNSSEC queries inspecting DNSKEY and parent DS records via public validating resolvers.',
+        howDiscovered: 'DASS performed non-intrusive DNSSEC queries inspecting DNSKEY and parent DS records via public validating resolvers.',
         technicalExplanation: 'Standard DNS queries are transmitted unauthenticated over UDP. An attacker on the network path (such as compromised Wi-Fi, malicious ISP, or cache-poisoned upstream resolver) can forge DNS responses (DNS spoofing/cache poisoning) and redirect users to imposter servers without warning.',
         whyItMatters: 'Without DNSSEC, applications and visitors relying on standard DNS lookups have no cryptographic guarantee that the IP address returned for your domain is legitimate.',
         securityImpact: 'Low to moderate depending on threat model. Allows network-level attackers to theoretically poison resolver caches, though HTTPS with trusted certificates provides an independent verification layer.',
@@ -1461,7 +1489,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
         severity: 'informational',
         kind: 'observation',
         category: 'exposure',
-        description: `Public breach index records indicate ${breachData.domain} was associated with ${breachData.breaches.length} historical public disclosure incident(s) affecting an estimated ${breachData.totalPwnCount.toLocaleString()} account record(s). Strictly records incident presence; no credentials or employee identities are stored or processed.`,
+        description: `Public breach index records indicate ${breachData.domain} was associated with ${breachData.breaches.length} historical public disclosure incident(s) affecting an estimated ${breachData.totalPwnCount.toLocaleString()} account record(s). Strictly records incident presence; no credentials or employee identities are stored or processed. Note: The absence of a breach record in public feeds does not prove an organization has never experienced a security incident.`,
         recommendation: `Enforce organization-wide multi-factor authentication (MFA/FIDO2) and mandate periodic credential rotation.`,
         confidence: 'high',
         observationStatus: 'observed',
@@ -1472,7 +1500,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
           whatIsThis: `Aggregated historical breach disclosure metadata from public security indexes.`,
           whatWasObserved: `Domain ${breachData.domain} has recorded public breach history (${breachData.breaches.map((b) => `${b.title} [${b.breachDate.slice(0, 4)}]`).join(', ')}).`,
           howDiscovered: `Queried public breach index records for domain presence. No credentials, hashes, or personal records are ever requested or stored.`,
-          technicalExplanation: `Historical breaches indicate past exposure incidents. Even if historical, credential reuse across employee accounts poses residual risk if MFA is not enforced.`,
+          technicalExplanation: `Historical breaches indicate past exposure incidents recorded by public aggregators. Even if historical, credential reuse across employee accounts poses residual risk if MFA is not enforced. Note: absence of records in third-party feeds does not establish the complete absence of historical incidents.`,
           whyItMatters: `Password reuse across corporate accounts remains one of the primary vectors for initial access and account takeover.`,
           securityImpact: `Residual risk of credential stuffing if compromised legacy passwords match active corporate credentials.`,
           potentialAbuse: `Attackers attempt historical compromised credentials against active corporate SSO or VPN login portals.`,

@@ -54,7 +54,9 @@ export default function WhatNeedsAttention({ scan, onOpenGlossary }: WhatNeedsAt
               Priority Action Items
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] text-[var(--text-secondary)] font-medium">
-              {attentionItems.length} Item{attentionItems.length === 1 ? '' : 's'} to Review
+              {attentionItems.filter((i) => i.severity === 'high' || i.severity === 'medium').length > 0
+                ? `${attentionItems.length} Item${attentionItems.length === 1 ? '' : 's'} to Review`
+                : `0 Critical/Medium • ${attentionItems.length} Observation${attentionItems.length === 1 ? '' : 's'} to Review`}
             </span>
           </div>
           <h2 id="attention-heading" className="text-xl sm:text-2xl font-display italic font-normal text-[var(--text-primary)] mt-0.5">

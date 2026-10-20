@@ -147,14 +147,16 @@ export default function SecurityAssessmentSummary({
             <div className="p-4 rounded-lg bg-[var(--bg-panel-inset)] border border-[var(--border-muted)] space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#d97706] dark:text-[#f59e0b]">
                 <AlertTriangle size={15} />
-                <span>Issues Identified</span>
+                <span>Critical &amp; Medium Issues</span>
               </div>
               <div className="text-3xl font-display italic text-[var(--text-primary)]">
                 {assessment.importantFindingsCount}
               </div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                 {assessment.importantFindingsCount === 0
-                  ? 'No critical or medium configuration weaknesses observed.'
+                  ? (assessment.lowCount + assessment.infoCount > 0
+                      ? `0 critical or medium findings (${assessment.lowCount} low-priority, ${assessment.infoCount} informational observations).`
+                      : '0 critical or medium configuration weaknesses observed.')
                   : `${assessment.highCount} high and ${assessment.mediumCount} medium priority items warranting review.`}
               </p>
             </div>
