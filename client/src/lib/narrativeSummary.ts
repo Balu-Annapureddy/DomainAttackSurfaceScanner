@@ -663,6 +663,7 @@ export interface HumanScoreCategory {
   scoreImpactText: string;
   statusText: string;
   isClean: boolean;
+  isInconclusive?: boolean;
   whatWasObserved: string;
   whyItAffectedScore: string;
   whatWouldImproveIt: string;
@@ -676,53 +677,99 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
   const dims = breakdown.dimensions;
   const categories: HumanScoreCategory[] = [];
 
+  const tlsData = scan.categories.tls?.data as {
+    available?: boolean;
+    outcome?: 'confirmed_absent' | 'connection_failed' | 'available';
+  } | undefined;
+  const httpData = scan.categories.http?.data as {
+    httpsEnforced?: boolean;
+    httpOutcome?: 'completed' | 'confirmed_absent' | 'inconclusive';
+    httpAvailable?: boolean;
+  } | undefined;
+
   // 1. TLS Hygiene
   if (dims.tlsHygiene) {
     const d = dims.tlsHygiene;
-    const isClean = d.deducted === 0;
+    const isFailedOrInconclusive = d.deducted === 0 && (
+      scan.categories.tls?.status === 'failed' ||
+      tlsData?.outcome === 'connection_failed' ||
+      (tlsData?.outcome !== 'available' && !tlsData?.available)
+    );
+    const isClean = d.deducted === 0 && !isFailedOrInconclusive;
     categories.push({
       title: 'Security Certificate & Encryption (TLS)',
       technicalLabel: 'TLS Hygiene',
       maxDeduction: d.maxDeduction,
       deducted: d.deducted,
-      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
-      statusText: isClean ? 'Healthy & Valid' : 'Renewal or Setup Needed',
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : isFailedOrInconclusive ? 'No deduction (unverified)' : `−${d.deducted} points deducted`,
+      statusText: isClean
+        ? 'Healthy & Valid'
+        : isFailedOrInconclusive
+        ? 'Inconclusive / Unverified'
+        : 'Renewal or Setup Needed',
       isClean,
+      isInconclusive: isFailedOrInconclusive,
       whatWasObserved: isClean
         ? 'A valid cryptographic certificate was observed with sufficient time remaining before expiration.'
+        : isFailedOrInconclusive
+        ? 'TLS certificate availability could not be verified during this scan — this check was inconclusive due to connection timeout or network error.'
         : d.observations.map((o) => o.description).join('; '),
       whyItAffectedScore: isClean
         ? 'Encryption protects data in transit and assures visitors of website identity.'
+        : isFailedOrInconclusive
+        ? 'Inconclusive network checks do not deduct points under our hygiene model, avoiding false negatives.'
         : 'An expired or soon-to-expire certificate causes browser error blocks, while an absent certificate leaves traffic unencrypted.',
       whatWouldImproveIt: isClean
         ? 'Continue automating certificate renewals through ACME/Let’s Encrypt or your cloud provider.'
+        : isFailedOrInconclusive
+        ? 'Ensure port 443 is open and accessible to external connections, and retry the scan.'
         : 'Renew the certificate promptly and ensure automatic renewal is configured before expiration.',
-      notes: d.observations.map((o) => o.description),
+      notes: isFailedOrInconclusive
+        ? ['TLS availability could not be verified during this scan — check was inconclusive.']
+        : d.observations.map((o) => o.description),
     });
   }
 
   // 2. HTTPS Enforcement
   if (dims.httpsEnforcement) {
     const d = dims.httpsEnforcement;
-    const isClean = d.deducted === 0;
+    const isFailedOrInconclusive = d.deducted === 0 && (
+      scan.categories.http?.status === 'failed' ||
+      httpData?.httpOutcome === 'inconclusive' ||
+      (httpData?.httpOutcome !== 'completed' && httpData?.httpsEnforced === undefined)
+    );
+    const isClean = d.deducted === 0 && !isFailedOrInconclusive;
     categories.push({
       title: 'Website Connection Security (HTTPS Redirection)',
       technicalLabel: 'HTTPS Enforcement',
       maxDeduction: d.maxDeduction,
       deducted: d.deducted,
-      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
-      statusText: isClean ? 'Properly Enforced' : 'Unenforced Redirection',
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : isFailedOrInconclusive ? 'No deduction (unverified)' : `−${d.deducted} points deducted`,
+      statusText: isClean
+        ? 'Properly Enforced'
+        : isFailedOrInconclusive
+        ? 'Inconclusive / Unverified'
+        : 'Unenforced Redirection',
       isClean,
+      isInconclusive: isFailedOrInconclusive,
       whatWasObserved: isClean
         ? 'Plain HTTP requests are automatically redirected to encrypted HTTPS connections.'
+        : isFailedOrInconclusive
+        ? 'Plain HTTP redirection to HTTPS could not be verified during this scan — this check was inconclusive due to connection timeout or network error.'
         : d.observations.map((o) => o.description).join('; '),
       whyItAffectedScore: isClean
         ? 'Ensures all web visitors communicate through an encrypted channel.'
+        : isFailedOrInconclusive
+        ? 'Inconclusive network checks do not deduct points under our hygiene model, avoiding false negatives.'
         : 'Allowing plain HTTP connections without redirection leaves visitors vulnerable to eavesdropping on public Wi-Fi networks.',
       whatWouldImproveIt: isClean
         ? 'Maintain strict 301/308 redirects from port 80 to port 443.'
+        : isFailedOrInconclusive
+        ? 'Ensure port 80 and port 443 are reachable and configure automatic redirection to HTTPS.'
         : 'Configure your web server or CDN to automatically redirect all HTTP traffic to HTTPS.',
-      notes: d.observations.map((o) => o.description),
+      notes: isFailedOrInconclusive
+        ? ['Plain HTTP redirection to HTTPS could not be verified during this scan — check was inconclusive.']
+        : d.observations.map((o) => o.description),
     });
   }
 
@@ -829,25 +876,43 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
   // 7. Certificate Chain Correctness
   if (dims.certificateChain) {
     const d = dims.certificateChain;
-    const isClean = d.deducted === 0;
+    const isFailedOrInconclusive = d.deducted === 0 && (
+      scan.categories.tls?.status === 'failed' ||
+      tlsData?.outcome === 'connection_failed' ||
+      (tlsData?.outcome !== 'available' && !tlsData?.available)
+    );
+    const isClean = d.deducted === 0 && !isFailedOrInconclusive;
     categories.push({
       title: 'Certificate Chain & Hostname Validation',
       technicalLabel: 'Certificate Chain Correctness',
       maxDeduction: d.maxDeduction,
       deducted: d.deducted,
-      scoreImpactText: isClean ? 'No deduction (0 pts)' : `−${d.deducted} points deducted`,
-      statusText: isClean ? 'Valid Chain & SANs' : 'Chain or Hostname Gap',
+      scoreImpactText: isClean ? 'No deduction (0 pts)' : isFailedOrInconclusive ? 'No deduction (unverified)' : `−${d.deducted} points deducted`,
+      statusText: isClean
+        ? 'Valid Chain & SANs'
+        : isFailedOrInconclusive
+        ? 'Inconclusive / Unverified'
+        : 'Chain or Hostname Gap',
       isClean,
+      isInconclusive: isFailedOrInconclusive,
       whatWasObserved: isClean
         ? 'The certificate Subject Alternative Names cover the scanned hostname and a complete intermediate chain was served.'
+        : isFailedOrInconclusive
+        ? 'Certificate chain validation could not be completed during this scan because TLS connection could not be established.'
         : d.observations.map((o) => o.description).join('; '),
       whyItAffectedScore: isClean
         ? 'Assures connecting clients of domain identity and prevents untrusted connection warnings.'
+        : isFailedOrInconclusive
+        ? 'Inconclusive network checks do not deduct points under our hygiene model.'
         : 'A hostname mismatch or missing intermediate certificate causes browsers and mobile clients to reject HTTPS connections.',
       whatWouldImproveIt: isClean
         ? 'Maintain automated certificate management covering all required subdomains.'
+        : isFailedOrInconclusive
+        ? 'Ensure port 443 is accessible to complete certificate chain inspection.'
         : 'Reissue certificate with correct SANs and ensure web servers serve the fullchain.pem certificate bundle.',
-      notes: d.observations.map((o) => o.description),
+      notes: isFailedOrInconclusive
+        ? ['Certificate chain verification could not be completed — TLS handshake was inconclusive.']
+        : d.observations.map((o) => o.description),
     });
   }
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach } from 'vitest';
-import { generateNarrativeSummary, generateHumanSecurityAssessment } from '../lib/narrativeSummary';
+import { generateNarrativeSummary, generateHumanSecurityAssessment, getHumanScoreBreakdown } from '../lib/narrativeSummary';
 import { generateGraphNarrative } from '../lib/graphNarrative';
 import FindingsSection from '../components/FindingsSection';
 import type { DomainScan, Asset, Relationship, Finding } from '../../../shared/types';
@@ -265,6 +265,85 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         const narrative = generateHumanSecurityAssessment(scan).whatWeFoundNarrative;
         expect(narrative).toContain('We could not verify whether example.com has HTTPS active during this scan — this check was inconclusive, not a confirmed finding.');
         expect(narrative).not.toContain('appears to lack an active HTTPS service');
+      });
+    });
+
+    describe('Score breakdown TLS and HTTPS honest inconclusive reporting', () => {
+      const baseScanWithBreakdown: DomainScan = {
+        scanId: 'test-breakdown-inconclusive',
+        domain: 'apple.com',
+        createdAt: '2026-10-07T00:00:00Z',
+        expiresAt: '2026-10-08T00:00:00Z',
+        status: 'completed',
+        score: 100,
+        scoreLabel: 'External Hygiene Score',
+        scoreBreakdown: {
+          scoringVersion: 2,
+          total: 100,
+          totalDeducted: 0,
+          dimensions: {
+            tlsHygiene: { label: 'TLS Hygiene', maxDeduction: 20, deducted: 0, observations: [] },
+            httpsEnforcement: { label: 'HTTPS Enforcement', maxDeduction: 15, deducted: 0, observations: [] },
+            webSecurityHeaders: { label: 'Web Security Headers', maxDeduction: 15, deducted: 0, observations: [] },
+            emailSecurity: { label: 'Email Security', maxDeduction: 10, deducted: 0, observations: [] },
+            dnssecHygiene: { label: 'DNSSEC Hygiene', maxDeduction: 3, deducted: 0, observations: [] },
+            networkExposure: { label: 'Network Exposure', maxDeduction: 15, deducted: 0, observations: [] },
+            certificateChain: { label: 'Certificate Chain Correctness', maxDeduction: 7, deducted: 0, observations: [] },
+            subdomainTakeover: { label: 'Subdomain Takeover Risk', maxDeduction: 15, deducted: 0, observations: [] },
+            whoisHygiene: { label: 'Domain & WHOIS Hygiene', maxDeduction: 5, deducted: 0, observations: [] },
+            cookieSecurity: { label: 'Cookie Security', maxDeduction: 5, deducted: 0, observations: [] },
+            corsConfiguration: { label: 'CORS Misconfiguration', maxDeduction: 5, deducted: 0, observations: [] },
+            breachExposure: { label: 'Breach Exposure', maxDeduction: 5, deducted: 0, observations: [] },
+          },
+        },
+        categories: {
+          scoring: { status: 'completed' },
+          tls: {
+            status: 'completed',
+            data: { available: false, outcome: 'connection_failed' },
+          },
+          http: {
+            status: 'completed',
+            data: { httpOutcome: 'inconclusive', httpsEnforced: undefined },
+          },
+        } as unknown as DomainScan['categories'],
+        assets: [],
+        findings: [],
+        relationships: [],
+        warnings: [],
+      };
+
+      it('asserts TLS breakdown text says inconclusive and not confirmed-good when outcome is connection_failed', () => {
+        const categories = getHumanScoreBreakdown(baseScanWithBreakdown);
+        const tlsCat = categories.find((c) => c.technicalLabel === 'TLS Hygiene');
+        expect(tlsCat).toBeDefined();
+        expect(tlsCat?.deducted).toBe(0);
+        expect(tlsCat?.isInconclusive).toBe(true);
+        expect(tlsCat?.isClean).toBe(false);
+        expect(tlsCat?.whatWasObserved).toContain('could not be verified during this scan');
+        expect(tlsCat?.whatWasObserved).not.toContain('A valid cryptographic certificate was observed');
+      });
+
+      it('asserts HTTPS enforcement breakdown text says inconclusive when httpOutcome is inconclusive', () => {
+        const categories = getHumanScoreBreakdown(baseScanWithBreakdown);
+        const httpsCat = categories.find((c) => c.technicalLabel === 'HTTPS Enforcement');
+        expect(httpsCat).toBeDefined();
+        expect(httpsCat?.deducted).toBe(0);
+        expect(httpsCat?.isInconclusive).toBe(true);
+        expect(httpsCat?.isClean).toBe(false);
+        expect(httpsCat?.whatWasObserved).toContain('could not be verified during this scan');
+        expect(httpsCat?.whatWasObserved).not.toContain('Plain HTTP requests are automatically redirected');
+      });
+
+      it('asserts certificate chain breakdown text says inconclusive when TLS connection failed', () => {
+        const categories = getHumanScoreBreakdown(baseScanWithBreakdown);
+        const certCat = categories.find((c) => c.technicalLabel === 'Certificate Chain Correctness');
+        expect(certCat).toBeDefined();
+        expect(certCat?.deducted).toBe(0);
+        expect(certCat?.isInconclusive).toBe(true);
+        expect(certCat?.isClean).toBe(false);
+        expect(certCat?.whatWasObserved).toContain('could not be completed during this scan');
+        expect(certCat?.whatWasObserved).not.toContain('complete intermediate chain was served');
       });
     });
   });
