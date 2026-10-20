@@ -224,6 +224,7 @@ describe('Phase 3 Information-Gathering Services & Scope Boundaries', () => {
 
   describe('Explicit Scope Boundaries Compliance', () => {
     it('Boundary 1: strictly forbids employee-level personal data (names, personal emails, direct phone numbers)', async () => {
+      jest.spyOn(providerHttp, 'fetchProviderJson').mockResolvedValue({ search: [] });
       // Simulate raw whois/contact payload with an individual's personal name and direct phone
       const rawHtml = '<div>Switchboard: +1-800-555-0100. Contact: Jane Doe, VP of Sales, direct mobile +1-555-019-2834, jane.doe.personal@gmail.com</div>';
       const docLinks = findLinkedDocuments([rawHtml], 'example.com');
@@ -235,6 +236,7 @@ describe('Phase 3 Information-Gathering Services & Scope Boundaries', () => {
     });
 
     it('Boundary 2: strictly excludes behavioral/social media/location tracking of individuals', async () => {
+      jest.spyOn(providerHttp, 'fetchProviderJson').mockResolvedValue({ search: [] });
       // Organization lookup queries only corporate Wikidata entities with official corporate claims, never personal timelines
       const profile = await fetchOrgProfile('Jane Doe personal twitter schedule');
       expect(profile).toBeNull();

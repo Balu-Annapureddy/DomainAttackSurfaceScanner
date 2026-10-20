@@ -260,6 +260,9 @@ export async function runWhois(domain: string, options: WhoisOptions = {}): Prom
       if (parsed.privacyStatus && parsed.privacyStatus !== 'unknown') {
         bestRecord.privacyStatus = parsed.privacyStatus;
       }
+      if (parsed.contactDetailsExposed !== undefined) {
+        bestRecord.contactDetailsExposed = parsed.contactDetailsExposed;
+      }
 
       // Check for next referral server
       const nextReferral = extractReferralServer(raw);
@@ -289,6 +292,7 @@ export async function runWhois(domain: string, options: WhoisOptions = {}): Prom
       available: false,
       nameservers: [],
       privacyStatus: 'unknown',
+      contactDetailsExposed: false,
       reason: 'WHOIS data unavailable',
     };
   }
@@ -301,6 +305,7 @@ export async function runWhois(domain: string, options: WhoisOptions = {}): Prom
     nameservers: bestRecord.nameservers ?? [],
     registrantOrg: bestRecord.registrantOrg ?? null,
     privacyStatus: bestRecord.privacyStatus ?? 'unknown',
+    contactDetailsExposed: bestRecord.contactDetailsExposed ?? false,
     rawText: combinedRaw ? combinedRaw.slice(0, 16384) : undefined,
   };
 }

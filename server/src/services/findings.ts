@@ -318,6 +318,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
         creationDate?: string | null;
         nameservers?: string[];
         privacyStatus?: 'public' | 'redacted' | 'unknown';
+        contactDetailsExposed?: boolean;
       } | undefined)
     : undefined;
 
@@ -348,8 +349,10 @@ export function buildFindings(scan: DomainScan): Finding[] {
 
   // ── SPF & DMARC policy analysis ───────────────────────────────────────────
 
-  const spfRecord = dns?.spf?.policy; // full SPF record string from DNS TXT
-  const dmarcRecord = dns?.dmarc?.record; // full DMARC record string from _dmarc.<domain>
+  const spfRecord = dns?.spf?.policy || (dns?.spf as { record?: string } | undefined)?.record;
+  const dmarcRecord =
+    dns?.dmarc?.record ||
+    (dns?.dmarc?.policy ? `v=DMARC1; p=${dns.dmarc.policy};` : undefined);
   const spf = analyzeSpf(spfRecord);
   const dmarc = analyzeDmarc(dmarcRecord);
   const hasMx = (dns?.mx ?? []).length > 0;
@@ -1670,35 +1673,65 @@ export function buildFindings(scan: DomainScan): Finding[] {
         }
       }
 
-      // Public WHOIS contact details
+      // Public WHOIS contact details vs corporate identification
       if (whois.privacyStatus === 'public') {
-        findings.push(finding({
-          title: 'Registrant contact information publicly visible in WHOIS records',
-          severity: 'low',
-          kind: 'observation',
-          category: 'whois',
-          description: 'Authoritative WHOIS records display unredacted registrant contact details. While standard for certain enterprise domains, lack of registrar privacy exposes administrative contact data to automated scrapers and unsolicited spam. This is a soft signal on its own, not a confirmed issue.',
-          recommendation: 'Enable registrar privacy proxy protection if public disclosure of administrator contact details is not required.',
-          confidence: 'medium',
-          observationStatus: 'observed',
-          evidence: [
-            ev('WHOIS query', 'Registrant details returned without privacy proxy or redaction patterns.'),
-          ],
-          analysis: {
-            whatIsThis: 'WHOIS privacy protection shields personal names, email addresses, and phone numbers in public domain registry lookups.',
-            whatWasObserved: 'Registrant contact information was returned in plaintext without privacy proxy or redaction masking.',
-            howDiscovered: 'DASS inspected registrant contact fields returned from public WHOIS lookups.',
-            technicalExplanation: 'Without registrar privacy masking, administrative contact details are accessible to anyone on the internet querying port 43.',
-            whyItMatters: 'Public contact details are frequently harvested by automated scrapers for spam, fraudulent renewal notices, and spear-phishing campaigns targeting domain owners.',
-            securityImpact: 'Increased risk of social engineering, targeted phishing, or fraudulent domain transfer requests sent to the listed administrative email.',
-            potentialAbuse: 'Attackers harvest the listed administrator contact details to launch convincing social engineering or domain renewal phishing attacks.',
-            remediation: 'Contact your domain registrar and activate WHOIS privacy or ID protection to mask public registrant details.',
-            safeValidation: `Verify privacy status: whois ${domain}`,
-            references: [
-              'https://www.icann.org/resources/pages/privacy-proxy-2013-03-22-en',
+        if (whois.contactDetailsExposed !== false) {
+          findings.push(finding({
+            title: 'Registrant contact information publicly visible in WHOIS records',
+            severity: 'low',
+            kind: 'observation',
+            category: 'whois',
+            description: 'Authoritative WHOIS records display unredacted registrant contact details (such as direct phone numbers or personal email addresses). While common, lack of registrar privacy exposes administrative contact data to automated scrapers and unsolicited spam. This is a soft signal on its own, not a confirmed issue.',
+            recommendation: 'Enable registrar privacy proxy protection if public disclosure of administrator contact details is not required.',
+            confidence: 'medium',
+            observationStatus: 'observed',
+            evidence: [
+              ev('WHOIS query', 'Registrant contact details returned without privacy proxy or redaction patterns.'),
             ],
-          },
-        }));
+            analysis: {
+              whatIsThis: 'WHOIS privacy protection shields personal names, email addresses, and phone numbers in public domain registry lookups.',
+              whatWasObserved: 'Registrant contact information was returned in plaintext without privacy proxy or redaction masking.',
+              howDiscovered: 'DASS inspected registrant contact fields returned from public WHOIS lookups.',
+              technicalExplanation: 'Without registrar privacy masking, administrative contact details are accessible to anyone on the internet querying port 43.',
+              whyItMatters: 'Public contact details are frequently harvested by automated scrapers for spam, fraudulent renewal notices, and spear-phishing campaigns targeting domain owners.',
+              securityImpact: 'Increased risk of social engineering, targeted phishing, or fraudulent domain transfer requests sent to the listed administrative email.',
+              potentialAbuse: 'Attackers harvest the listed administrator contact details to launch convincing social engineering or domain renewal phishing attacks.',
+              remediation: 'Contact your domain registrar and activate WHOIS privacy or ID protection to mask public registrant details.',
+              safeValidation: `Verify privacy status: whois ${domain}`,
+              references: [
+                'https://www.icann.org/resources/pages/privacy-proxy-2013-03-22-en',
+              ],
+            },
+          }));
+        } else {
+          findings.push(finding({
+            title: 'Registrant organization identified in public WHOIS records',
+            severity: 'informational',
+            kind: 'observation',
+            category: 'whois',
+            description: `Authoritative WHOIS records identify the operating entity (${whois.registrar || 'corporate registrant'}). Personal administrative contact details (such as direct phone numbers or private email addresses) were not observed exposed in public query responses.`,
+            recommendation: 'Maintain standard domain registration privacy practices. No administrative remediation is required.',
+            confidence: 'high',
+            observationStatus: 'observed',
+            evidence: [
+              ev('WHOIS query', 'Registrant organization identified without exposed personal contact details.'),
+            ],
+            analysis: {
+              whatIsThis: 'WHOIS registration records establish legal ownership and technical administration for top-level domain names.',
+              whatWasObserved: `Domain ownership is registered to ${whois.registrar || 'an identified enterprise entity'}, with personal contact details protected or absent.`,
+              howDiscovered: 'DASS queried authoritative WHOIS port 43 servers and parsed registration records.',
+              technicalExplanation: 'Corporate entity disclosure without personal contact leakage is standard practice for enterprise internet assets.',
+              whyItMatters: 'Confirms domain registration transparency while preventing personal information harvesting.',
+              securityImpact: 'Low. Organization name is public, but no private contact information was exposed.',
+              potentialAbuse: 'Public corporate ownership is normal and expected for public web services.',
+              remediation: 'No action required.',
+              safeValidation: `Verify whois ${domain}`,
+              references: [
+                'https://www.icann.org/resources/pages/whois-2012-02-25-en',
+              ],
+            },
+          }));
+        }
       }
     }
 
