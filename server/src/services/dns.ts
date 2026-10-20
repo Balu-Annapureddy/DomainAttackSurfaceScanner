@@ -79,7 +79,7 @@ export async function runDns(
   txt: string[];
   cname: string[];
   aaaa: string[];
-  spf: { present: boolean; policy?: string };
+  spf: { present: boolean; policy?: string; record?: string };
   dmarc: { present: boolean; policy?: string; record?: string };
   dnssec: DnssecResult;
 }> {
@@ -143,7 +143,7 @@ export async function runDns(
     spf: (() => {
       const values = txt.status === 'fulfilled' ? txt.value.flat() : [];
       const record = values.find((value) => value.toLowerCase().startsWith('v=spf1'));
-      return { present: Boolean(record), policy: record };
+      return { present: Boolean(record), policy: record, record };
     })(),
     dmarc: (() => {
       const values = dmarcTxt.status === 'fulfilled' ? dmarcTxt.value.flat() : [];

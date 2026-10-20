@@ -345,10 +345,55 @@ describe('Narrative Generation & Findings Section QA Suite', () => {
         expect(certCat?.whatWasObserved).toContain('could not be completed during this scan');
         expect(certCat?.whatWasObserved).not.toContain('complete intermediate chain was served');
       });
+
+      it('generates accurate HSTS-specific explanation and status when only HSTS is missing', () => {
+        const hstsScan: DomainScan = {
+          ...baseScanWithBreakdown,
+          categories: {
+            scoring: { status: 'completed' },
+            tls: { status: 'completed', data: { available: true, outcome: 'available' } },
+            http: { status: 'completed', data: { httpOutcome: 'completed', httpsEnforced: true } },
+          } as unknown as DomainScan['categories'],
+          scoreBreakdown: {
+            ...baseScanWithBreakdown.scoreBreakdown!,
+            dimensions: {
+              ...baseScanWithBreakdown.scoreBreakdown!.dimensions,
+              httpsEnforcement: {
+                label: 'HTTPS Enforcement',
+                maxDeduction: 15,
+                deducted: 4,
+                observations: [
+                  { description: 'Strict-Transport-Security (HSTS) was not observed', pointsDeducted: 4 },
+                ],
+              },
+            },
+          },
+        };
+
+        const categories = getHumanScoreBreakdown(hstsScan);
+        const httpsCat = categories.find((c) => c.technicalLabel === 'HTTPS Enforcement');
+        expect(httpsCat).toBeDefined();
+        expect(httpsCat?.statusText).toBe('HSTS Header Missing');
+        expect(httpsCat?.whatWouldImproveIt).toContain('Strict-Transport-Security');
+        expect(httpsCat?.whatWouldImproveIt).not.toContain('automatically redirect all HTTP traffic');
+        expect(httpsCat?.whyItAffectedScore).toContain('Strict-Transport-Security');
+      });
     });
   });
 
   describe('generateGraphNarrative', () => {
+    it('correctly reports multiple separate servers when domain has more than 2 nameservers', () => {
+      const fourNsAssets: Asset[] = [
+        { id: '1', type: 'DOMAIN', value: 'microsoft.com', targetDomain: 'microsoft.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '2', type: 'NAMESERVER', value: 'ns1.example.com', targetDomain: 'microsoft.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '3', type: 'NAMESERVER', value: 'ns2.example.com', targetDomain: 'microsoft.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '4', type: 'NAMESERVER', value: 'ns3.example.com', targetDomain: 'microsoft.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+        { id: '5', type: 'NAMESERVER', value: 'ns4.example.com', targetDomain: 'microsoft.com', discoveredAt: '2026-10-07T00:00:00Z', evidence: [] },
+      ];
+      const narrative = generateGraphNarrative(fourNsAssets, []);
+      expect(narrative).toContain("Multiple separate servers (4) manage this domain's DNS");
+      expect(narrative).not.toContain('Two separate servers');
+    });
     it('generates sentence-level topology summary identifying consolidation under single provider', () => {
       const narrative = generateGraphNarrative(mockAssets, mockRelationships);
       expect(narrative).toContain('1 apex domain');

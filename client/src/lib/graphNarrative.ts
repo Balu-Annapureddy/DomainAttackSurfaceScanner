@@ -144,10 +144,12 @@ export function generateGraphNarrative(assets: Asset[], relationships: Relations
 
   // Authoritative routing & DNS context
   if (nameservers.length > 0) {
-    if (nameservers.length >= 2) {
+    if (nameservers.length === 1) {
+      narrative += ` A single server manages this domain's DNS (the Domain Name System that translates domain names into IP addresses). This means there is no backup nameserver if that server goes down.`;
+    } else if (nameservers.length === 2) {
       narrative += ` Two separate servers manage this domain's DNS (the Domain Name System that translates domain names into IP addresses) — if one goes down, the other keeps it working.`;
     } else {
-      narrative += ` A single server manages this domain's DNS (the Domain Name System that translates domain names into IP addresses). This means there is no backup nameserver if that server goes down.`;
+      narrative += ` Multiple separate servers (${nameservers.length}) manage this domain's DNS (the Domain Name System that translates domain names into IP addresses) — if one goes down, the others keep it working.`;
     }
   }
 

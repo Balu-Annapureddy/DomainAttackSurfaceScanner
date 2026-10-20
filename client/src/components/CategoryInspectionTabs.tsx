@@ -252,21 +252,31 @@ export default function CategoryInspectionTabs({
                       Records that tell receiving mail services which servers are authorized to send email on your behalf, preventing fraud.
                     </p>
                     <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-[var(--text-secondary)]">SPF Record:</span>
-                        <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                          (data.spf as { record?: string })?.record
-                            ? 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788]'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                        }`}>
-                          {(data.spf as { record?: string })?.record ? '✓ Published' : 'Missing'}
-                        </span>
-                      </div>
-                      {(data.spf as { record?: string })?.record && (
-                        <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-panel)] p-2 rounded border border-[var(--border-muted)] break-all font-mono">
-                          {(data.spf as { record?: string }).record}
-                        </p>
-                      )}
+                      {(() => {
+                        const spfData = data.spf as { record?: string; policy?: string; present?: boolean } | undefined;
+                        const spfRecord = spfData?.record || spfData?.policy;
+                        const isPublished = Boolean(spfRecord || spfData?.present);
+
+                        return (
+                          <>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-[var(--text-secondary)]">SPF Record:</span>
+                              <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                                isPublished
+                                  ? 'bg-[#16a34a]/10 text-[#16a34a] dark:text-[#52B788]'
+                                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              }`}>
+                                {isPublished ? '✓ Published' : 'Missing'}
+                              </span>
+                            </div>
+                            {spfRecord && (
+                              <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-panel)] p-2 rounded border border-[var(--border-muted)] break-all font-mono">
+                                {spfRecord}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-[var(--border-muted)]">
                         <span className="text-[var(--text-secondary)]">DMARC Policy:</span>

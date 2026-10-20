@@ -739,17 +739,48 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
       (httpData?.httpOutcome !== 'completed' && httpData?.httpsEnforced === undefined)
     );
     const isClean = d.deducted === 0 && !isFailedOrInconclusive;
+    const hasHstsMissing = d.observations.some(
+      (o) => o.description.toLowerCase().includes('strict-transport-security') || o.description.toLowerCase().includes('hsts'),
+    );
+    const hasRedirectMissing = d.observations.some(
+      (o) => o.description.toLowerCase().includes('not redirected') || o.description.toLowerCase().includes('redirect'),
+    );
+
+    const statusText = isClean
+      ? 'Properly Enforced'
+      : isFailedOrInconclusive
+      ? 'Inconclusive / Unverified'
+      : hasHstsMissing && !hasRedirectMissing
+      ? 'HSTS Header Missing'
+      : 'Unenforced Redirection';
+
+    const whyItAffectedScore = isClean
+      ? 'Ensures all web visitors communicate through an encrypted channel.'
+      : isFailedOrInconclusive
+      ? 'Inconclusive network checks do not deduct points under our hygiene model, avoiding false negatives.'
+      : hasHstsMissing && !hasRedirectMissing
+      ? 'Without Strict-Transport-Security (HSTS), web browsers are not forced to use HTTPS on subsequent visits, leaving initial requests open to network downgrade attacks.'
+      : hasRedirectMissing && !hasHstsMissing
+      ? 'Allowing plain HTTP connections without redirection leaves visitors vulnerable to eavesdropping on public Wi-Fi networks.'
+      : 'Allowing plain HTTP connections and omitting Strict-Transport-Security (HSTS) leaves visitors vulnerable to network interception and downgrade attacks.';
+
+    const whatWouldImproveIt = isClean
+      ? 'Maintain strict 301/308 redirects from port 80 to port 443.'
+      : isFailedOrInconclusive
+      ? 'Ensure port 80 and port 443 are reachable and configure automatic redirection to HTTPS.'
+      : hasHstsMissing && !hasRedirectMissing
+      ? 'Add the Strict-Transport-Security (HSTS) response header with a max-age of at least one year (e.g. max-age=31536000; includeSubDomains) to your HTTPS responses.'
+      : hasRedirectMissing && !hasHstsMissing
+      ? 'Configure your web server or CDN to automatically redirect all HTTP traffic to HTTPS.'
+      : 'Configure automatic HTTP-to-HTTPS redirection and enable the Strict-Transport-Security (HSTS) response header.';
+
     categories.push({
       title: 'Website Connection Security (HTTPS Redirection)',
       technicalLabel: 'HTTPS Enforcement',
       maxDeduction: d.maxDeduction,
       deducted: d.deducted,
       scoreImpactText: isClean ? 'No deduction (0 pts)' : isFailedOrInconclusive ? 'No deduction (unverified)' : `−${d.deducted} points deducted`,
-      statusText: isClean
-        ? 'Properly Enforced'
-        : isFailedOrInconclusive
-        ? 'Inconclusive / Unverified'
-        : 'Unenforced Redirection',
+      statusText,
       isClean,
       isInconclusive: isFailedOrInconclusive,
       whatWasObserved: isClean
@@ -757,16 +788,8 @@ export function getHumanScoreBreakdown(scan: DomainScan): HumanScoreCategory[] {
         : isFailedOrInconclusive
         ? 'Plain HTTP redirection to HTTPS could not be verified during this scan — this check was inconclusive due to connection timeout or network error.'
         : d.observations.map((o) => o.description).join('; '),
-      whyItAffectedScore: isClean
-        ? 'Ensures all web visitors communicate through an encrypted channel.'
-        : isFailedOrInconclusive
-        ? 'Inconclusive network checks do not deduct points under our hygiene model, avoiding false negatives.'
-        : 'Allowing plain HTTP connections without redirection leaves visitors vulnerable to eavesdropping on public Wi-Fi networks.',
-      whatWouldImproveIt: isClean
-        ? 'Maintain strict 301/308 redirects from port 80 to port 443.'
-        : isFailedOrInconclusive
-        ? 'Ensure port 80 and port 443 are reachable and configure automatic redirection to HTTPS.'
-        : 'Configure your web server or CDN to automatically redirect all HTTP traffic to HTTPS.',
+      whyItAffectedScore,
+      whatWouldImproveIt,
       notes: isFailedOrInconclusive
         ? ['Plain HTTP redirection to HTTPS could not be verified during this scan — check was inconclusive.']
         : d.observations.map((o) => o.description),
