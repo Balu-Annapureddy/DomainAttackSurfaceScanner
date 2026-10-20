@@ -94,7 +94,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   const text = `
 Welcome to Domain Attack Surface Scanner.
 
-Please verify your email address to unlock your 50 scans/hour quota allocation and persistent scan archive:
+Please verify your email address to unlock your ${config.registeredScanLimit} scans/hour quota allocation and persistent scan archive:
 ${verifyUrl}
 
 This verification link will expire in 24 hours.
@@ -123,7 +123,7 @@ If you did not register for this account, you can safely disregard this email.
   <div class="card">
     <div class="header">Domain Attack Surface Scanner &middot; Account Security</div>
     <h1>Verify Your Workstation Account</h1>
-    <p>Thank you for registering. Confirming your email unlocks your full registered operator allocation of <strong>50 scans per hour</strong> and enables persistent cloud recon archives.</p>
+    <p>Thank you for registering (<code>${safeTo}</code>). Confirming your email unlocks your full registered operator allocation of <strong>${config.registeredScanLimit} scans per hour</strong> and enables persistent cloud recon archives.</p>
     <div>
       <a href="${safeVerifyUrl}" class="button" target="_blank" rel="noopener noreferrer">VERIFY OPERATOR EMAIL</a>
     </div>

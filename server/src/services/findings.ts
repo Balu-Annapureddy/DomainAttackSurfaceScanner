@@ -965,7 +965,7 @@ export function buildFindings(scan: DomainScan): Finding[] {
   const serverHeader = http?.https?.headers?.server ?? http?.https?.server;
   const serverHeaderLower = serverHeader?.toLowerCase() ?? '';
   // Detect version disclosure: e.g., "Apache/2.4.51" or "nginx/1.18.0"
-  if (serverHeader && /[\/\s]\d+\.\d+/.test(serverHeader) && !serverHeaderLower.includes('cloudflare')) {
+  if (serverHeader && /[/\s]\d+\.\d+/.test(serverHeader) && !serverHeaderLower.includes('cloudflare')) {
     findings.push(finding({
       title: `Server header discloses software version: "${serverHeader}"`,
       severity: 'informational',

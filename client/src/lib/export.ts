@@ -22,7 +22,9 @@ function escapeCsvCell(val: unknown): string {
 }
 
 export function exportScanJson(scan: DomainScan): void {
-  const data = JSON.stringify(scan, null, 2);
+  // Strip internal user identity and session data before export
+  const { userId: _strippedUserId, ...cleanScan } = scan;
+  const data = JSON.stringify(cleanScan, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const safeDomain = sanitizeFilename(scan.domain);
   const dateStr = new Date(scan.createdAt).toISOString().slice(0, 10);
@@ -50,13 +52,15 @@ export function exportAssetsCsv(scan: DomainScan): void {
 }
 
 export function exportFindingsCsv(scan: DomainScan): void {
-  const headers = ['ID', 'Title', 'Severity', 'Kind', 'Category', 'Description', 'Recommendation', 'Confidence', 'PrimarySource'];
+  const headers = ['ID', 'Title', 'Severity', 'Kind', 'Category', 'ObservationStatus', 'AffectedAsset', 'Description', 'Recommendation', 'Confidence', 'PrimarySource'];
   const rows = (scan.findings || []).map((finding) => [
     escapeCsvCell(finding.id),
     escapeCsvCell(finding.title),
     escapeCsvCell(finding.severity),
     escapeCsvCell(finding.kind),
     escapeCsvCell(finding.category),
+    escapeCsvCell(finding.observationStatus || 'observed'),
+    escapeCsvCell(finding.affectedAsset || scan.domain),
     escapeCsvCell(finding.description),
     escapeCsvCell(finding.recommendation),
     escapeCsvCell(finding.confidence),

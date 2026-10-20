@@ -66,7 +66,8 @@ export function compareScans(baseline: DomainScan, current: DomainScan): ScanCom
   // 3. Posture Score Delta
   const baselineScore = typeof baseline.score === 'number' ? baseline.score : null;
   const currentScore = typeof current.score === 'number' ? current.score : null;
-  const scoreDelta = (currentScore ?? 0) - (baselineScore ?? 0);
+  const scoreDelta =
+    baselineScore !== null && currentScore !== null ? currentScore - baselineScore : 0;
 
   // 4. Certificate Drift
   const baselineTls = baseline.categories.tls?.data as {

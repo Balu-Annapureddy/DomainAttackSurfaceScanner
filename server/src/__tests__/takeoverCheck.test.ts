@@ -1,5 +1,5 @@
 import dns from 'node:dns/promises';
-import { checkSubdomainTakeover, TAKEOVER_RULES } from '../services/takeoverCheck';
+import { checkSubdomainTakeover } from '../services/takeoverCheck';
 import * as safeHttp from '../services/safeHttp';
 
 jest.mock('node:dns/promises');

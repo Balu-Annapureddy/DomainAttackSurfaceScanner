@@ -129,6 +129,8 @@ export interface Finding {
   whyItMatters?: string;
   investigationSteps?: string[];
   observationStatus?: ObservationStatus;
+  affectedAsset?: string;
+  scoringImpact?: number;
   /** v2: Full structured analysis. Optional for backward compatibility with v1 scan records. */
   analysis?: FindingAnalysis;
 }

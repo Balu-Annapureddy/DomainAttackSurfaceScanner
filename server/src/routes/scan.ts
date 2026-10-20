@@ -8,7 +8,6 @@ import {
   getScanRecord,
   markScanFinished,
   setScanIntelligence,
-  setScanScore,
   setScanScoreAndBreakdown,
   updateCategoryStatus,
 } from '../services/scanStore';

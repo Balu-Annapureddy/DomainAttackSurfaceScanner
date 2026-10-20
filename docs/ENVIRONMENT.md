@@ -14,8 +14,8 @@ This document describes all environment variables used by **Domain Attack Surfac
 | `DATABASE_URL` | `string` | _empty (in-memory dev)_ | Recommended | PostgreSQL connection URI (`postgres://user:pass@host:5432/dbname`) |
 | `SESSION_SECRET` | `string` | _internal fallback_ | **Yes** | Cryptographic secret for signing session state (min 32 chars in production) |
 | `TRUST_PROXY` | `string/bool` | `false` | When behind proxy | Reverse proxy hop configuration (`true`, `false`, `1`, or CIDR) |
-| `ANONYMOUS_SCAN_LIMIT` | `integer` | `5` | No | Maximum scans per hour for unauthenticated IP addresses |
-| `REGISTERED_SCAN_LIMIT` | `integer` | `50` | No | Maximum scans per hour for registered user accounts |
+| `ANONYMOUS_SCAN_LIMIT` | `integer` | `15` | No | Maximum scans per hour for unauthenticated IP addresses |
+| `REGISTERED_SCAN_LIMIT` | `integer` | `60` | No | Maximum scans per hour for registered user accounts |
 | `SCAN_LIMIT_WINDOW_MS` | `integer` | `3600000` (1 hr) | No | Quota sliding window duration in milliseconds |
 | `SCAN_TIMEOUT_MS` | `integer` | `120000` (2 min) | No | Maximum duration allowed for a single domain scan |
 | `MAX_CONCURRENT_SCANS` | `integer` | `2` | No | Concurrent scans processed per node instance |
@@ -27,6 +27,8 @@ This document describes all environment variables used by **Domain Attack Surfac
 | `IP_INTELLIGENCE_ENABLED`| `boolean` | `true` | No | Enable/disable external IP ASN & geo lookups (`true`/`false`) |
 | `IP_INTELLIGENCE_URL` | `url` | `https://ipapi.co/{ip}/json/`| No | Provider URL template containing `{ip}` placeholder |
 | `IP_INTELLIGENCE_TIMEOUT_MS` | `integer` | `5000` (5s) | No | Timeout for IP intelligence lookup queries |
+| `RESEND_API_KEY` | `string` | _empty (mock in dev)_ | When email enabled | API key for Resend transactional email service |
+| `EMAIL_FROM` | `string` | `no-reply@reconlab.local` | No | From header address for verification and reset emails |
 
 ---
 
